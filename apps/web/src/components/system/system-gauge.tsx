@@ -15,7 +15,14 @@ export function SystemGauge({
 }) {
   const dash = Math.max(0, Math.min(1, percent)) * CIRCUMFERENCE;
   return (
-    <svg width={150} height={150} viewBox="0 0 120 120" className="my-3.5">
+    <svg
+      width={150}
+      height={150}
+      viewBox="0 0 120 120"
+      className="my-3.5"
+      role="img"
+      aria-label={`${value} ${caption}`}
+    >
       <circle
         cx={60}
         cy={60}

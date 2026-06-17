@@ -7,7 +7,9 @@ const gaugeCard =
   'flex flex-col items-center rounded-[14px] border border-border bg-card p-5 shadow-sm';
 
 export function System() {
-  const chunkPct = CHUNKS.total ? CHUNKS.compressed / CHUNKS.total : 0;
+  const chunkPct = CHUNKS.total
+    ? Math.min(1, Math.max(0, CHUNKS.compressed / CHUNKS.total))
+    : 0;
 
   return (
     <div className="flex flex-col gap-4">
