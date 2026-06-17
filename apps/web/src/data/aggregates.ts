@@ -34,18 +34,26 @@ export function compareSeries(): CompareResult {
     const min = Math.min(...avgs);
     const max = Math.max(...avgs);
     const span = max - min || 1;
-    return {
-      sensor,
-      buckets,
-      color: SERIES_COLORS[i % SERIES_COLORS.length],
-      norm: avgs.map((v) => Math.round(((v - min) / span) * 100) / 100),
-    };
+    // Key the normalized value by the bucket's hour timestamp, so rows align by
+    // hour rather than by array index (robust to differing bucket counts).
+    const normByTs = new Map(
+      buckets.map((b) => [b.ts, Math.round(((b.avg - min) / span) * 100) / 100]),
+    );
+    return { sensor, color: SERIES_COLORS[i % SERIES_COLORS.length], normByTs };
   });
 
-  const hours = perSensor[0]?.buckets.map((b) => b.hour) ?? [];
-  const data = hours.map((hour, hi) => {
-    const row: Record<string, number | string> = { hour };
-    for (const ps of perSensor) row[ps.sensor.id] = ps.norm[hi];
+  const labelByTs = new Map<number, string>();
+  for (const sensor of SENSORS) {
+    for (const b of hourly(sensor)) labelByTs.set(b.ts, b.hour);
+  }
+  const allTs = [...labelByTs.keys()].sort((a, b) => a - b);
+
+  const data = allTs.map((ts) => {
+    const row: Record<string, number | string> = { hour: labelByTs.get(ts)! };
+    for (const ps of perSensor) {
+      const value = ps.normByTs.get(ts);
+      if (value !== undefined) row[ps.sensor.id] = value;
+    }
     return row;
   });
   const series = perSensor.map((ps) => ({
