@@ -38,5 +38,44 @@ jobs:
       - name: Unit tests
         run: npm test
 
-      # End-to-end tests run in a dedicated job (with a TimescaleDB service)
-      # once the database is introduced — see the e2e/CI PR in the roadmap.
+  e2e:
+    name: End-to-end (TimescaleDB)
+    runs-on: ubuntu-latest
+    services:
+      timescaledb:
+        image: timescale/timescaledb:2.27.2-pg17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: app
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d app"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/app?schema=public
+      # Unused at runtime (only `migrate dev` needs a shadow DB); a valid URL is
+      # enough to satisfy env validation.
+      SHADOW_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/shadow?schema=public
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply migrations
+        run: npm run db:deploy
+
+      - name: E2E tests
+        run: npm run test:e2e
