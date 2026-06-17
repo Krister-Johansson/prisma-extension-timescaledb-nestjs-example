@@ -16,15 +16,14 @@ reviews:
   path_filters:
     - '!**/*.lock'
     - '!**/package-lock.json'
-    - '!src/@generated/**'
-    - '!prisma/generated/**'
+    - '!apps/api/src/generated/**'
   path_instructions:
-    - path: 'src/**/*.ts'
+    - path: 'apps/api/src/**/*.ts'
       instructions: >-
         This is a NestJS code-first GraphQL example for the
         prisma-extension-timescaledb package. Prefer NestJS idioms, keep modules
         cohesive, and flag any N+1 GraphQL access that should use a DataLoader.
-    - path: 'prisma/schema.prisma'
+    - path: 'apps/api/prisma/schema.prisma'
       instructions: >-
         TimescaleDB hypertables/continuous aggregates are configured via `///`
         annotations consumed by prisma-extension-timescaledb. Do not suggest

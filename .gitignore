@@ -1,13 +1,13 @@
-# compiled output
-/dist
-/node_modules
+# compiled output (any workspace)
+dist
+node_modules
 /build
 
 # Prisma generated client + timescale registry (regenerated via `prisma generate`)
-/src/generated
+apps/api/src/generated
 
 # Code-first GraphQL schema (regenerated at app boot)
-/src/schema.gql
+apps/api/src/schema.gql
 
 # Logs
 logs

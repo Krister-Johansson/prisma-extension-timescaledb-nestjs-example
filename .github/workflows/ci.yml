@@ -30,13 +30,13 @@ jobs:
         run: npm ci
 
       - name: Lint
-        run: npm run lint -- --max-warnings=0
+        run: npm run lint --workspace @timescale-demo/api -- --max-warnings=0
 
       - name: Build
-        run: npm run build
+        run: npm run build --workspace @timescale-demo/api
 
       - name: Unit tests
-        run: npm test
+        run: npm test --workspace @timescale-demo/api
 
   e2e:
     name: End-to-end (TimescaleDB)
