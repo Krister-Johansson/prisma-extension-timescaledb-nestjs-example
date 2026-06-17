@@ -21,7 +21,8 @@ transactionally through Prisma into a TimescaleDB **hypertable**, rolled up by
 - Prisma 7 with the `@prisma/adapter-pg` driver adapter
 - `prisma-extension-timescaledb` for hypertables, continuous aggregates, retention &
   compression policies, and typed `timeBucket(...)` queries
-- `prisma-nestjs-graphql` to generate GraphQL where-inputs from the schema
+- Hand-written GraphQL `@InputType`s for filters (Prisma 7's client generator isn't
+  compatible with `prisma-nestjs-graphql`)
 - PostgreSQL + TimescaleDB via Docker Compose
 
 ## Getting started
@@ -42,7 +43,8 @@ local Postgres. The shadow DB lives on the same server because `prisma migrate d
 validates migrations against it, and TimescaleDB's `CREATE EXTENSION` must run there
 too. Stop it with `npm run db:down`; tail logs with `npm run db:logs`.
 
-(The GraphQL API arrives in subsequent PRs — see the roadmap.)
+(Readings ingestion, `timeBucket` queries, and the alerts engine arrive in subsequent
+PRs — see the roadmap.)
 
 ## Database & migrations
 
