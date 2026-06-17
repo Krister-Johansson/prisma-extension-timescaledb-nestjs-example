@@ -12,6 +12,7 @@ import { validate } from './config/env.validation';
 import { createLoaders } from './dataloader/loaders';
 import { ExtendedPrismaClient, PRISMA_CLIENT } from './prisma/prisma-client';
 import { PrismaModule } from './prisma/prisma.module';
+import { PubSubModule } from './pubsub/pubsub.module';
 import { SensorModule } from './sensor/sensor.module';
 import { ReadingModule } from './reading/reading.module';
 import { AlertModule } from './alert/alert.module';
@@ -24,12 +25,15 @@ import { TimescaleAdminModule } from './timescale-admin/timescale-admin.module';
       validate,
     }),
     PrismaModule,
+    PubSubModule,
     GraphQLModule.forRootAsync<ApolloDriverConfig>({
       driver: ApolloDriver,
       inject: [PRISMA_CLIENT],
       useFactory: (prisma: ExtendedPrismaClient) => ({
         autoSchemaFile: join(process.cwd(), 'src/schema.gql'),
         sortSchema: true,
+        // Live data over WebSocket (graphql-ws).
+        subscriptions: { 'graphql-ws': true },
         // Fresh DataLoaders per request (they cache only within a request).
         context: () => ({ loaders: createLoaders(prisma) }),
       }),

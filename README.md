@@ -152,6 +152,20 @@ mutation {
 query { alertEvents(sensorId: "temp-1") { kind value message } }
 ```
 
+## Live data (subscriptions)
+
+GraphQL subscriptions stream live data over WebSocket (`graphql-ws`) at the same
+`/graphql` endpoint. Two topics, each optionally filtered by `sensorId`:
+
+```graphql
+subscription { readingIngested(sensorId: "temp-1") { time value } }   # every ingested reading
+subscription { alertFired(sensorId: "temp-1") { kind value message } } # RAISED / CLEARED
+```
+
+`readingIngested` is published from the ingest path; `alertFired` from the alert
+engine on each transition. (In-memory PubSub — fine for a single instance; swap for a
+Redis-backed PubSub to scale out.)
+
 ## Timescale admin
 
 A small **read-only** admin surface exposes the extension's `$timescale` introspection:

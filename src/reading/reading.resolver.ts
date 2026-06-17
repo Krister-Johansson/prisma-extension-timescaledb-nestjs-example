@@ -1,4 +1,14 @@
-import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { Inject } from '@nestjs/common';
+import {
+  Args,
+  ID,
+  Mutation,
+  Query,
+  Resolver,
+  Subscription,
+} from '@nestjs/graphql';
+import { PubSub } from 'graphql-subscriptions';
+import { PUB_SUB, TOPICS } from '../pubsub/pubsub.module';
 import { SensorReading } from '../sensor/models/sensor.model';
 import { IngestReadingInput } from './dto/ingest-reading.input';
 import {
@@ -12,7 +22,10 @@ import { ReadingService } from './reading.service';
 
 @Resolver()
 export class ReadingResolver {
-  constructor(private readonly readingService: ReadingService) {}
+  constructor(
+    private readonly readingService: ReadingService,
+    @Inject(PUB_SUB) private readonly pubSub: PubSub,
+  ) {}
 
   @Mutation(() => SensorReading)
   ingestReading(
@@ -36,5 +49,20 @@ export class ReadingResolver {
   @Mutation(() => Boolean, { name: 'refreshSensorReadingHourly' })
   refreshHourly(@Args() args: RefreshHourlyArgs): Promise<boolean> {
     return this.readingService.refreshHourly(args);
+  }
+
+  /** Live stream of ingested readings, optionally filtered by sensor. */
+  @Subscription(() => SensorReading, {
+    filter: (
+      payload: { readingIngested: SensorReading },
+      variables: { sensorId?: string },
+    ) =>
+      !variables.sensorId ||
+      payload.readingIngested.sensorId === variables.sensorId,
+  })
+  readingIngested(
+    @Args('sensorId', { type: () => ID, nullable: true }) _sensorId?: string,
+  ) {
+    return this.pubSub.asyncIterableIterator(TOPICS.readingIngested);
   }
 }

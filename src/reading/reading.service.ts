@@ -1,8 +1,10 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import { PubSub } from 'graphql-subscriptions';
 import { assertInterval } from 'prisma-extension-timescaledb';
 import { AlertService } from '../alert/alert.service';
 import { PRISMA_CLIENT } from '../prisma/prisma-client';
 import type { ExtendedPrismaClient } from '../prisma/prisma-client';
+import { PUB_SUB, TOPICS } from '../pubsub/pubsub.module';
 import { IngestReadingInput } from './dto/ingest-reading.input';
 import {
   HourlyArgs,
@@ -18,6 +20,7 @@ export class ReadingService {
 
   constructor(
     @Inject(PRISMA_CLIENT) private readonly prisma: ExtendedPrismaClient,
+    @Inject(PUB_SUB) private readonly pubSub: PubSub,
     private readonly alertService: AlertService,
   ) {}
 
@@ -29,6 +32,10 @@ export class ReadingService {
         value: input.value,
         time: input.time ?? new Date(),
       },
+    });
+
+    await this.pubSub.publish(TOPICS.readingIngested, {
+      readingIngested: reading,
     });
 
     // Alert evaluation is best-effort: a failure here must not fail the ingest
