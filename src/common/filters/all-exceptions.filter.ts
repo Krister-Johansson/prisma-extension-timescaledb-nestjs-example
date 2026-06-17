@@ -8,6 +8,8 @@ import {
 } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
+import { GqlContextType } from '@nestjs/graphql';
+import { GraphQLError } from 'graphql';
 import { EnvironmentVariables, NodeEnv } from '../../config/env.validation';
 
 export interface ErrorResponseBody {
@@ -24,7 +26,8 @@ export interface ErrorResponseBody {
  * Registered first via APP_FILTER so more specific filters (e.g. the Prisma
  * filter) take precedence by virtue of their narrower `@Catch(...)` target.
  *
- * GraphQL-context awareness is layered on when the GraphQL module is added.
+ * Context-aware: writes an HTTP envelope for REST requests and returns a
+ * GraphQLError (with `extensions.code`) for GraphQL operations.
  */
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -35,12 +38,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     private readonly config: ConfigService<EnvironmentVariables, true>,
   ) {}
 
-  catch(exception: unknown, host: ArgumentsHost): void {
-    // `httpAdapter` is resolved here (not in the constructor) because it may not
-    // be available at construction time.
-    const { httpAdapter } = this.httpAdapterHost;
-    const ctx = host.switchToHttp();
-
+  catch(exception: unknown, host: ArgumentsHost): void | GraphQLError {
     const httpStatus =
       exception instanceof HttpException
         ? exception.getStatus()
@@ -55,13 +53,22 @@ export class AllExceptionsFilter implements ExceptionFilter {
       );
     }
 
+    const message = this.resolveMessage(exception, isServerError);
+
+    if (host.getType<GqlContextType>() === 'graphql') {
+      return toGraphQLError(httpStatus, message);
+    }
+
+    // `httpAdapter` is resolved here (not in the constructor) because it may not
+    // be available at construction time.
+    const { httpAdapter } = this.httpAdapterHost;
+    const ctx = host.switchToHttp();
     const responseBody: ErrorResponseBody = {
       statusCode: httpStatus,
       timestamp: new Date().toISOString(),
       path: httpAdapter.getRequestUrl(ctx.getRequest()) as string,
-      message: this.resolveMessage(exception, isServerError),
+      message,
     };
-
     httpAdapter.reply(ctx.getResponse(), responseBody, httpStatus);
   }
 
@@ -94,4 +101,28 @@ export class AllExceptionsFilter implements ExceptionFilter {
     }
     return String(exception);
   }
+}
+
+const STATUS_CODES: Record<number, string> = {
+  [HttpStatus.BAD_REQUEST]: 'BAD_REQUEST',
+  [HttpStatus.UNAUTHORIZED]: 'UNAUTHORIZED',
+  [HttpStatus.FORBIDDEN]: 'FORBIDDEN',
+  [HttpStatus.NOT_FOUND]: 'NOT_FOUND',
+  [HttpStatus.CONFLICT]: 'CONFLICT',
+};
+
+/** Shared by the Prisma filter too: build a GraphQLError with a stable code. */
+export function toGraphQLError(
+  status: number,
+  message: string | object,
+): GraphQLError {
+  const code =
+    STATUS_CODES[status] ?? (status >= 500 ? 'INTERNAL_SERVER_ERROR' : 'ERROR');
+  const text =
+    typeof message === 'string'
+      ? message
+      : ((message as { message?: unknown }).message?.toString() ?? 'Error');
+  return new GraphQLError(text, {
+    extensions: { code, statusCode: status, response: message },
+  });
 }
