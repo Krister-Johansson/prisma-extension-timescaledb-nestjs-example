@@ -30,12 +30,8 @@ import { TimescaleAdminModule } from './timescale-admin/timescale-admin.module';
       useFactory: (prisma: ExtendedPrismaClient) => ({
         autoSchemaFile: join(process.cwd(), 'src/schema.gql'),
         sortSchema: true,
-        // `req` is exposed so guards can read headers; fresh DataLoaders per
-        // request (they cache only within a request).
-        context: ({ req }: { req: unknown }) => ({
-          req,
-          loaders: createLoaders(prisma),
-        }),
+        // Fresh DataLoaders per request (they cache only within a request).
+        context: () => ({ loaders: createLoaders(prisma) }),
       }),
     }),
     SensorModule,
