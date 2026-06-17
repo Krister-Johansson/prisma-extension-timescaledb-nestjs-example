@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { PagePlaceholder } from '@/components/layout/page-placeholder';
+import { System } from '@/components/system/system';
 
 export const Route = createFileRoute('/system')({
   staticData: {
@@ -7,5 +7,5 @@ export const Route = createFileRoute('/system')({
     subtitle: 'Storage & ingestion metrics',
     crumb: 'System',
   },
-  component: () => <PagePlaceholder name="System" />,
+  component: System,
 });
