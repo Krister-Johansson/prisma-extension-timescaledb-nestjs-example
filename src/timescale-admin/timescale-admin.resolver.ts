@@ -1,4 +1,6 @@
+import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { AdminGuard } from './admin.guard';
 import {
   HypertableModel,
   HypertableStats,
@@ -6,6 +8,7 @@ import {
 import { TimescaleAdminService } from './timescale-admin.service';
 
 @Resolver()
+@UseGuards(AdminGuard)
 export class TimescaleAdminResolver {
   constructor(private readonly admin: TimescaleAdminService) {}
 

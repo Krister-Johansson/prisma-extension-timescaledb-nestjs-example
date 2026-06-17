@@ -155,7 +155,10 @@ query { alertEvents(sensorId: "temp-1") { kind value message } }
 ## Timescale admin
 
 A small admin surface wraps the extension's `$timescale` management API — hypertable
-introspection plus retention/compression/chunk operations:
+introspection plus retention/compression/chunk operations. These mutations are
+**destructive**, so they're protected by an `AdminGuard`: set `ADMIN_TOKEN` and send it
+as an `x-admin-token` header. If `ADMIN_TOKEN` is unset the admin API is open in
+development but denied in production.
 
 ```graphql
 query { hypertableStats(model: SensorReading) { totalBytes approximateRowCount totalChunks compressedChunks } }
