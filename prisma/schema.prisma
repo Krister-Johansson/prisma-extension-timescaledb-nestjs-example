@@ -1,0 +1,110 @@
+generator client {
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  runtime         = "nodejs"
+  moduleFormat    = "cjs"
+  previewFeatures = ["views"]
+}
+
+generator timescaledb {
+  provider = "prisma-extension-timescaledb"
+  output   = "../src/generated/timescale"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum SensorType {
+  TEMPERATURE
+  PRESSURE
+  HUMIDITY
+}
+
+/// Direction a threshold is breached. ABOVE = value climbs over `threshold`
+/// (e.g. temp > 35°C); BELOW = value drops under it (e.g. low pressure).
+enum AlertDirection {
+  ABOVE
+  BELOW
+}
+
+/// Hysteresis state of a sensor's alert. Persisted so the state machine survives
+/// restarts.
+enum AlertState {
+  OK
+  ALERTING
+}
+
+enum AlertEventKind {
+  RAISED
+  CLEARED
+}
+
+model Sensor {
+  id        String         @id @default(uuid())
+  name      String
+  type      SensorType
+  unit      String
+  createdAt DateTime       @default(now())
+  readings  SensorReading[]
+  rule      AlertRule?
+  events    AlertEvent[]
+}
+
+/// Raw time-series readings. This is the TimescaleDB hypertable — the raw
+/// (transactional) storage layer. Compressed after 7 days and dropped after 90.
+/// @timescale.hypertable(column: "time", chunkInterval: "1 day")
+/// @timescale.compression(after: "7 days", segmentBy: "sensorId", orderBy: "time DESC")
+/// @timescale.retention(dropAfter: "90 days")
+model SensorReading {
+  time     DateTime
+  sensorId String
+  value    Float
+  sensor   Sensor   @relation(fields: [sensorId], references: [id], onDelete: Cascade)
+
+  // The composite primary key already indexes (sensorId, time).
+  @@id([sensorId, time])
+}
+
+/// Hourly rollup continuous aggregate — the timeseries "export" layer.
+/// @timescale.continuousAggregate(source: "SensorReading", bucket: "1 hour", timeColumn: "time", refresh: { startOffset: "7 days", endOffset: "1 hour", scheduleInterval: "1 hour" })
+view SensorReadingHourly {
+  bucket   DateTime /// @timescale.bucket
+  sensorId String   /// @timescale.groupBy
+  avgValue Float    /// @timescale.aggregate(fn: "avg", column: "value")
+  minValue Float    /// @timescale.aggregate(fn: "min", column: "value")
+  maxValue Float    /// @timescale.aggregate(fn: "max", column: "value")
+  samples  BigInt   /// @timescale.aggregate(fn: "count", column: "value")
+
+  @@unique([sensorId, bucket])
+}
+
+/// Per-sensor alert rule with a hysteresis reset band: fire when `threshold` is
+/// crossed, clear only once the value returns past `clearThreshold`. The gap
+/// between them absorbs oscillation around the threshold (no alert flapping).
+model AlertRule {
+  id             String         @id @default(uuid())
+  sensorId       String         @unique
+  sensor         Sensor         @relation(fields: [sensorId], references: [id], onDelete: Cascade)
+  direction      AlertDirection @default(ABOVE)
+  threshold      Float
+  clearThreshold Float
+  severity       String         @default("WARNING")
+  enabled        Boolean        @default(true)
+  state          AlertState     @default(OK)
+  lastFiredAt    DateTime?
+  updatedAt      DateTime       @updatedAt
+}
+
+/// Audit trail of raised/cleared alerts.
+model AlertEvent {
+  id        String         @id @default(uuid())
+  sensorId  String
+  sensor    Sensor         @relation(fields: [sensorId], references: [id], onDelete: Cascade)
+  kind      AlertEventKind
+  value     Float
+  message   String
+  createdAt DateTime       @default(now())
+
+  @@index([sensorId, createdAt])
+}
