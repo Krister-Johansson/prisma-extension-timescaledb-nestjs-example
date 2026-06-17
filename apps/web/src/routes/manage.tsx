@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { PagePlaceholder } from '@/components/layout/page-placeholder';
+import { Manage } from '@/components/manage/manage';
 
 export const Route = createFileRoute('/manage')({
   staticData: {
@@ -7,5 +7,5 @@ export const Route = createFileRoute('/manage')({
     subtitle: 'Create sensors and configure alert rules',
     crumb: 'Manage sensors',
   },
-  component: () => <PagePlaceholder name="Manage sensors" />,
+  component: Manage,
 });
