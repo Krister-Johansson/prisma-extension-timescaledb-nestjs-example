@@ -15,14 +15,15 @@ transactionally through Prisma into a TimescaleDB **hypertable**, rolled up by
 
 npm workspaces:
 
-| Path       | What                                                           |
-| ---------- | -------------------------------------------------------------- |
+| Path       | What                                                              |
+| ---------- | ----------------------------------------------------------------- |
 | `apps/api` | NestJS + GraphQL backend (the `prisma-extension-timescaledb` demo) |
-| `apps/web` | Frontend demo app (TanStack Start) — _coming next_             |
+| `apps/web` | Frontend demo (TanStack Router + Vite SPA, Tailwind v4) — scaffold; UI brief in `apps/web/DESIGN.md` |
 
 Run `npm install` once at the root; infra (`docker-compose.yml`) lives at the root.
-Root scripts delegate to the API workspace (`api:dev`, `db:deploy`, `db:seed`, …); see
-each app's `package.json` for its full script set.
+Root scripts delegate to the workspaces (`api:dev`, `web:dev`, `db:deploy`, `db:seed`,
+…); see each app's `package.json` for its full script set. The frontend dev server runs
+on **port 3001** (the API is on 3000).
 
 ## Stack
 
