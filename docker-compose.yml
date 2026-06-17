@@ -1,0 +1,30 @@
+services:
+  timescaledb:
+    # TimescaleDB-bundled image, NOT vanilla postgres. `CREATE EXTENSION
+    # timescaledb` (run by the first Prisma migration) only works because the
+    # extension binaries ship inside this image. Pinned for reproducibility —
+    # bump deliberately. Use a -pg16 tag for PG16, or the timescale/timescaledb-ha
+    # image if you later need timescaledb_toolkit hyperfunctions.
+    image: timescale/timescaledb:2.27.2-pg17
+    container_name: timescaledb_nestjs_example
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: app
+    ports:
+      # Host port 5433 (not 5432) so this example can run alongside another
+      # local Postgres/TimescaleDB. Keep this in sync with *_URL in .env.
+      - '5433:5432'
+    volumes:
+      - timescale_data:/var/lib/postgresql/data
+      # Runs once on first init: creates the empty shadow database Prisma needs.
+      - ./docker/init-shadow-db.sql:/docker-entrypoint-initdb.d/01-init-shadow-db.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d app']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  timescale_data:
