@@ -14,8 +14,8 @@ transactionally through Prisma into a TimescaleDB **hypertable**, rolled up by
 ## Stack
 
 > _Currently installed: NestJS, Prisma 7 + TimescaleDB extension, code-first GraphQL
-> (Apollo) with DataLoader, Docker Compose DB. Readings ingestion / `timeBucket` and
-> the alerts engine arrive in later PRs (see the roadmap)._
+> (Apollo) with DataLoader, readings ingestion + `timeBucket`/continuous-aggregate
+> queries, Docker Compose DB. The alerts engine arrives in a later PR (see the roadmap)._
 
 - NestJS 11 (code-first GraphQL via `@nestjs/apollo`)
 - Prisma 7 with the `@prisma/adapter-pg` driver adapter
@@ -110,6 +110,29 @@ query {
 }
 ```
 
+### Time-series queries
+
+Raw readings are written to the hypertable, rolled up on the fly with the extension's
+typed `timeBucket(...)`, and exported via the continuous aggregate:
+
+```graphql
+mutation { ingestReading(input: { sensorId: "temp-1", value: 36.6 }) { time value } }
+
+# Ad-hoc rollup over raw readings (timeBucket)
+query {
+  sensorReadingsBucketed(
+    sensorId: "temp-1"
+    bucket: "1 hour"
+    start: "2026-06-17T04:00:00Z"
+    end: "2026-06-17T16:00:00Z"
+  ) { bucket avg min max count }
+}
+
+# Continuous-aggregate export (refresh, then read)
+mutation { refreshSensorReadingHourly }
+query { sensorReadingsHourly(sensorId: "temp-1") { bucket avgValue minValue maxValue samples } }
+```
+
 ## Testing
 
 ```bash
@@ -123,7 +146,7 @@ npm run test:e2e
 2. ✅ Docker Compose TimescaleDB + shadow database
 3. ✅ Prisma 7 + timescale extension + schema (hypertable, continuous aggregates, alerts) + Prisma exception filter
 4. ✅ GraphQL + Sensor module + DataLoader + GraphQL-aware exception filter
-5. Readings ingest + `timeBucket` queries + continuous-aggregate export
+5. ✅ Readings ingest + `timeBucket` queries + continuous-aggregate export
 6. Alerts with hysteresis + unit tests
 7. Timescale admin module (`$timescale` introspection & policies)
 8. End-to-end tests

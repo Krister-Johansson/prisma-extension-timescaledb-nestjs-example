@@ -13,6 +13,7 @@ import { createLoaders } from './dataloader/loaders';
 import { ExtendedPrismaClient, PRISMA_CLIENT } from './prisma/prisma-client';
 import { PrismaModule } from './prisma/prisma.module';
 import { SensorModule } from './sensor/sensor.module';
+import { ReadingModule } from './reading/reading.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { SensorModule } from './sensor/sensor.module';
       }),
     }),
     SensorModule,
+    ReadingModule,
   ],
   controllers: [AppController],
   providers: [
