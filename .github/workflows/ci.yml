@@ -38,6 +38,12 @@ jobs:
       - name: Unit tests
         run: npm test --workspace @timescale-demo/api
 
+      - name: Web typecheck
+        run: npm run typecheck --workspace @timescale-demo/web
+
+      - name: Web build
+        run: npm run build --workspace @timescale-demo/web
+
   e2e:
     name: End-to-end (TimescaleDB)
     runs-on: ubuntu-latest

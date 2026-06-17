@@ -9,6 +9,12 @@ apps/api/src/generated
 # Code-first GraphQL schema (regenerated at app boot)
 apps/api/src/schema.gql
 
+# TanStack Start (generated route tree + build/SSR output)
+apps/web/src/routeTree.gen.ts
+.output
+.nitro
+.tanstack
+
 # Logs
 logs
 *.log
