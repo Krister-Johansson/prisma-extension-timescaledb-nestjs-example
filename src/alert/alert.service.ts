@@ -47,10 +47,12 @@ export class AlertService {
   }
 
   events(sensorId?: string, take = 50) {
+    // Bound the scan so a single query can't pull unbounded history.
+    const safeTake = Math.min(Math.max(take, 1), 200);
     return this.prisma.alertEvent.findMany({
       where: { sensorId },
       orderBy: { createdAt: 'desc' },
-      take,
+      take: safeTake,
     });
   }
 
@@ -75,19 +77,29 @@ export class AlertService {
     const raised = decision.transition === 'RAISED';
     const message = `Sensor ${sensorId} alert ${raised ? 'RAISED' : 'CLEARED'}: value ${value} (${rule.direction} threshold ${rule.threshold}, reset ${rule.clearThreshold})`;
 
-    await this.prisma.$transaction([
-      this.prisma.alertRule.update({
-        where: { sensorId },
+    // Compare-and-swap: only flip the rule (and record the event) if the state is
+    // still what we evaluated against. Concurrent ingests for the same sensor then
+    // can't both fire the same transition.
+    const committed = await this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.alertRule.updateMany({
+        where: { sensorId, state: rule.state },
         data: {
           state: decision.nextState,
           ...(raised ? { lastFiredAt: new Date() } : {}),
         },
-      }),
-      this.prisma.alertEvent.create({
+      });
+      if (count === 0) {
+        return false; // another ingest already transitioned this rule
+      }
+      await tx.alertEvent.create({
         data: { sensorId, kind: decision.transition, value, message },
-      }),
-    ]);
+      });
+      return true;
+    });
 
+    if (!committed) {
+      return;
+    }
     if (raised) {
       this.logger.warn(message);
     } else {
