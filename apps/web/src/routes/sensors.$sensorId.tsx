@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { PagePlaceholder } from '@/components/layout/page-placeholder';
+import { SensorDetail } from '@/components/sensor-detail/sensor-detail';
+import { sensorById } from '@/data/sensors';
 
 export const Route = createFileRoute('/sensors/$sensorId')({
   staticData: {
@@ -7,5 +8,23 @@ export const Route = createFileRoute('/sensors/$sensorId')({
     subtitle: 'Time-series, hourly aggregates & alerts',
     crumb: 'Sensor detail',
   },
-  component: () => <PagePlaceholder name="Sensor detail" />,
+  component: SensorDetailRoute,
 });
+
+function SensorDetailRoute() {
+  const { sensorId } = Route.useParams();
+  const sensor = sensorById(sensorId);
+
+  if (!sensor) {
+    return (
+      <div className="flex min-h-90 flex-col items-center justify-center rounded-[14px] border border-dashed border-border bg-card text-center">
+        <div className="text-sm font-semibold">Sensor not found</div>
+        <div className="mt-1 text-[12.5px] text-muted-foreground">
+          No sensor matches “{sensorId}”.
+        </div>
+      </div>
+    );
+  }
+
+  return <SensorDetail sensor={sensor} />;
+}
