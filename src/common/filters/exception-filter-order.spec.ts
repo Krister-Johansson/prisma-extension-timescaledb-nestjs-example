@@ -1,3 +1,4 @@
+import type { Server } from 'node:http';
 import { Controller, Get, Provider } from '@nestjs/common';
 import { APP_FILTER } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
@@ -46,16 +47,19 @@ async function boot(filters: Provider[]) {
   return app;
 }
 
+const httpServer = (app: Awaited<ReturnType<typeof boot>>): Server =>
+  app.getHttpServer() as Server;
+
 describe('global exception filter ordering', () => {
   it('routes a Prisma P2002 error to the Prisma filter (409)', async () => {
     const app = await boot(appModuleFilterOrder);
-    await request(app.getHttpServer()).get('/prisma').expect(409);
+    await request(httpServer(app)).get('/prisma').expect(409);
     await app.close();
   });
 
   it('routes a generic error to the catch-all filter (500)', async () => {
     const app = await boot(appModuleFilterOrder);
-    await request(app.getHttpServer()).get('/generic').expect(500);
+    await request(httpServer(app)).get('/generic').expect(500);
     await app.close();
   });
 });
