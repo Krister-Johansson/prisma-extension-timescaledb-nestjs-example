@@ -15,13 +15,14 @@ this file is **how** we build it. These are binding conventions, not suggestions
 ## shadcn — always via the CLI
 
 Install every shadcn component with its own CLI; never hand-author or copy a shadcn
-component file.
+component file. Add each primitive as a feature needs it (one `add` per missing
+primitive):
 
 ```bash
-npx shadcn@latest add button table dialog alert-dialog skeleton badge card tabs select form sonner
+npx shadcn@latest add button
+npx shadcn@latest add table
+# …and so on for dialog, alert-dialog, skeleton, badge, card, tabs, select, form, sonner
 ```
-
-Add components as features need them (one `add` per missing primitive).
 
 ## Component architecture — domain-driven & small
 
@@ -29,7 +30,7 @@ Components are **domain-driven** and split into the smallest meaningful pieces. 
 by `domain-thing-part`, nesting from the container down to leaves. Example for a sensor
 table:
 
-```
+```text
 table-sensor                      # the table container (wires TanStack Table + shadcn)
 table-sensor-skeleton             # loading state
 table-sensor-empty                # empty state
