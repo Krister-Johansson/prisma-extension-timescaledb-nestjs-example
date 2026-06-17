@@ -14,6 +14,7 @@ import { ExtendedPrismaClient, PRISMA_CLIENT } from './prisma/prisma-client';
 import { PrismaModule } from './prisma/prisma.module';
 import { SensorModule } from './sensor/sensor.module';
 import { ReadingModule } from './reading/reading.module';
+import { AlertModule } from './alert/alert.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { ReadingModule } from './reading/reading.module';
     }),
     SensorModule,
     ReadingModule,
+    AlertModule,
   ],
   controllers: [AppController],
   providers: [

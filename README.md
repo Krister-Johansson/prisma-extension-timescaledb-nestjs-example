@@ -15,7 +15,7 @@ transactionally through Prisma into a TimescaleDB **hypertable**, rolled up by
 
 > _Currently installed: NestJS, Prisma 7 + TimescaleDB extension, code-first GraphQL
 > (Apollo) with DataLoader, readings ingestion + `timeBucket`/continuous-aggregate
-> queries, Docker Compose DB. The alerts engine arrives in a later PR (see the roadmap)._
+> queries, a hysteresis-based alert engine, Docker Compose DB._
 
 - NestJS 11 (code-first GraphQL via `@nestjs/apollo`)
 - Prisma 7 with the `@prisma/adapter-pg` driver adapter
@@ -133,6 +133,25 @@ mutation { refreshSensorReadingHourly }
 query { sensorReadingsHourly(sensorId: "temp-1") { bucket avgValue minValue maxValue samples } }
 ```
 
+## Alerts (hysteresis)
+
+Each sensor can have one `AlertRule` evaluated **on every ingest**. A rule fires when the
+value crosses `threshold` and only clears once it returns past a separate `clearThreshold`
+— the gap is a **deadband** that prevents flapping when a value oscillates around the
+trigger point. `RAISED`/`CLEARED` transitions are logged (`RAISED` at `warn`) and persisted
+as `AlertEvent`s. The state machine (`src/alert/alert.hysteresis.ts`) is a pure function
+with unit tests; the invariant is also enforced by a DB `CHECK` constraint.
+
+```graphql
+mutation {
+  setAlertRule(input: { sensorId: "temp-1", direction: ABOVE, threshold: 35, clearThreshold: 33 }) {
+    state
+  }
+}
+# ingest 34.9, 35.2, 34.9, 35.1, 34.9, 32 → exactly one RAISED + one CLEARED
+query { alertEvents(sensorId: "temp-1") { kind value message } }
+```
+
 ## Testing
 
 ```bash
@@ -147,7 +166,7 @@ npm run test:e2e
 3. ✅ Prisma 7 + timescale extension + schema (hypertable, continuous aggregates, alerts) + Prisma exception filter
 4. ✅ GraphQL + Sensor module + DataLoader + GraphQL-aware exception filter
 5. ✅ Readings ingest + `timeBucket` queries + continuous-aggregate export
-6. Alerts with hysteresis + unit tests
+6. ✅ Alerts with hysteresis + unit tests
 7. Timescale admin module (`$timescale` introspection & policies)
 8. End-to-end tests
 
