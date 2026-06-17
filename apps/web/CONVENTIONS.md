@@ -73,6 +73,33 @@ Every list/table ships its skeleton and empty siblings alongside it.
   rendered through shadcn's table primitives. The `table-<domain>` component wires the
   two together; rows/cells/actions are their own small components per the naming above.
 
+## Routing — the `routes` registry
+
+Never hard-code path strings. All paths come from the central registry in
+`src/lib/routes.ts`, where each leaf is a pure function returning an absolute path:
+
+```ts
+routes.home(); // "/"
+routes.sensors.detail('t1'); // "/sensors/t1"
+routes.aggregates(); // "/aggregates"
+```
+
+Callers pass only the params they need, so moving/duplicating a link means passing
+an `id` — not threading path strings. Use the registry everywhere a path is needed:
+
+```tsx
+import { AppLink } from '#/components/app-link';
+import { routes } from '#/lib/routes';
+
+<AppLink to={routes.sensors.detail(id)}>Open</AppLink>;
+
+const navigate = useNavigate();
+navigate({ to: routes.aggregates() });
+```
+
+`AppLink` (`src/components/app-link.tsx`) wraps TanStack Router's `<Link>` and takes a
+registry-built path; it's the one place the TanStack literal-path typing is bridged.
+
 ## Data layer (GraphQL Codegen)
 
 - Write operations in `*.gql` files colocated with the feature.
