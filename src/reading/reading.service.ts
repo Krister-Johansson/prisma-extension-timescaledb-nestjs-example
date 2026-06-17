@@ -1,5 +1,6 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { assertInterval } from 'prisma-extension-timescaledb';
+import { AlertService } from '../alert/alert.service';
 import { PRISMA_CLIENT } from '../prisma/prisma-client';
 import type { ExtendedPrismaClient } from '../prisma/prisma-client';
 import { IngestReadingInput } from './dto/ingest-reading.input';
@@ -13,19 +14,35 @@ import { SensorReadingHourly } from './models/sensor-reading-hourly.model';
 
 @Injectable()
 export class ReadingService {
+  private readonly logger = new Logger(ReadingService.name);
+
   constructor(
     @Inject(PRISMA_CLIENT) private readonly prisma: ExtendedPrismaClient,
+    private readonly alertService: AlertService,
   ) {}
 
-  /** Write a raw reading into the hypertable. */
-  ingest(input: IngestReadingInput) {
-    return this.prisma.sensorReading.create({
+  /** Write a raw reading into the hypertable, then evaluate the sensor's alert. */
+  async ingest(input: IngestReadingInput) {
+    const reading = await this.prisma.sensorReading.create({
       data: {
         sensorId: input.sensorId,
         value: input.value,
         time: input.time ?? new Date(),
       },
     });
+
+    // Alert evaluation is best-effort: a failure here must not fail the ingest
+    // (the reading is already persisted, and a client retry would duplicate it).
+    try {
+      await this.alertService.evaluateReading(input.sensorId, input.value);
+    } catch (error) {
+      this.logger.error(
+        `Alert evaluation failed for sensor ${input.sensorId}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
+
+    return reading;
   }
 
   /** Ad-hoc time_bucket rollup over the raw hypertable. */
