@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { PagePlaceholder } from '@/components/layout/page-placeholder';
+import { Overview } from '@/components/overview/overview';
 
 export const Route = createFileRoute('/')({
   staticData: {
@@ -7,5 +7,5 @@ export const Route = createFileRoute('/')({
     subtitle: 'Real-time status across all sensors',
     crumb: 'Overview',
   },
-  component: () => <PagePlaceholder name="Overview" />,
+  component: Overview,
 });

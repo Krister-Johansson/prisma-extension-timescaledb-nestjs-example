@@ -1,0 +1,24 @@
+export type SensorType = 'TEMPERATURE' | 'PRESSURE' | 'HUMIDITY';
+export type AlertDirection = 'ABOVE' | 'BELOW';
+
+/** Derived status shown on badges across the app. */
+export type SensorStatus = 'OK' | 'ALERTING' | 'WARNING' | 'PAUSED' | 'NO_RULES';
+
+export interface AlertRule {
+  direction: AlertDirection;
+  threshold: number;
+  clearThreshold: number;
+}
+
+export interface Sensor {
+  id: string;
+  name: string;
+  type: SensorType;
+  unit: string;
+  latest: number;
+  status: SensorStatus;
+  enabled: boolean;
+  rule?: AlertRule;
+  /** Last 24h of readings (oldest → newest) for sparklines/charts. */
+  series: number[];
+}
