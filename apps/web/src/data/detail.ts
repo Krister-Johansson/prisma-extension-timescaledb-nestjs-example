@@ -37,6 +37,13 @@ function hhmm(ts: number): string {
 
 const round = (n: number) => Math.round(n * 10) / 10;
 
+/** Relative label vs the fixed reference time (e.g. "25m ago", "3h ago"). */
+export function agoLabel(ts: number): string {
+  const mins = Math.max(0, Math.round((NOW - ts) / 60_000));
+  if (mins < 60) return `${mins}m ago`;
+  return `${Math.round(mins / 60)}h ago`;
+}
+
 /** Raw readings (oldest → newest) reconstructed from the sensor's series. */
 export function readings(sensor: Sensor): Reading[] {
   const n = sensor.series.length;
@@ -82,31 +89,47 @@ export function recentReadings(sensor: Sensor, take = 12) {
 }
 
 /**
- * Synthetic alert history: ALERTING/WARNING sensors show a RAISED (+ CLEARED)
- * event; calm sensors return an empty history (drives the empty state).
+ * Synthetic alert history derived from real threshold crossings: RAISED at the
+ * first reading that crosses the rule's threshold, and (for recovered WARNING
+ * sensors) CLEARED at the first reading back inside the reset band. Calm sensors
+ * return an empty history (drives the empty state).
  */
 export function alertHistory(sensor: Sensor): AlertEvent[] {
-  if (
-    sensor.status !== 'ALERTING' &&
-    sensor.status !== 'WARNING'
-  ) {
-    return [];
-  }
+  if (sensor.status !== 'ALERTING' && sensor.status !== 'WARNING') return [];
+  const rule = sensor.rule;
   const rs = readings(sensor);
-  if (rs.length === 0) return [];
-  const raised = rs[Math.floor(rs.length * 0.55)];
+  if (!rule || rs.length === 0) return [];
+
+  const above = rule.direction === 'ABOVE';
+  const crossed = (v: number) =>
+    above ? v >= rule.threshold : v <= rule.threshold;
+  const recovered = (v: number) =>
+    above ? v <= rule.clearThreshold : v >= rule.clearThreshold;
+
+  const raisedIdx = rs.findIndex((r) => crossed(r.value));
+  if (raisedIdx === -1) return [];
+  const raised = rs[raisedIdx];
   const events: AlertEvent[] = [
-    { id: 'a1', kind: 'RAISED', ts: raised.ts, time: raised.time, value: raised.value },
+    {
+      id: 'a1',
+      kind: 'RAISED',
+      ts: raised.ts,
+      time: raised.time,
+      value: raised.value,
+    },
   ];
+
   if (sensor.status === 'WARNING') {
-    const cleared = rs[Math.floor(rs.length * 0.75)];
-    events.push({
-      id: 'a2',
-      kind: 'CLEARED',
-      ts: cleared.ts,
-      time: cleared.time,
-      value: cleared.value,
-    });
+    const cleared = rs.slice(raisedIdx + 1).find((r) => recovered(r.value));
+    if (cleared) {
+      events.push({
+        id: 'a2',
+        kind: 'CLEARED',
+        ts: cleared.ts,
+        time: cleared.time,
+        value: cleared.value,
+      });
+    }
   }
   return events.reverse();
 }
