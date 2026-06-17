@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/table';
 import { ruleSummary } from '@/data/sensors';
 import type { Sensor } from '@/data/types';
-import { useGoTo } from '@/lib/navigation';
+import { useRowLinkProps } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
 import { ManageRowActions } from './manage-row-actions';
 
@@ -68,7 +68,7 @@ const columns = [
 ];
 
 export function TableManage({ sensors }: { sensors: Sensor[] }) {
-  const goTo = useGoTo();
+  const rowLink = useRowLinkProps();
   const table = useReactTable({
     data: sensors,
     columns,
@@ -99,8 +99,8 @@ export function TableManage({ sensors }: { sensors: Sensor[] }) {
           {table.getRowModel().rows.map((row) => (
             <TableRow
               key={row.id}
-              onClick={() => goTo(routes.sensors.detail(row.original.id))}
-              className="cursor-pointer"
+              {...rowLink(routes.sensors.detail(row.original.id))}
+              className="cursor-pointer focus-visible:outline-2 focus-visible:outline-ring"
             >
               {row.getVisibleCells().map((cell) => (
                 <TableCell key={cell.id} className="py-3.5">
