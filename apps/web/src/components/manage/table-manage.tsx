@@ -100,7 +100,7 @@ export function TableManage({ sensors }: { sensors: Sensor[] }) {
             <TableRow
               key={row.id}
               {...rowLink(routes.sensors.detail(row.original.id))}
-              className="cursor-pointer focus-visible:outline-2 focus-visible:outline-ring"
+              className="cursor-pointer focus-visible:outline focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-ring"
             >
               {row.getVisibleCells().map((cell) => (
                 <TableCell key={cell.id} className="py-3.5">
