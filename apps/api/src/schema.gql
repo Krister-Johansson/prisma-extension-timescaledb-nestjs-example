@@ -1,0 +1,160 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+enum AlertDirection {
+  ABOVE
+  BELOW
+}
+
+type AlertEvent {
+  createdAt: DateTime!
+  id: ID!
+  kind: AlertEventKind!
+  message: String!
+  sensorId: ID!
+  value: Float!
+}
+
+enum AlertEventKind {
+  CLEARED
+  RAISED
+}
+
+type AlertRule {
+  clearThreshold: Float!
+  direction: AlertDirection!
+  enabled: Boolean!
+  id: ID!
+  lastFiredAt: DateTime
+  sensorId: ID!
+  severity: String!
+  state: AlertState!
+  threshold: Float!
+  updatedAt: DateTime!
+}
+
+enum AlertState {
+  ALERTING
+  OK
+}
+
+input CreateSensorInput {
+  name: String!
+  type: SensorType!
+
+  """Unit of measure, e.g. °C, hPa, %."""
+  unit: String!
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+enum HypertableModel {
+  SensorReading
+}
+
+type HypertableStats {
+  afterCompressionBytes: Float
+  approximateRowCount: Float!
+  beforeCompressionBytes: Float
+  compressedChunks: Float!
+  indexBytes: Float!
+  tableBytes: Float!
+  toastBytes: Float!
+  totalBytes: Float!
+  totalChunks: Float!
+}
+
+input IngestReadingInput {
+  sensorId: ID!
+
+  """Defaults to now() if omitted."""
+  time: DateTime
+  value: Float!
+}
+
+type Mutation {
+  createSensor(input: CreateSensorInput!): Sensor!
+  ingestReading(input: IngestReadingInput!): SensorReading!
+  refreshSensorReadingHourly(end: DateTime, start: DateTime): Boolean!
+  setAlertRule(input: SetAlertRuleInput!): AlertRule!
+}
+
+type Query {
+  alertEvents(sensorId: ID, take: Int): [AlertEvent!]!
+  alertRule(sensorId: ID!): AlertRule
+  hypertableStats(model: HypertableModel!): HypertableStats!
+  sensor(id: ID!): Sensor!
+  sensorReadingsBucketed(
+    """time_bucket interval, e.g. "1 hour"."""
+    bucket: String! = "1 hour"
+    end: DateTime!
+    sensorId: ID!
+    start: DateTime!
+  ): [ReadingBucket!]!
+  sensorReadingsHourly(end: DateTime, sensorId: ID, start: DateTime): [SensorReadingHourly!]!
+  sensors(where: SensorWhereInput): [Sensor!]!
+}
+
+type ReadingBucket {
+  avg: Float
+  bucket: DateTime!
+  count: Int!
+  max: Float
+  min: Float
+}
+
+type Sensor {
+  createdAt: DateTime!
+  id: ID!
+  name: String!
+  readings: [SensorReading!]!
+  type: SensorType!
+  unit: String!
+}
+
+type SensorReading {
+  sensorId: ID!
+  time: DateTime!
+  value: Float!
+}
+
+type SensorReadingHourly {
+  avgValue: Float!
+  bucket: DateTime!
+  maxValue: Float!
+  minValue: Float!
+  samples: Int!
+  sensorId: ID!
+}
+
+"""Kind of physical quantity a sensor measures."""
+enum SensorType {
+  HUMIDITY
+  PRESSURE
+  TEMPERATURE
+}
+
+input SensorWhereInput {
+  """Case-insensitive substring match on name."""
+  nameContains: String
+  type: SensorType
+}
+
+input SetAlertRuleInput {
+  """Hysteresis reset band edge (must be on the resetting side)."""
+  clearThreshold: Float!
+  direction: AlertDirection! = ABOVE
+  enabled: Boolean! = true
+  sensorId: ID!
+  severity: String! = "WARNING"
+  threshold: Float!
+}
+
+type Subscription {
+  alertFired(sensorId: ID): AlertEvent!
+  readingIngested(sensorId: ID): SensorReading!
+}

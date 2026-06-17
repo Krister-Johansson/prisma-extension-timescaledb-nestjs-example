@@ -6,11 +6,12 @@ node_modules
 # Prisma generated client + timescale registry (regenerated via `prisma generate`)
 apps/api/src/generated
 
-# Code-first GraphQL schema (regenerated at app boot)
-apps/api/src/schema.gql
-
 # TanStack Router (generated route tree)
 apps/web/src/routeTree.gen.ts
+
+# GraphQL Codegen output (generated from apps/api/src/schema.gql via *.gql docs)
+apps/web/src/gql/
+apps/web/src/**/*.generated.ts
 
 # Puppeteer visual-QA output
 apps/web/.screenshots
