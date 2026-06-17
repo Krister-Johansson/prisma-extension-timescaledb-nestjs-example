@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { PagePlaceholder } from '@/components/layout/page-placeholder';
+import { Alerts } from '@/components/alerts/alerts';
 
 export const Route = createFileRoute('/alerts')({
   staticData: {
@@ -7,5 +7,5 @@ export const Route = createFileRoute('/alerts')({
     subtitle: 'Active alerts and 24h event log',
     crumb: 'Alerts',
   },
-  component: () => <PagePlaceholder name="Alerts" />,
+  component: Alerts,
 });
