@@ -15,6 +15,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { SensorModule } from './sensor/sensor.module';
 import { ReadingModule } from './reading/reading.module';
 import { AlertModule } from './alert/alert.module';
+import { TimescaleAdminModule } from './timescale-admin/timescale-admin.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { AlertModule } from './alert/alert.module';
     SensorModule,
     ReadingModule,
     AlertModule,
+    TimescaleAdminModule,
   ],
   controllers: [AppController],
   providers: [
