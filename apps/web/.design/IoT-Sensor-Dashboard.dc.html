@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;}
+  :root{
+    --bg:hsl(240 6% 97%);--card:hsl(0 0% 100%);--card-2:hsl(240 5% 96.5%);
+    --border:hsl(240 6% 89%);--fg:hsl(240 10% 9%);--muted:hsl(240 4% 44%);--muted-2:hsl(240 5% 64%);
+    --ok:hsl(150 62% 36%);--ok-bg:hsl(150 55% 94%);
+    --alert:hsl(0 78% 53%);--alert-bg:hsl(0 80% 96.5%);
+    --warn:hsl(36 92% 44%);--warn-bg:hsl(40 92% 94%);
+    --sidebar:hsl(240 8% 99%);--shadow:0 1px 2px rgba(20,20,30,.05),0 1px 3px rgba(20,20,30,.04);
+    --grid:hsl(240 6% 92%);
+  }
+  [data-theme="dark"]{
+    --bg:hsl(240 11% 5%);--card:hsl(240 8% 8%);--card-2:hsl(240 8% 11%);
+    --border:hsl(240 5% 16%);--fg:hsl(0 0% 95%);--muted:hsl(240 5% 60%);--muted-2:hsl(240 5% 42%);
+    --ok:hsl(150 56% 50%);--ok-bg:hsl(150 40% 12%);
+    --alert:hsl(0 76% 62%);--alert-bg:hsl(0 45% 14%);
+    --warn:hsl(38 90% 56%);--warn-bg:hsl(38 55% 13%);
+    --sidebar:hsl(240 10% 6%);--shadow:0 1px 2px rgba(0,0,0,.35);
+    --grid:hsl(240 5% 14%);
+  }
+  @keyframes draw{to{stroke-dashoffset:0;}}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+  @keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+  ::-webkit-scrollbar{width:10px;height:10px;}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:8px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+</style>
+</helmet>
+<div data-theme="{{ theme }}" style="--primary:{{ primary }};font-family:'IBM Plex Sans',system-ui,sans-serif;display:flex;min-height:100vh;width:100%;background:var(--bg);color:var(--fg);-webkit-font-smoothing:antialiased;">
+
+  <aside style="width:248px;flex:none;background:var(--sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;">
+    <div style="display:flex;align-items:center;gap:11px;padding:22px 20px 20px;">
+      <div style="width:34px;height:34px;border-radius:9px;background:var(--primary);display:flex;align-items:center;justify-content:center;flex:none;box-shadow:0 2px 8px color-mix(in srgb,var(--primary) 40%,transparent);">
+        <div style="width:13px;height:13px;border-radius:3px;background:#fff;"></div>
+      </div>
+      <div style="line-height:1.15;">
+        <div style="font-weight:700;font-size:15px;letter-spacing:-.01em;">SENTINEL</div>
+        <div style="font-size:11px;color:var(--muted);letter-spacing:.02em;">IoT Monitoring</div>
+      </div>
+    </div>
+
+    <div style="font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.12em;color:var(--muted-2);padding:8px 22px 8px;">NAVIGATION</div>
+    <nav style="display:flex;flex-direction:column;gap:3px;padding:0 12px;">
+      <sc-for list="{{ nav }}" as="n" hint-placeholder-count="3">
+        <button onClick="{{ n.go }}" style="{{ n.style }}">
+          <sc-if value="{{ n.bar }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;left:0;top:9px;bottom:9px;width:3px;border-radius:0 3px 3px 0;background:var(--primary);"></span></sc-if>
+          <span style="{{ n.iconStyle }}">{{ n.icon }}</span>
+          <span>{{ n.label }}</span>
+          <sc-if value="{{ n.badge }}" hint-placeholder-val="{{ false }}"><span style="{{ n.badgeStyle }}">{{ n.badge }}</span></sc-if>
+        </button>
+      </sc-for>
+    </nav>
+
+    <div style="margin-top:auto;padding:16px 16px 18px;">
+      <button onClick="{{ goAlerts }}" style="width:100%;text-align:left;cursor:pointer;color:var(--fg);font-family:'IBM Plex Sans',sans-serif;border:1px solid var(--border);border-radius:11px;padding:13px 14px;background:var(--card);display:flex;align-items:center;gap:11px;transition:border-color .15s;" style-hover="border-color:var(--primary);">
+        <span style="{{ alertDotStyle }}"></span>
+        <div style="line-height:1.25;">
+          <div style="font-weight:600;font-size:12.5px;white-space:nowrap;">{{ alertText }}</div>
+          <div style="font-size:10.5px;color:var(--muted);font-family:'IBM Plex Mono',monospace;">updated {{ lastUpdated }}</div>
+        </div>
+      </button>
+    </div>
+  </aside>
+
+  <main style="flex:1;min-width:0;display:flex;flex-direction:column;">
+    <header style="position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:17px 30px;border-bottom:1px solid var(--border);background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(10px);">
+      <div style="line-height:1.3;min-width:0;">
+        <div style="font-size:19px;font-weight:700;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ title }}</div>
+        <div style="font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ subtitle }}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;flex:none;">
+        <div style="display:flex;align-items:center;gap:7px;padding:6px 12px;border:1px solid var(--border);border-radius:999px;background:var(--card);">
+          <span style="width:7px;height:7px;border-radius:50%;background:var(--ok);animation:pulse 1.8s ease-in-out infinite;"></span>
+          <span style="font:500 11.5px/1 'IBM Plex Mono',monospace;color:var(--muted);">LIVE</span>
+        </div>
+        <button onClick="{{ toggle }}" style="display:flex;align-items:center;gap:8px;padding:8px 13px;border:1px solid var(--border);border-radius:9px;background:var(--card);color:var(--fg);cursor:pointer;font:500 12.5px/1 'IBM Plex Sans';">
+          <span style="{{ themeIconStyle }}"></span>{{ themeLabel }}
+        </button>
+      </div>
+    </header>
+
+    <div style="padding:24px 30px 40px;flex:1;">
+
+      <!-- BREADCRUMB -->
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:18px;">
+        <sc-for list="{{ crumbs }}" as="c" hint-placeholder-count="2">
+          <sc-if value="{{ c.sep }}" hint-placeholder-val="{{ false }}"><span style="color:var(--muted-2);font-size:13px;">/</span></sc-if>
+          <sc-if value="{{ c.isLink }}" hint-placeholder-val="{{ false }}"><button onClick="{{ c.go }}" style="background:none;border:none;padding:0;cursor:pointer;white-space:nowrap;font:500 12.5px/1 'IBM Plex Sans',sans-serif;color:var(--muted);" style-hover="color:var(--primary);">{{ c.label }}</button></sc-if>
+          <sc-if value="{{ c.isStatic }}" hint-placeholder-val="{{ false }}"><span style="white-space:nowrap;font:500 12.5px/1 'IBM Plex Sans',sans-serif;color:var(--muted);">{{ c.label }}</span></sc-if>
+          <sc-if value="{{ c.isCurrent }}" hint-placeholder-val="{{ true }}"><span style="white-space:nowrap;font:600 12.5px/1 'IBM Plex Sans',sans-serif;color:var(--fg);">{{ c.label }}</span></sc-if>
+        </sc-for>
+      </div>
+
+      <!-- LOADING -->
+      <sc-if value="{{ showLoading }}" hint-placeholder-val="{{ true }}">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px;">
+          <sc-for list="{{ skel4 }}" as="x" hint-placeholder-count="4">
+            <div style="height:104px;border-radius:14px;border:1px solid var(--border);background:linear-gradient(90deg,var(--card-2) 25%,var(--card) 37%,var(--card-2) 63%);background-size:200% 100%;animation:shimmer 1.4s ease-in-out infinite;"></div>
+          </sc-for>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
+          <sc-for list="{{ skel6 }}" as="x" hint-placeholder-count="6">
+            <div style="height:178px;border-radius:14px;border:1px solid var(--border);background:linear-gradient(90deg,var(--card-2) 25%,var(--card) 37%,var(--card-2) 63%);background-size:200% 100%;animation:shimmer 1.4s ease-in-out infinite;"></div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <!-- OVERVIEW -->
+      <sc-if value="{{ showOverview }}" hint-placeholder-val="{{ true }}">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:26px;">
+          <div style="border:1px solid var(--border);border-radius:14px;background:var(--card);box-shadow:var(--shadow);padding:18px 19px;">
+            <div style="font:600 11px/1 'IBM Plex Mono',monospace;letter-spacing:.06em;color:var(--muted);">TOTAL SENSORS</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:34px;margin-top:12px;letter-spacing:-.02em;">{{ kpiSensors }}</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;">3 types monitored</div>
+          </div>
+          <button onClick="{{ goAlerts }}" style="text-align:left;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;border:1px solid var(--border);border-radius:14px;background:var(--card);box-shadow:var(--shadow);padding:18px 19px;transition:border-color .15s;" style-hover="border-color:var(--primary);">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <span style="font:600 11px/1 'IBM Plex Mono',monospace;letter-spacing:.06em;color:var(--muted);">ACTIVE ALERTS</span>
+              <span style="font:600 10px/1 'IBM Plex Mono',monospace;color:var(--primary);">view →</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;margin-top:12px;">
+              <div style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:34px;letter-spacing:-.02em;color:{{ alertCountColor }};">{{ kpiAlerts }}</div>
+              <span style="{{ alertDotStyle }}"></span>
+            </div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;">{{ alertText }}</div>
+          </button>
+          <div style="border:1px solid var(--border);border-radius:14px;background:var(--card);box-shadow:var(--shadow);padding:18px 19px;">
+            <div style="font:600 11px/1 'IBM Plex Mono',monospace;letter-spacing:.06em;color:var(--muted);">DATA POINTS · 24H</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:34px;margin-top:12px;letter-spacing:-.02em;">{{ kpiPoints }}</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;">1 reading / 5 min</div>
+          </div>
+          <div style="border:1px solid var(--border);border-radius:14px;background:var(--card);box-shadow:var(--shadow);padding:16px 19px;">
+            <div style="font:600 11px/1 'IBM Plex Mono',monospace;letter-spacing:.06em;color:var(--muted);margin-bottom:10px;">AVG BY TYPE</div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <sc-for list="{{ kpiTypes }}" as="t" hint-placeholder-count="3">
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                  <span style="font-size:12.5px;color:var(--muted);">{{ t.type }}</span>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:14px;white-space:nowrap;">{{ t.avg }} <span style="color:var(--muted-2);font-weight:400;font-size:11px;">{{ t.unit }}</span></span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div style="font-size:14px;font-weight:600;">Sensors</div>
+          <div style="display:flex;align-items:center;gap:0;">
+            <button onClick="{{ ov.setCards }}" style="{{ ov.cardsStyle }}">Cards</button>
+            <button onClick="{{ ov.setTable }}" style="{{ ov.tableStyle }}">Table</button>
+          </div>
+        </div>
+        <sc-if value="{{ ov.isCards }}" hint-placeholder-val="{{ true }}">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:16px;">
+          <sc-for list="{{ cards }}" as="s" hint-placeholder-count="6">
+            <button onClick="{{ s.open }}" style="text-align:left;cursor:pointer;color:var(--fg);font-family:'IBM Plex Sans',sans-serif;border:1px solid var(--border);background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:17px 18px;display:flex;flex-direction:column;gap:14px;transition:border-color .15s,transform .15s;" style-hover="border-color:var(--primary);transform:translateY(-2px);">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
+                <div style="display:flex;align-items:center;gap:11px;min-width:0;">
+                  <div style="width:34px;height:34px;border-radius:9px;flex:none;background:var(--card-2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font:600 14px/1 'IBM Plex Mono',monospace;color:var(--muted);">{{ s.chip }}</div>
+                  <div style="min-width:0;line-height:1.2;">
+                    <div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ s.name }}</div>
+                    <div style="font:500 10.5px/1 'IBM Plex Mono',monospace;color:var(--muted);letter-spacing:.04em;margin-top:3px;">{{ s.type }}</div>
+                  </div>
+                </div>
+                <span style="{{ s.badgeStyle }}"><span style="{{ s.dotStyle }}"></span>{{ s.badgeLabel }}</span>
+              </div>
+              <div style="display:flex;align-items:flex-end;gap:6px;">
+                <span style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:30px;letter-spacing:-.02em;line-height:1;">{{ s.latest }}</span>
+                <span style="font-size:13px;color:var(--muted);margin-bottom:3px;">{{ s.unit }}</span>
+              </div>
+              <svg viewBox="0 0 120 34" preserveAspectRatio="none" style="width:100%;height:38px;display:block;">
+                <path d="{{ s.sparkArea }}" fill="{{ s.sparkColor }}" fill-opacity="0.1"></path>
+                <path d="{{ s.spark }}" fill="none" stroke="{{ s.sparkColor }}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></path>
+              </svg>
+              <div style="display:flex;align-items:center;justify-content:space-between;font:500 11px/1 'IBM Plex Mono',monospace;color:var(--muted-2);border-top:1px solid var(--border);padding-top:11px;">
+                <span>{{ s.rule }}</span>
+                <span>24h</span>
+              </div>
+            </button>
+          </sc-for>
+        </div>
+        </sc-if>
+        <sc-if value="{{ ov.isTable }}" hint-placeholder-val="{{ false }}">
+          <div style="border:1px solid var(--border);border-radius:14px;background:var(--card);box-shadow:var(--shadow);overflow:hidden;">
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+              <thead><tr style="background:var(--card-2);">
+                <th style="text-align:left;font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:var(--muted);padding:11px 20px;">SENSOR</th>
+                <th style="text-align:left;font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:var(--muted);padding:11px 12px;">TYPE</th>
+                <th style="text-align:right;font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:var(--muted);padding:11px 12px;">LATEST</th>
+                <th style="text-align:left;font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:var(--muted);padding:11px 16px;">ALERT RULE</th>
+                <th style="text-align:right;font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:var(--muted);padding:11px 20px;">STATUS</th>
+              </tr></thead>
+              <tbody>
+                <sc-for list="{{ cards }}" as="s" hint-placeholder-count="6">
+                  <tr onClick="{{ s.open }}" style="border-top:1px solid var(--border);cursor:pointer;" style-hover="background:var(--card-2);">
+                    <td style="padding:12px 20px;">
+                      <div style="display:flex;align-items:center;gap:11px;min-width:0;">
+                        <div style="width:30px;height:30px;border-radius:8px;flex:none;background:var(--card-2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font:600 12.5px/1 'IBM Plex Mono',monospace;color:var(--muted);">{{ s.chip }}</div>
+                        <span style="font-weight:600;font-size:13.5px;">{{ s.name }}</span>
+                      </div>
+                    </td>
+                    <td style="padding:12px 12px;font:500 11px/1 'IBM Plex Mono',monospace;color:var(--muted);">{{ s.type }}</td>
+                    <td style="padding:12px 12px;text-align:right;font:600 13.5px/1 'IBM Plex Mono',monospace;white-space:nowrap;">{{ s.latest }} <span style="color:var(--muted-2);font-weight:400;font-size:11px;">{{ s.unit }}</span></td>
+                    <td style="padding:12px 16px;font:500 12px/1 'IBM Plex Mono',monospace;color:var(--muted);">{{ s.rule }}</td>
+                    <td style="padding:12px 20px;"><div style="display:flex;justify-content:flex-end;"><span style="{{ s.badgeStyle }}"><span style="{{ s.dotStyle }}"></span>{{ s.badgeLabel }}</span></div></td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </sc-if>
+      </sc-if>
+
+      <!-- DETAIL -->
+      <sc-if value="{{ showDetail }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
+          <sc-for list="{{ d.pills }}" as="p" hint-placeholder-count="6">
+            <button onClick="{{ p.go }}" style="{{ p.style }}">{{ p.label }}</button>
+          </sc-for>
+        </div>
+
+        <!-- raw chart -->
+        <div style="border:1px solid var(--border);border-radius:14px;background:var(--card);box-shadow:var(--shadow);padding:20px 22px;margin-bottom:16px;">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;">
+            <div>
+              <div style="font-size:14px;font-weight:600;">Raw readings · last 24h</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:2px;">Time-series with alert threshold and reset band</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:16px;font:500 11px/1 'IBM Plex Mono',monospace;">
+              <span style="display:flex;align-items:center;gap:6px;color:var(--muted);"><span style="width:14px;height:3px;border-radius:2px;background:var(--alert);"></span>threshold</span>
+              <span style="display:flex;align-items:center;gap:6px;color:var(--muted);"><span style="width:14px;height:10px;border-radius:2px;background:var(--warn);opacity:.3;"></span>reset band</span>
+            </div>
+          </div>
+          <svg viewBox="0 0 760 260" style="width:100%;height:auto;display:block;font-family:'IBM Plex Mono',monospace;">
+            <sc-for list="{{ d.lc.bands }}" as="b" hint-placeholder-count="2">
+              <rect x="48" y="{{ b.y }}" width="696" height="{{ b.h }}" fill="{{ b.fill }}" opacity="{{ b.op }}"></rect>
+            </sc-for>
+            <sc-for list="{{ d.lc.yTicks }}" as="g" hint-placeholder-count="5">
+              <line x1="48" x2="744" y1="{{ g.y }}" y2="{{ g.y }}" stroke="var(--grid)" stroke-width="1"></line>
+              <text x="42" y="{{ g.y }}" text-anchor="end" dominant-baseline="middle" font-size="10.5" fill="var(--muted-2)">{{ g.label }}</text>
+            </sc-for>
+            <sc-for list="{{ d.lc.lines }}" as="l" hint-placeholder-count="2">
+              <line x1="48" x2="744" y1="{{ l.y }}" y2="{{ l.y }}" stroke="{{ l.color }}" stroke-width="1.4" stroke-dasharray="5 4"></line>
+            </sc-for>
+            <sc-for list="{{ d.lc.xTicks }}" as="x" hint-placeholder-count="7">
+              <text x="{{ x.x }}" y="250" text-anchor="middle" font-size="10.5" fill="var(--muted-2)">{{ x.label }}</text>
+            </sc-for>
+            <path d="{{ d.lc.areaPath }}" fill="{{ d.lc.lineColor }}" fill-opacity="0.08"></path>
+            <path d="{{ d.lc.linePath }}" style="{{ d.lc.lineStyle }}"></path>
+            <circle cx="{{ d.lc.lastDot.x }}" cy="{{ d.lc.lastDot.y }}" r="3.5" fill="{{ d.lc.lineColor }}" stroke="var(--card)" stroke-width="2"></circle>
+          </svg>
+        </div>
+
+        <!-- agg chart + alert rule -->
+        <div style="display:grid;grid-template-columns:1.55fr 1fr;gap:16px;margin-bottom:16px;">
+          <div style="border:1px solid var(--border);border-radius:14px;background:var(--card);box-shadow:var(--shadow);padding:20px 22px;">
+            <div style="font-size:14px;font-weight:600;">Hourly aggregates</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:2px;margin-bottom:6px;">Bars = avg · whiskers = min–max range</div>
+            <svg viewBox="0 0 760 260" style="width:100%;height:auto;display:block;font-family:'IBM Plex Mono',monospace;">
+              <sc-for list="{{ d.ac.yTicks }}" as="g" hint-placeholder-count="5">
+                <line x1="48" x2="744" y1="{{ g.y }}" y2="{{ g.y }}" stroke="var(--grid)" stroke-width="1"></line>
+                <text x="42" y="{{ g.y }}" text-anchor="end" dominant-baseline="middle" font-size="10.5" fill="var(--muted-2)">{{ g.label }}</text>
+              </sc-for>
+              <sc-for list="{{ d.ac.bars }}" as="b" hint-placeholder-count="24">
+                <rect x="{{ b.x }}" y="{{ b.y }}" width="{{ b.w }}" height="{{ b.h }}" rx="2" fill="var(--primary)" opacity="0.82"></rect>
+                <line x1="{{ b.cx }}" x2="{{ b.cx }}" y1="{{ b.wy1 }}" y2="{{ b.wy2 }}" stroke="var(--fg)" stroke-width="1.2" opacity="0.4"></line>
+              </sc-for>
+              <sc-for list="{{ d.ac.xTicks }}" as="x" hint-placeholder-count="6">
+                <text x="{{ x.x }}" y="250" text-anchor="middle" font-size="10.5" fill="var(--muted-2)">{{ x.label }}</text>
+              </sc-for>
+            </svg>
+          </div>
+          <div style="border:1px solid var(--border);border-radius:14px;background:var(--card);box-shadow:var(--shadow);padding:20px 22px;display:flex;flex-direction:column;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+              <div style="font-size:14px;font-weight:600;">Alert rules</div>
+              <span style="{{ d.badgeStyle }}"><span style="{{ d.dotStyle }}"></span>{{ d.badgeLabel }}</span>
+            </div>
+            <sc-if value="{{ d.hasRules }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;flex-direction:column;gap:10px;">
+                <sc-for list="{{ d.rules }}" as="r" hint-placeholder-count="1">
+                  <div style="border:1px solid var(--border);border-radius:10px;padding:12px 13px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;">
+                      <span style="font:600 12.5px/1 'IBM Plex Sans';">{{ r.dirLabel }}</span>
+                      <span style="{{ r.badgeStyle }}"><span style="{{ r.dotStyle }}"></span>{{ r.badgeLabel }}</span>
+                    </div>
+                    <div style="display:flex;gap:22px;">
+                      <div><div style="font:500 10px/1 'IBM Plex Mono',monospace;color:var(--muted-2);letter-spacing:.05em;">THRESHOLD</div><div style="font:600 13px/1 'IBM Plex Mono',monospace;color:var(--alert);margin-top:5px;">{{ r.threshold }}</div></div>
+                      <div><div style="font:500 10px/1 'IBM Plex Mono',monospace;color:var(--muted-2);letter-spacing:.05em;">RESET</div><div style="font:600 13px/1 'IBM Plex Mono',monospace;color:var(--warn);margin-top:5px;">{{ r.clear }}</div></div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ d.noRules }}" hint-placeholder-val="{{ false }}">
+              <div style="border:1px dashed var(--border);border-radius:10px;padding:22px 14px;text-align:center;color:var(--muted);font-size:12.5px;line-height:1.5;">No alert rules yet.<br/>Add one to start monitoring this sensor.</div>
+            </sc-if>
+            <div style="margin-top:14px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border);padding-top:14px;">
+              <span style="font-size:12.5px;color:var(--muted);">Current value</span>
+              <span style="font:600 14px/1 'IBM Plex Mono',monospace;">{{ d.latest }} {{ d.unit }}</span>
+            </div>
+            <button onClick="{{ d.configure }}" style="margin-top:14px;width:100%;padding:10px;border:1px solid var(--border);border-radius:9px;background:var(--card);color:var(--fg);font:600 12.5px/1 'IBM Plex Sans';cursor:pointer;" style-hover="border-color:var(--primary);color:var(--primary);">Manage alert rules</button>
+          </div>
+        </div>
+
+        <!-- tables row -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+          <div style="border:1px solid var(--border);border-radius:14px;background:var(--card);box-shadow:var(--shadow);overflow:hidden;">
+            <div style="padding:16px 20px 12px;font-size:14px;font-weight:600;">Recent raw readings</div>
+            <div style="max-height:300px;overflow:auto;">
+              <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
+                <thead><tr style="position:sticky;top:0;background:var(--card-2);">
+                  <th style="text-align:left;font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:var(--muted);padding:9px 20px;">TIME</th>
+                  <th style="text-align:right;font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:var(--muted);padding:9px 12px;">VALUE</th>
+                  <th style="text-align:right;font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:var(--muted);padding:9px 20px;">Δ</th>
+                </tr></thead>
+                <tbody>
+                  <sc-for list="{{ d.recent }}" as="r" hint-placeholder-count="10">
+                    <tr style="border-top:1px solid var(--border);">
+                      <td style="padding:8px 20px;font-family:'IBM Plex Mono',monospace;color:var(--muted);">{{ r.time }}</td>
+                      <td style="padding:8px 12px;text-align:right;font-family:'IBM Plex Mono',monospace;font-weight:600;">{{ r.value }}</td>
+                      <td style="padding:8px 20px;text-align:right;font-family:'IBM Plex Mono',monospace;color:{{ r.deltaColor }};">{{ r.delta }}</td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div style="border:1px solid var(--border);border-radius:14px;background:var(--card);box-shadow:var(--shadow);overflow:hidden;">
+            <div style="padding:16px 20px 12px;font-size:14px;font-weight:600;">Hourly aggregates</div>
+            <div style="max-height:300px;overflow:auto;">
+              <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
+                <thead><tr style="position:sticky;top:0;background:var(--card-2);">
+                  <th style="text-align:left;font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:var(--muted);padding:9px 20px;">HOUR</th>
+                  <th style="text-align:right;font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:var(--muted);padding:9px 8px;">AVG</th>
+                  <th style="text-align:right;font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:var(--muted);padding:9px 8px;">MIN</th>
+                  <th style="text-align:right;font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:var(--muted);padding:9px 8px;">MAX</th>
+                  <th style="text-align:right;font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:var(--muted);padding:9px 20px;">N</th>
+                </tr></thead>
+                <tbody>
+                  <sc-for list="{{ d.hourly }}" as="h" hint-placeholder-count="10">
+                    <tr style="border-top:1px solid var(--border);">
+                      <td style="padding:8px 20px;font-family:'IBM Plex Mono',monospace;color:var(--muted);">{{ h.label }}</td>
+                      <td style="padding:8px 8px;text-align:right;font-family:'IBM Plex Mono',monospace;font-weight:600;">{{ h.avg }}</td>
+                      <td style="padding:8px 8px;text-align:right;font-family:'IBM Plex Mono',monospace;color:var(--muted);">{{ h.min }}</td>
+                      <td style="padding:8px 8px;text-align:right;font-family:'IBM Plex Mono',monospace;color:var(--muted);">{{ h.max }}</td>
+                      <td style="padding:8px 20px;text-align:right;font-family:'IBM Plex Mono',monospace;color:var(--muted-2);">{{ h.count }}</td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- alert history -->
+        <div style="border:1px solid var(--border);border-radius:14px;background:var(--card);box-shadow:var(--shadow);overflow:hidden;">
+          <div style="padding:16px 20px 12px;font-size:14px;font-weight:600;">Alert history · last 24h</div>
+          <sc-if value="{{ d.hasAlerts }}" hint-placeholder-val="{{ true }}">
+            <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
+              <thead><tr style="background:var(--card-2);">
+                <th style="text-align:left;font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:var(--muted);padding:9px 20px;">EVENT</th>
+                <th style="text-align:left;font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:var(--muted);padding:9px 12px;">TIME</th>
+                <th style="text-align:right;font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:var(--muted);padding:9px 20px;">VALUE</th>
+              </tr></thead>
+              <tbody>
+                <sc-for list="{{ d.alerts }}" as="a" hint-placeholder-count="3">
+                  <tr style="border-top:1px solid var(--border);">
+                    <td style="padding:10px 20px;"><span style="display:inline-flex;align-items:center;gap:7px;font:600 11px/1 'IBM Plex Mono',monospace;letter-spacing:.04em;padding:4px 9px;border-radius:6px;background:{{ a.bg }};color:{{ a.color }};">{{ a.type }}</span></td>
+                    <td style="padding:10px 12px;font-family:'IBM Plex Mono',monospace;color:var(--muted);">{{ a.time }}</td>
+                    <td style="padding:10px 20px;text-align:right;font-family:'IBM Plex Mono',monospace;font-weight:600;">{{ a.value }} {{ d.unit }}</td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </sc-if>
+          <sc-if value="{{ d.noAlerts }}" hint-placeholder-val="{{ true }}">
+            <div style="padding:42px 20px 48px;text-align:center;">
+              <div style="width:42px;height:42px;border-radius:50%;background:var(--ok-bg);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;">
+                <div style="width:14px;height:14px;border-radius:50%;background:var(--ok);"></div>
+              </div>
+              <div style="font-size:13.5px;font-weight:600;">No alerts in the last 24h</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:3px;">This sensor stayed within its threshold band the entire window.</div>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <!-- ALERTS -->
+      <sc-if value="{{ showAlerts }}" hint-placeholder-val="{{ true }}">
+        <div style="font-size:14px;font-weight:600;margin-bottom:14px;">Active alerts</div>
+        <sc-if value="{{ al.hasActive }}" hint-placeholder-val="{{ true }}">
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-bottom:28px;">
+            <sc-for list="{{ al.active }}" as="a" hint-placeholder-count="2">
+              <button onClick="{{ a.open }}" style="text-align:left;cursor:pointer;color:var(--fg);font-family:'IBM Plex Sans',sans-serif;border:1px solid color-mix(in srgb,var(--alert) 50%,var(--border));background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:17px 18px;display:flex;flex-direction:column;gap:13px;transition:border-color .15s,transform .15s;" style-hover="border-color:var(--alert);transform:translateY(-2px);">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
+                  <div style="display:flex;align-items:center;gap:11px;min-width:0;">
+                    <div style="width:34px;height:34px;border-radius:9px;flex:none;background:var(--alert-bg);border:1px solid color-mix(in srgb,var(--alert) 30%,transparent);display:flex;align-items:center;justify-content:center;font:600 14px/1 'IBM Plex Mono',monospace;color:var(--alert);">{{ a.chip }}</div>
+                    <div style="min-width:0;line-height:1.2;">
+                      <div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ a.name }}</div>
+                      <div style="font:500 10.5px/1 'IBM Plex Mono',monospace;color:var(--muted);letter-spacing:.04em;margin-top:3px;">{{ a.type }}</div>
+                    </div>
+                  </div>
+                  <span style="display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;font:600 10px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;white-space:nowrap;background:var(--alert-bg);color:var(--alert);"><span style="width:7px;height:7px;border-radius:50%;background:var(--alert);animation:pulse 1.6s ease-in-out infinite;"></span>ALERTING</span>
+                </div>
+                <div style="display:flex;align-items:flex-end;gap:8px;">
+                  <span style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:30px;letter-spacing:-.02em;line-height:1;color:var(--alert);">{{ a.value }}</span>
+                  <span style="font-size:13px;color:var(--muted);margin-bottom:3px;">{{ a.unit }}</span>
+                  <span style="margin-left:auto;font:500 11px/1 'IBM Plex Mono',monospace;color:var(--muted-2);margin-bottom:3px;">{{ a.rule }}</span>
+                </div>
+                <svg viewBox="0 0 120 34" preserveAspectRatio="none" style="width:100%;height:34px;display:block;">
+                  <path d="{{ a.sparkArea }}" fill="var(--alert)" fill-opacity="0.1"></path>
+                  <path d="{{ a.spark }}" fill="none" stroke="var(--alert)" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></path>
+                </svg>
+                <div style="display:flex;align-items:center;justify-content:space-between;font:500 11px/1 'IBM Plex Mono',monospace;color:var(--muted-2);border-top:1px solid var(--border);padding-top:11px;">
+                  <span>{{ a.agoText }}</span>
+                  <span style="color:var(--primary);">View sensor →</span>
+                </div>
+              </button>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ al.noActive }}" hint-placeholder-val="{{ false }}">
+          <div style="border:1px solid var(--border);border-radius:14px;background:var(--card);box-shadow:var(--shadow);padding:42px 20px 48px;text-align:center;margin-bottom:28px;">
+            <div style="width:46px;height:46px;border-radius:50%;background:var(--ok-bg);display:flex;align-items:center;justify-content:center;margin:0 auto 13px;"><div style="width:16px;height:16px;border-radius:50%;background:var(--ok);"></div></div>
+            <div style="font-size:14px;font-weight:600;">No active alerts</div>
+            <div style="font-size:12.5px;color:var(--muted);margin-top:3px;">All sensors are within their threshold bands.</div>
+          </div>
+        </sc-if>
+
+        <div style="font-size:14px;font-weight:600;margin-bottom:14px;">Event log · last 24h</div>
+        <div style="border:1px solid var(--border);border-radius:14px;background:var(--card);box-shadow:var(--shadow);overflow:hidden;">
+          <div style="max-height:460px;overflow:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
+              <thead><tr style="position:sticky;top:0;background:var(--card-2);">
+                <th style="text-align:left;font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:var(--muted);padding:10px 20px;">SENSOR</th>
+                <th style="text-align:left;font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:var(--muted);padding:10px 12px;">EVENT</th>
+                <th style="text-align:left;font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:var(--muted);padding:10px 12px;">TIME</th>
+                <th style="text-align:right;font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:var(--muted);padding:10px 20px;">VALUE</th>
+              </tr></thead>
+              <tbody>
+                <sc-for list="{{ al.log }}" as="e" hint-placeholder-count="8">
+                  <tr style="border-top:1px solid var(--border);">
+                    <td style="padding:9px 20px;font-weight:500;">{{ e.sensor }}</td>
+                    <td style="padding:9px 12px;"><span style="display:inline-flex;align-items:center;gap:6px;font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.04em;padding:4px 9px;border-radius:6px;background:{{ e.bg }};color:{{ e.color }};">{{ e.type }}</span></td>
+                    <td style="padding:9px 12px;font-family:'IBM Plex Mono',monospace;color:var(--muted);">{{ e.time }}</td>
+                    <td style="padding:9px 20px;text-align:right;font-family:'IBM Plex Mono',monospace;font-weight:600;">{{ e.value }} {{ e.unit }}</td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- AGGREGATES -->
+      <sc-if value="{{ showAggregates }}" hint-placeholder-val="{{ true }}">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:18px;">
+          <sc-for list="{{ agg.typeCards }}" as="t" hint-placeholder-count="3">
+            <div style="border:1px solid var(--border);border-radius:14px;background:var(--card);box-shadow:var(--shadow);padding:18px 20px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <div style="font:600 11px/1 'IBM Plex Mono',monospace;letter-spacing:.06em;color:var(--muted);">{{ t.type }}</div>
+                <div style="font:500 11px/1 'IBM Plex Mono',monospace;color:var(--muted-2);">{{ t.count }} sensors</div>
+              </div>
+              <div style="display:flex;align-items:flex-end;gap:6px;margin-top:14px;">
+                <span style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:30px;letter-spacing:-.02em;line-height:1;">{{ t.avg }}</span>
+                <span style="font-size:13px;color:var(--muted);margin-bottom:3px;">{{ t.unit }} avg</span>
+              </div>
+              <div style="display:flex;gap:18px;margin-top:14px;border-top:1px solid var(--border);padding-top:12px;">
+                <div><div style="font:500 10px/1 'IBM Plex Mono',monospace;color:var(--muted-2);letter-spacing:.05em;">MIN</div><div style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:14px;margin-top:5px;">{{ t.min }}</div></div>
+                <div><div style="font:500 10px/1 'IBM Plex Mono',monospace;color:var(--muted-2);letter-spacing:.05em;">MAX</div><div style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:14px;margin-top:5px;">{{ t.max }}</div></div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="border:1px solid var(--border);border-radius:14px;background:var(--card);box-shadow:var(--shadow);padding:20px 22px;margin-bottom:16px;">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;">
+            <div>
+              <div style="font-size:14px;font-weight:600;">Hourly averages · cross-sensor</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:2px;">Each series normalized to its own min–max range for comparison</div>
+            </div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:8px;">
+            <sc-for list="{{ agg.cmp }}" as="c" hint-placeholder-count="6">
+              <span style="display:inline-flex;align-items:center;gap:7px;font:500 11.5px/1 'IBM Plex Sans';color:var(--muted);"><span style="width:11px;height:3px;border-radius:2px;background:{{ c.color }};"></span>{{ c.name }}</span>
+            </sc-for>
+          </div>
+          <svg viewBox="0 0 760 260" style="width:100%;height:auto;display:block;font-family:'IBM Plex Mono',monospace;">
+            <sc-for list="{{ agg.yTicks }}" as="g" hint-placeholder-count="5">
+              <line x1="48" x2="744" y1="{{ g.y }}" y2="{{ g.y }}" stroke="var(--grid)" stroke-width="1"></line>
+              <text x="42" y="{{ g.y }}" text-anchor="end" dominant-baseline="middle" font-size="10.5" fill="var(--muted-2)">{{ g.label }}</text>
+            </sc-for>
+            <sc-for list="{{ agg.cmpX }}" as="x" hint-placeholder-count="6">
+              <text x="{{ x.x }}" y="250" text-anchor="middle" font-size="10.5" fill="var(--muted-2)">{{ x.label }}</text>
+            </sc-for>
+            <sc-for list="{{ agg.cmp }}" as="c" hint-placeholder-count="6">
+              <path d="{{ c.path }}" fill="none" stroke="{{ c.color }}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" opacity="0.9"></path>
+            </sc-for>
+          </svg>
+        </div>
+
+        <div style="border:1px solid var(--border);border-radius:14px;background:var(--card);box-shadow:var(--shadow);overflow:hidden;">
+          <div style="padding:16px 20px 12px;font-size:14px;font-weight:600;">Hourly buckets · last 6 hours</div>
+          <div style="max-height:420px;overflow:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
+              <thead><tr style="position:sticky;top:0;background:var(--card-2);">
+                <th style="text-align:left;font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:var(--muted);padding:9px 20px;">SENSOR</th>
+                <th style="text-align:left;font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:var(--muted);padding:9px 12px;">HOUR</th>
+                <th style="text-align:right;font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:var(--muted);padding:9px 8px;">AVG</th>
+                <th style="text-align:right;font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:var(--muted);padding:9px 8px;">MIN</th>
+                <th style="text-align:right;font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:var(--muted);padding:9px 8px;">MAX</th>
+                <th style="text-align:right;font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:var(--muted);padding:9px 20px;">N</th>
+              </tr></thead>
+              <tbody>
+                <sc-for list="{{ agg.buckets }}" as="b" hint-placeholder-count="12">
+                  <tr style="border-top:1px solid var(--border);">
+                    <td style="padding:8px 20px;font-weight:500;">{{ b.sensor }}</td>
+                    <td style="padding:8px 12px;font-family:'IBM Plex Mono',monospace;color:var(--muted);">{{ b.hour }}</td>
+                    <td style="padding:8px 8px;text-align:right;font-family:'IBM Plex Mono',monospace;font-weight:600;">{{ b.avg }}</td>
+                    <td style="padding:8px 8px;text-align:right;font-family:'IBM Plex Mono',monospace;color:var(--muted);">{{ b.min }}</td>
+                    <td style="padding:8px 8px;text-align:right;font-family:'IBM Plex Mono',monospace;color:var(--muted);">{{ b.max }}</td>
+                    <td style="padding:8px 20px;text-align:right;font-family:'IBM Plex Mono',monospace;color:var(--muted-2);">{{ b.count }}</td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- MANAGE -->
+      <sc-if value="{{ showManage }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div style="font-size:14px;font-weight:600;">All sensors · {{ manage.count }}</div>
+          <button onClick="{{ manage.openNew }}" style="display:flex;align-items:center;gap:7px;padding:9px 15px;border:none;border-radius:9px;background:var(--primary);color:#fff;font:600 12.5px/1 'IBM Plex Sans';cursor:pointer;"><span style="font-size:16px;line-height:1;margin-top:-1px;">+</span>Add sensor</button>
+        </div>
+        <div style="border:1px solid var(--border);border-radius:14px;background:var(--card);box-shadow:var(--shadow);overflow:visible;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead><tr style="background:var(--card-2);">
+              <th style="text-align:left;font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:var(--muted);padding:11px 20px;border-top-left-radius:13px;">SENSOR</th>
+              <th style="text-align:left;font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:var(--muted);padding:11px 12px;">TYPE</th>
+              <th style="text-align:left;font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:var(--muted);padding:11px 12px;">ALERT RULES</th>
+              <th style="text-align:left;font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:var(--muted);padding:11px 12px;">STATUS</th>
+              <th style="text-align:right;font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:var(--muted);padding:11px 20px;border-top-right-radius:13px;">ACTIONS</th>
+            </tr></thead>
+            <tbody>
+              <sc-for list="{{ manage.rows }}" as="r" hint-placeholder-count="6">
+                <tr onClick="{{ r.rowClick }}" style="border-top:1px solid var(--border);cursor:pointer;" style-hover="background:var(--card-2);">
+                  <td style="padding:13px 20px;font-weight:600;">{{ r.name }}</td>
+                  <td style="padding:13px 12px;font:500 11px/1 'IBM Plex Mono',monospace;color:var(--muted);">{{ r.type }}</td>
+                  <td style="padding:13px 12px;font:500 12px/1 'IBM Plex Mono',monospace;color:{{ r.ruleColor }};white-space:nowrap;">{{ r.ruleText }}</td>
+                  <td style="padding:13px 12px;"><span style="{{ r.badgeStyle }}"><span style="{{ r.dotStyle }}"></span>{{ r.badgeLabel }}</span></td>
+                  <td style="padding:11px 20px;position:relative;">
+                    <div style="display:flex;justify-content:flex-end;">
+                      <button onClick="{{ r.toggleMenu }}" style="{{ r.kebabStyle }}">⋯</button>
+                    </div>
+                    <sc-if value="{{ r.menuOpen }}" hint-placeholder-val="{{ false }}">
+                      <div style="position:absolute;right:20px;top:48px;z-index:50;min-width:182px;background:var(--card);border:1px solid var(--border);border-radius:11px;box-shadow:0 14px 38px rgba(0,0,0,.22);padding:5px;">
+                        <button onClick="{{ r.configure }}" style="display:block;width:100%;text-align:left;padding:9px 11px;border:none;background:transparent;color:var(--fg);font:500 12.5px/1.1 'IBM Plex Sans';cursor:pointer;border-radius:7px;" style-hover="background:var(--card-2);">Manage alerts</button>
+                        <button onClick="{{ r.toggle }}" style="display:block;width:100%;text-align:left;padding:9px 11px;border:none;background:transparent;color:var(--fg);font:500 12.5px/1.1 'IBM Plex Sans';cursor:pointer;border-radius:7px;" style-hover="background:var(--card-2);">{{ r.enabledLabel }}</button>
+                        <div style="height:1px;background:var(--border);margin:4px 6px;"></div>
+                        <button onClick="{{ r.del }}" style="display:block;width:100%;text-align:left;padding:9px 11px;border:none;background:transparent;color:var(--alert);font:500 12.5px/1.1 'IBM Plex Sans';cursor:pointer;border-radius:7px;" style-hover="background:var(--alert-bg);">Delete sensor</button>
+                      </div>
+                    </sc-if>
+                  </td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+        <sc-if value="{{ manage.anyMenu }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ manage.closeMenu }}" style="position:fixed;inset:0;z-index:40;"></div>
+        </sc-if>
+        <div style="font-size:12px;color:var(--muted-2);margin-top:14px;line-height:1.5;">Demo data: new sensors are generated with a synthetic 24h reading history. Rule changes re-evaluate alert state instantly. The last sensor can't be deleted.</div>
+      </sc-if>
+
+      <!-- SENSOR CONFIG PAGE -->
+      <sc-if value="{{ showConfig }}" hint-placeholder-val="{{ false }}">
+        <div style="border:1px solid var(--border);border-radius:14px;background:var(--card);box-shadow:var(--shadow);padding:20px 22px;margin-bottom:16px;display:flex;align-items:flex-start;justify-content:space-between;gap:18px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:flex-start;gap:14px;min-width:0;">
+            <div style="width:42px;height:42px;border-radius:10px;flex:none;background:var(--card-2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font:600 17px/1 'IBM Plex Mono',monospace;color:var(--muted);">{{ cf.chip }}</div>
+            <div style="min-width:0;">
+              <label style="display:block;font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.06em;color:var(--muted);margin-bottom:6px;">SENSOR NAME</label>
+              <input value="{{ cf.name }}" onChange="{{ cf.onName }}" style="width:300px;max-width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--border);border-radius:9px;background:var(--card-2);color:var(--fg);font:600 16px/1.2 'IBM Plex Sans',sans-serif;outline:none;" style-focus="border-color:var(--primary);"/>
+              <div style="font:500 11.5px/1 'IBM Plex Mono',monospace;color:var(--muted);margin-top:9px;">{{ cf.type }} · current {{ cf.latest }} {{ cf.unit }} · type can't be changed</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;flex:none;">
+            <span style="{{ cf.badgeStyle }}"><span style="{{ cf.dotStyle }}"></span>{{ cf.badgeLabel }}</span>
+            <button onClick="{{ cf.toggle }}" style="padding:8px 13px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--fg);font:600 12px/1 'IBM Plex Sans';cursor:pointer;">{{ cf.enabledLabel }}</button>
+            <button onClick="{{ cf.del }}" style="padding:8px 13px;border:1px solid color-mix(in srgb,var(--alert) 35%,var(--border));border-radius:8px;background:var(--card);color:var(--alert);font:600 12px/1 'IBM Plex Sans';cursor:pointer;">Delete sensor</button>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div style="font-size:14px;font-weight:600;">Alert rules</div>
+          <button onClick="{{ cf.addRule }}" style="display:flex;align-items:center;gap:6px;padding:9px 14px;border:none;border-radius:9px;background:var(--primary);color:#fff;font:600 12.5px/1 'IBM Plex Sans';cursor:pointer;"><span style="font-size:15px;line-height:1;margin-top:-1px;">+</span>Add rule</button>
+        </div>
+        <sc-if value="{{ cf.hasRules }}" hint-placeholder-val="{{ true }}">
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;">
+            <sc-for list="{{ cf.rules }}" as="r" hint-placeholder-count="2">
+              <div style="border:1px solid var(--border);border-radius:12px;background:var(--card);box-shadow:var(--shadow);padding:16px 17px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:11px;">
+                  <span style="font:600 14px/1 'IBM Plex Sans';">{{ r.title }}</span>
+                  <span style="{{ r.badgeStyle }}">{{ r.badgeLabel }}</span>
+                </div>
+                <div style="font:500 12px/1 'IBM Plex Mono',monospace;color:var(--muted);">{{ r.sub }}</div>
+                <div style="display:flex;gap:8px;margin-top:14px;border-top:1px solid var(--border);padding-top:13px;">
+                  <button onClick="{{ r.edit }}" style="padding:7px 13px;border:1px solid var(--border);border-radius:7px;background:var(--card);color:var(--fg);font:600 11.5px/1 'IBM Plex Sans';cursor:pointer;">Edit rule</button>
+                  <button onClick="{{ r.del }}" style="padding:7px 13px;border:1px solid color-mix(in srgb,var(--alert) 35%,var(--border));border-radius:7px;background:var(--card);color:var(--alert);font:600 11.5px/1 'IBM Plex Sans';cursor:pointer;">Delete</button>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ cf.noRules }}" hint-placeholder-val="{{ false }}">
+          <div style="border:1px dashed var(--border);border-radius:12px;padding:44px 20px;text-align:center;">
+            <div style="font-size:14px;font-weight:600;">No alert rules yet</div>
+            <div style="font-size:12.5px;color:var(--muted);margin-top:5px;line-height:1.5;">This sensor is collecting data but won't raise alerts.<br/>Add a rule to start monitoring it.</div>
+            <button onClick="{{ cf.addRule }}" style="margin-top:16px;display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border:none;border-radius:9px;background:var(--primary);color:#fff;font:600 12.5px/1 'IBM Plex Sans';cursor:pointer;"><span style="font-size:15px;line-height:1;margin-top:-1px;">+</span>Add first rule</button>
+          </div>
+        </sc-if>
+      </sc-if>
+
+      <!-- SYSTEM -->
+      <sc-if value="{{ showSystem }}" hint-placeholder-val="{{ true }}">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px;">
+          <sc-for list="{{ sys.cards }}" as="c" hint-placeholder-count="4">
+            <div style="border:1px solid var(--border);border-radius:14px;background:var(--card);box-shadow:var(--shadow);padding:18px 19px;">
+              <div style="font:600 11px/1 'IBM Plex Mono',monospace;letter-spacing:.06em;color:var(--muted);">{{ c.label }}</div>
+              <div style="display:flex;align-items:flex-end;gap:5px;margin-top:13px;">
+                <span style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:30px;letter-spacing:-.02em;line-height:1;">{{ c.value }}</span>
+                <span style="font-size:13px;color:var(--muted);margin-bottom:3px;">{{ c.unit }}</span>
+              </div>
+              <div style="font-size:12px;color:var(--muted);margin-top:5px;">{{ c.sub }}</div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr 1.3fr;gap:16px;">
+          <div style="border:1px solid var(--border);border-radius:14px;background:var(--card);box-shadow:var(--shadow);padding:20px 22px;display:flex;flex-direction:column;align-items:center;">
+            <div style="align-self:flex-start;font-size:14px;font-weight:600;">Compression ratio</div>
+            <svg width="150" height="150" viewBox="0 0 120 120" style="margin:14px 0 6px;">
+              <circle cx="60" cy="60" r="50" fill="none" stroke="var(--card-2)" stroke-width="13"></circle>
+              <circle cx="60" cy="60" r="50" fill="none" stroke="var(--primary)" stroke-width="13" stroke-linecap="round" stroke-dasharray="{{ sys.ratio.dash }} 999" transform="rotate(-90 60 60)"></circle>
+              <text x="60" y="55" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-weight="600" font-size="24" fill="var(--fg)">{{ sys.ratio.val }}</text>
+              <text x="60" y="74" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="10" fill="var(--muted)">compression</text>
+            </svg>
+            <div style="font-size:12px;color:var(--muted);">{{ sys.ratio.sub }}</div>
+          </div>
+          <div style="border:1px solid var(--border);border-radius:14px;background:var(--card);box-shadow:var(--shadow);padding:20px 22px;display:flex;flex-direction:column;align-items:center;">
+            <div style="align-self:flex-start;font-size:14px;font-weight:600;">Chunks compressed</div>
+            <svg width="150" height="150" viewBox="0 0 120 120" style="margin:14px 0 6px;">
+              <circle cx="60" cy="60" r="50" fill="none" stroke="var(--card-2)" stroke-width="13"></circle>
+              <circle cx="60" cy="60" r="50" fill="none" stroke="var(--ok)" stroke-width="13" stroke-linecap="round" stroke-dasharray="{{ sys.chunks.dash }} 999" transform="rotate(-90 60 60)"></circle>
+              <text x="60" y="55" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-weight="600" font-size="24" fill="var(--fg)">{{ sys.chunks.val }}</text>
+              <text x="60" y="74" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="10" fill="var(--muted)">of total</text>
+            </svg>
+            <div style="font-size:12px;color:var(--muted);">{{ sys.chunks.comp }} / {{ sys.chunks.total }} chunks</div>
+          </div>
+          <div style="border:1px solid var(--border);border-radius:14px;background:var(--card);box-shadow:var(--shadow);padding:20px 22px;">
+            <div style="font-size:14px;font-weight:600;margin-bottom:18px;">Storage by sensor type</div>
+            <div style="display:flex;flex-direction:column;gap:18px;">
+              <sc-for list="{{ sys.storage }}" as="s" hint-placeholder-count="3">
+                <div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;">
+                    <span style="font-size:12.5px;font-weight:500;">{{ s.type }}</span>
+                    <span style="font:600 12.5px/1 'IBM Plex Mono',monospace;">{{ s.gb }} GB</span>
+                  </div>
+                  <div style="height:9px;border-radius:6px;background:var(--card-2);overflow:hidden;">
+                    <div style="height:100%;width:{{ s.pct }}%;border-radius:6px;background:var(--primary);"></div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+    </div>
+  </main>
+
+  <!-- ADD SENSOR MODAL -->
+  <sc-if value="{{ showSensorModal }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(8,8,14,.5);backdrop-filter:blur(3px);">
+      <div style="width:100%;max-width:420px;background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:0 24px 70px rgba(0,0,0,.4);overflow:hidden;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border);">
+          <div style="font-size:15px;font-weight:700;">Add sensor</div>
+          <button onClick="{{ sm.close }}" style="border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:22px;line-height:1;padding:0 4px;">×</button>
+        </div>
+        <div style="padding:20px 22px;display:flex;flex-direction:column;gap:16px;">
+          <div>
+            <label style="display:block;font:600 11px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:var(--muted);margin-bottom:7px;">SENSOR NAME</label>
+            <input value="{{ sm.name }}" onChange="{{ sm.onName }}" placeholder="e.g. Boiler temperature" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:9px;background:var(--card-2);color:var(--fg);font:400 13.5px/1.2 'IBM Plex Sans',sans-serif;outline:none;" style-focus="border-color:var(--primary);"/>
+          </div>
+          <div style="display:flex;gap:12px;">
+            <div style="flex:1;min-width:0;">
+              <label style="display:block;font:600 11px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:var(--muted);margin-bottom:7px;">TYPE</label>
+              <select value="{{ sm.type }}" onChange="{{ sm.onType }}" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:9px;background:var(--card-2);color:var(--fg);font:500 13.5px/1.2 'IBM Plex Sans',sans-serif;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;">
+                <option value="TEMPERATURE">Temperature</option>
+                <option value="PRESSURE">Pressure</option>
+                <option value="HUMIDITY">Humidity</option>
+              </select>
+            </div>
+            <div style="width:92px;flex:none;">
+              <label style="display:block;font:600 11px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:var(--muted);margin-bottom:7px;">UNIT</label>
+              <div style="padding:10px 12px;border:1px solid var(--border);border-radius:9px;background:var(--card-2);color:var(--muted);font:600 13.5px/1.2 'IBM Plex Mono',monospace;text-align:center;">{{ sm.unit }}</div>
+            </div>
+          </div>
+          <div style="font-size:11.5px;color:var(--muted-2);line-height:1.5;">A 24h reading history is generated for the sensor. Open it afterwards to add alert rules.</div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:10px;padding:16px 22px;border-top:1px solid var(--border);background:var(--card-2);">
+          <button onClick="{{ sm.close }}" style="padding:9px 16px;border:1px solid var(--border);border-radius:9px;background:var(--card);color:var(--fg);font:600 12.5px/1 'IBM Plex Sans';cursor:pointer;">Cancel</button>
+          <button onClick="{{ sm.save }}" style="padding:9px 18px;border:none;border-radius:9px;background:var(--primary);color:#fff;font:600 12.5px/1 'IBM Plex Sans';cursor:pointer;">Add sensor</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- RULE EDITOR MODAL -->
+  <sc-if value="{{ showRuleModal }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:110;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(8,8,14,.55);backdrop-filter:blur(3px);">
+      <div style="width:100%;max-width:430px;background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:0 24px 70px rgba(0,0,0,.45);overflow:hidden;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border);">
+          <div style="min-width:0;">
+            <div style="font-size:15px;font-weight:700;">{{ rm.title }}</div>
+            <div style="font:500 11px/1 'IBM Plex Mono',monospace;color:var(--muted);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ rm.sensorName }}</div>
+          </div>
+          <button onClick="{{ rm.close }}" style="border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:22px;line-height:1;padding:0 4px;">×</button>
+        </div>
+        <div style="padding:20px 22px;display:flex;flex-direction:column;gap:16px;">
+          <div>
+            <label style="display:block;font:600 11px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:var(--muted);margin-bottom:7px;">ALERT DIRECTION</label>
+            <div style="display:flex;">
+              <button onClick="{{ rm.setAbove }}" style="{{ rm.aboveStyle }}">Above</button>
+              <button onClick="{{ rm.setBelow }}" style="{{ rm.belowStyle }}">Below</button>
+            </div>
+          </div>
+          <div style="display:flex;gap:12px;">
+            <div style="flex:1;min-width:0;">
+              <label style="display:block;font:600 11px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:var(--muted);margin-bottom:7px;">THRESHOLD ({{ rm.unit }})</label>
+              <input type="number" value="{{ rm.threshold }}" onChange="{{ rm.onThreshold }}" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:9px;background:var(--card-2);color:var(--fg);font:600 13.5px/1.2 'IBM Plex Mono',monospace;outline:none;" style-focus="border-color:var(--primary);"/>
+            </div>
+            <div style="flex:1;min-width:0;">
+              <label style="display:block;font:600 11px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:var(--muted);margin-bottom:7px;">RESET / CLEAR ({{ rm.unit }})</label>
+              <input type="number" value="{{ rm.clear }}" onChange="{{ rm.onClear }}" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:9px;background:var(--card-2);color:var(--fg);font:600 13.5px/1.2 'IBM Plex Mono',monospace;outline:none;" style-focus="border-color:var(--primary);"/>
+            </div>
+          </div>
+          <div style="font-size:11.5px;color:var(--muted-2);line-height:1.5;">{{ rm.ruleHint }}</div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:10px;padding:16px 22px;border-top:1px solid var(--border);background:var(--card-2);">
+          <button onClick="{{ rm.close }}" style="padding:9px 16px;border:1px solid var(--border);border-radius:9px;background:var(--card);color:var(--fg);font:600 12.5px/1 'IBM Plex Sans';cursor:pointer;">Cancel</button>
+          <button onClick="{{ rm.save }}" style="padding:9px 18px;border:none;border-radius:9px;background:var(--primary);color:#fff;font:600 12.5px/1 'IBM Plex Sans';cursor:pointer;">{{ rm.saveLabel }}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:860},&quot;accentColor&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#FF6700&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;defaultTheme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;animateCharts&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+const PAL=['#FF6700','#0EA5A0','#6366F1','#8B5CF6','#D9A406','#64748B'];
+const TYPEDEF={TEMPERATURE:{unit:'°C',base:62,amp:5,noise:1.2,threshold:85,clear:80,dir:'above'},PRESSURE:{unit:'hPa',base:1015,amp:8,noise:2,threshold:1035,clear:1028,dir:'above'},HUMIDITY:{unit:'%',base:45,amp:5,noise:1.4,threshold:65,clear:60,dir:'above'}};
+const VW=760,VH=260,PL=48,PR=16,PT=18,PB=30,PW=VW-PL-PR,PH=VH-PT-PB;
+function hashStr(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
+function rng(seed){let a=seed>>>0;return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function nf(v,d){return Number(v).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});}
+function hhmm(ts){const d=new Date(ts);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
+
+class Component extends DCLogic {
+  constructor(props){
+    super(props);
+    const SPECS=[
+      {id:'boiler-temp',name:'Boiler temperature',type:'TEMPERATURE',unit:'°C',base:78,amp:5,phase:1.2,noise:1.3,drift:22,bumps:[{at:0.42,width:0.05,mag:20}],enabled:true,rules:[{id:'r1',dir:'above',threshold:90,clear:85}]},
+      {id:'reactor-temp',name:'Reactor temperature',type:'TEMPERATURE',unit:'°C',base:64,amp:4,phase:0.4,noise:1.1,drift:0,enabled:true,rules:[{id:'r1',dir:'above',threshold:80,clear:75}]},
+      {id:'line-pressure',name:'Line pressure',type:'PRESSURE',unit:'hPa',base:1013,amp:7,phase:2.1,noise:2.0,drift:0,enabled:true,rules:[{id:'r1',dir:'above',threshold:1035,clear:1028}]},
+      {id:'pump-pressure',name:'Pump pressure',type:'PRESSURE',unit:'hPa',base:1020,amp:9,phase:0.8,noise:2.6,drift:35,bumps:[{at:0.6,width:0.04,mag:32}],enabled:true,rules:[{id:'r1',dir:'above',threshold:1040,clear:1032}]},
+      {id:'room-humidity',name:'Room humidity',type:'HUMIDITY',unit:'%',base:46,amp:5,phase:1.7,noise:1.4,drift:19,enabled:true,rules:[{id:'r1',dir:'above',threshold:65,clear:60}]},
+      {id:'cold-humidity',name:'Cold storage humidity',type:'HUMIDITY',unit:'%',base:39,amp:4,phase:3.0,noise:1.2,drift:0,enabled:true,rules:[{id:'r1',dir:'below',threshold:30,clear:34}]}
+    ];
+    this.state={ page:'overview', selectedId:'boiler-temp', theme:(props&&props.defaultTheme)||'light', loading:true, configs:SPECS, modal:null, menuOpen:null, overviewView:'cards', configId:null };
+    this.NOW=new Date('2026-06-17T14:30:00').getTime();
+  }
+  componentDidMount(){ this._t=setTimeout(()=>this.setState({loading:false}),780); }
+  componentWillUnmount(){ clearTimeout(this._t); }
+
+  setM(patch){ this.setState(s=>({modal:Object.assign({},s.modal,patch)})); }
+  closeModal(){ this.setState({modal:null}); }
+  toggleMenu(id){ this.setState(s=>({menuOpen:s.menuOpen===id?null:id})); }
+  closeMenu(){ this.setState({menuOpen:null}); }
+  openAddSensor(){ this.setState({modal:{view:'sensor',name:'',type:'TEMPERATURE',unit:'°C'}}); }
+  onSensorType(t){ this.setState(s=>({modal:Object.assign({},s.modal,{type:t,unit:TYPEDEF[t].unit})})); }
+  saveSensor(){ const m=this.state.modal; if(!m||!(m.name||'').trim())return; const T=TYPEDEF[m.type];
+    this.setState(s=>{ let cfgs=s.configs.slice(); let base=(m.name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,''))||'sensor'; let id=base,i=2; while(cfgs.some(c=>c.id===id)){id=base+'-'+i;i++;}
+      cfgs.push({id,name:m.name.trim(),type:m.type,unit:m.unit,base:T.base,amp:T.amp,phase:Math.random()*6.283,noise:T.noise,drift:0,enabled:true,rules:[]});
+      return {configs:cfgs, page:'config', configId:id, modal:null};
+    });
+  }
+  openConfig(id){ this.setState({page:'config', configId:id, menuOpen:null, modal:null}); }
+  renameSensor(id,name){ this.setState(s=>({configs:s.configs.map(c=>c.id===id?Object.assign({},c,{name}):c)})); }
+  openRuleNew(sensorId){ const c=this.state.configs.find(x=>x.id===sensorId); const T=TYPEDEF[c.type]; this.setState({modal:{view:'rule',sensorId,ruleId:null,dir:'above',threshold:T.threshold,clear:T.clear}}); }
+  openRuleEdit(sensorId,ruleId){ const c=this.state.configs.find(x=>x.id===sensorId); const r=(c.rules||[]).find(x=>x.id===ruleId); if(!r)return; this.setState({modal:{view:'rule',sensorId,ruleId,dir:r.dir,threshold:r.threshold,clear:r.clear}}); }
+  backToConfig(){ this.setState({modal:null}); }
+  saveRule(){ const m=this.state.modal; if(!m)return; const th=parseFloat(m.threshold),cl=parseFloat(m.clear);
+    this.setState(s=>{ const cfgs=s.configs.map(c=>{ if(c.id!==m.sensorId)return c; const T=TYPEDEF[c.type]; let rules=(c.rules||[]).slice();
+      if(m.ruleId){ rules=rules.map(r=>r.id===m.ruleId?{id:r.id,dir:m.dir,threshold:isNaN(th)?r.threshold:th,clear:isNaN(cl)?r.clear:cl}:r); }
+      else { rules.push({id:'rule-'+Date.now()+'-'+Math.floor(Math.random()*9999),dir:m.dir,threshold:isNaN(th)?T.threshold:th,clear:isNaN(cl)?T.clear:cl}); }
+      return Object.assign({},c,{rules}); });
+      return {configs:cfgs, modal:null};
+    });
+  }
+  deleteRule(sensorId,ruleId){ this.setState(s=>({configs:s.configs.map(c=>c.id===sensorId?Object.assign({},c,{rules:(c.rules||[]).filter(r=>r.id!==ruleId)}):c)})); }
+  deleteSensor(id){ this.setState(s=>{ if(s.configs.length<=1)return {menuOpen:null}; const cfgs=s.configs.filter(c=>c.id!==id); let sel=s.selectedId; if(sel===id)sel=cfgs[0]?cfgs[0].id:null; const back=s.page==='config'&&s.configId===id; return {configs:cfgs,selectedId:sel,menuOpen:null,modal:null,page:back?'manage':s.page,configId:s.configId===id?null:s.configId}; }); }
+  toggleEnabled(id){ this.setState(s=>({configs:s.configs.map(c=>c.id===id?Object.assign({},c,{enabled:c.enabled===false}):c),menuOpen:null})); }
+
+  getSensors(){
+    const now=this.NOW;
+    const N=288, STEP=5*60*1000;
+    return this.state.configs.map(sp=>{
+      const rand=rng(hashStr(sp.id));
+      const series=[];
+      for(let i=0;i<N;i++){
+        const t=now-(N-1-i)*STEP;
+        const dt=new Date(t); const hf=dt.getHours()+dt.getMinutes()/60;
+        const diurnal=sp.amp*Math.sin((hf/24)*Math.PI*2+sp.phase);
+        const noise=(rand()-0.5)*sp.noise*2;
+        let extra=0; const p=i/(N-1);
+        if(sp.drift){ const ds=N-36; if(i>=ds) extra+=sp.drift*((i-ds)/(N-1-ds)); }
+        if(sp.bumps){ sp.bumps.forEach(b=>{ extra+=b.mag*Math.exp(-Math.pow((p-b.at)/b.width,2)); }); }
+        series.push({t, v:Math.round((sp.base+diurnal+noise+extra)*10)/10});
+      }
+      const hourly=[];
+      for(let h=0;h<24;h++){
+        const chunk=series.slice(h*12,h*12+12); const vs=chunk.map(r=>r.v);
+        hourly.push({ts:chunk[0].t,label:hhmm(chunk[0].t),avg:Math.round(vs.reduce((a,b)=>a+b,0)/vs.length*10)/10,min:Math.min.apply(null,vs),max:Math.max.apply(null,vs),count:vs.length});
+      }
+      const events=[]; const ruleStates=[]; let anyAlerting=false;
+      (sp.rules||[]).forEach(rule=>{
+        let alerting=false;
+        series.forEach(r=>{
+          if(rule.dir==='above'){
+            if(!alerting&&r.v>=rule.threshold){alerting=true;events.push({type:'RAISED',t:r.t,v:r.v,ruleId:rule.id});}
+            else if(alerting&&r.v<=rule.clear){alerting=false;events.push({type:'CLEARED',t:r.t,v:r.v,ruleId:rule.id});}
+          } else {
+            if(!alerting&&r.v<=rule.threshold){alerting=true;events.push({type:'RAISED',t:r.t,v:r.v,ruleId:rule.id});}
+            else if(alerting&&r.v>=rule.clear){alerting=false;events.push({type:'CLEARED',t:r.t,v:r.v,ruleId:rule.id});}
+          }
+        });
+        ruleStates.push(Object.assign({},rule,{alerting}));
+        if(alerting)anyAlerting=true;
+      });
+      events.sort((a,b)=>b.t-a.t);
+      return Object.assign({},sp,{enabled:sp.enabled!==false,series,hourly,events,rules:sp.rules||[],ruleStates,state:anyAlerting?'ALERTING':'OK',latest:series[series.length-1].v});
+    });
+  }
+
+  spark(s){
+    const step=Math.ceil(s.series.length/46);
+    const sub=s.series.filter((_,i)=>i%step===0);
+    const vs=sub.map(r=>r.v); const lo=Math.min.apply(null,vs),hi=Math.max.apply(null,vs),rg=(hi-lo)||1;
+    const X=i=>i/(sub.length-1)*120, Y=v=>33-((v-lo)/rg)*30;
+    const line='M'+sub.map((r,i)=>X(i).toFixed(1)+' '+Y(r.v).toFixed(1)).join(' L');
+    return {line, area:line+' L120 34 L0 34 Z'};
+  }
+
+  lineChart(s,animate){
+    const v=s.series.map(r=>r.v), n=v.length;
+    const ex=[]; (s.rules||[]).forEach(r=>{ex.push(r.threshold,r.clear);});
+    let lo=Math.min.apply(null,v.concat(ex)), hi=Math.max.apply(null,v.concat(ex));
+    const pad=(hi-lo)*0.14||1; lo-=pad; hi+=pad;
+    const X=i=>PL+i/(n-1)*PW, Y=val=>PT+(1-(val-lo)/(hi-lo))*PH;
+    let d='M',len=0,px,py;
+    s.series.forEach((r,i)=>{const x=X(i),y=Y(r.v);d+=(i?' L':'')+x.toFixed(1)+' '+y.toFixed(1);if(i)len+=Math.hypot(x-px,y-py);px=x;py=y;});
+    const base=PT+PH;
+    const area=d+' L'+X(n-1).toFixed(1)+' '+base+' L'+PL+' '+base+' Z';
+    const bands=[], lines=[];
+    (s.rules||[]).forEach(r=>{ const yT=Y(r.threshold), yC=Y(r.clear);
+      if(r.dir==='above'){ bands.push({y:PT.toFixed(1),h:(yT-PT).toFixed(1),fill:'var(--alert)',op:0.07}); bands.push({y:yT.toFixed(1),h:(yC-yT).toFixed(1),fill:'var(--warn)',op:0.12}); }
+      else { bands.push({y:yT.toFixed(1),h:(base-yT).toFixed(1),fill:'var(--alert)',op:0.07}); bands.push({y:yC.toFixed(1),h:(yT-yC).toFixed(1),fill:'var(--warn)',op:0.12}); }
+      lines.push({y:yT.toFixed(1),color:'var(--alert)'}); lines.push({y:yC.toFixed(1),color:'var(--warn)'});
+    });
+    const yTicks=[],xTicks=[];
+    for(let k=0;k<=4;k++){const val=lo+(hi-lo)*k/4;yTicks.push({y:Y(val).toFixed(1),label:nf(val,0)});}
+    for(let i=0;i<n;i+=48)xTicks.push({x:X(i).toFixed(1),label:hhmm(s.series[i].t)});
+    xTicks.push({x:X(n-1).toFixed(1),label:hhmm(s.series[n-1].t)});
+    const lineColor=s.state==='ALERTING'?'var(--alert)':'var(--primary)';
+    const lineStyle='fill:none;stroke:'+lineColor+';stroke-width:2;stroke-linejoin:round;stroke-linecap:round;'+(animate?('stroke-dasharray:'+Math.ceil(len)+';stroke-dashoffset:'+Math.ceil(len)+';animation:draw 1.5s ease forwards;'):'');
+    return {linePath:d,areaPath:area,bands,lines,yTicks,xTicks,lastDot:{x:X(n-1).toFixed(1),y:Y(v[n-1]).toFixed(1)},lineColor,lineStyle};
+  }
+
+  aggChart(s){
+    const H=s.hourly;
+    let lo=Math.min.apply(null,H.map(h=>h.min)), hi=Math.max.apply(null,H.map(h=>h.max));
+    const pad=(hi-lo)*0.14||1; lo-=pad; hi+=pad;
+    const Y=val=>PT+(1-(val-lo)/(hi-lo))*PH, base=PT+PH, bw=PW/24, w=bw*0.5;
+    const bars=H.map((h,i)=>{const cx=PL+(i+0.5)*bw, y=Y(h.avg);return{x:(cx-w/2).toFixed(1),y:y.toFixed(1),w:w.toFixed(1),h:(base-y).toFixed(1),cx:cx.toFixed(1),wy1:Y(h.max).toFixed(1),wy2:Y(h.min).toFixed(1)};});
+    const yTicks=[],xTicks=[];
+    for(let k=0;k<=4;k++){const val=lo+(hi-lo)*k/4;yTicks.push({y:Y(val).toFixed(1),label:nf(val,0)});}
+    H.forEach((h,i)=>{if(i%4===0)xTicks.push({x:(PL+(i+0.5)*bw).toFixed(1),label:h.label});});
+    return {bars,yTicks,xTicks};
+  }
+
+  renderVals(){
+    const st=this.state, sensors=this.getSensors();
+    const primary=(this.props&&this.props.accentColor)||'#FF6700';
+    const animate=!(this.props&&this.props.animateCharts===false);
+    const theme=st.theme;
+
+    const statusOf=s=>{
+      if(s.enabled===false) return {label:'PAUSED',fg:'var(--muted)',bg:'var(--card-2)',dot:'var(--muted-2)',pulse:false};
+      if(!s.rules||!s.rules.length) return {label:'NO RULES',fg:'var(--muted)',bg:'var(--card-2)',dot:'var(--muted-2)',pulse:false};
+      if(s.state==='ALERTING') return {label:'ALERTING',fg:'var(--alert)',bg:'var(--alert-bg)',dot:'var(--alert)',pulse:true};
+      const warn=(s.ruleStates||[]).some(r=>!r.alerting&&(r.dir==='above'?(s.latest>r.clear&&s.latest<r.threshold):(s.latest<r.clear&&s.latest>r.threshold)));
+      if(warn) return {label:'WARNING',fg:'var(--warn)',bg:'var(--warn-bg)',dot:'var(--warn)',pulse:false};
+      return {label:'OK',fg:'var(--ok)',bg:'var(--ok-bg)',dot:'var(--ok)',pulse:false};
+    };
+    const badgeStyle=stt=>'display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;font:600 10px/1 \'IBM Plex Mono\',monospace;letter-spacing:.05em;white-space:nowrap;background:'+stt.bg+';color:'+stt.fg+';';
+    const dotStyle=(c,pulse)=>'width:7px;height:7px;border-radius:50%;flex:none;background:'+c+';'+(pulse?'animation:pulse 1.6s ease-in-out infinite;':'');
+    const cardRule=s=>!s.rules.length?'no alert rule':(s.rules.length===1?('alert '+(s.rules[0].dir==='above'?'> ':'< ')+nf(s.rules[0].threshold,0)+' '+s.unit):(s.rules.length+' alert rules'));
+    const ruleSummary=s=>!s.rules.length?'No rules':(s.rules.length===1?((s.rules[0].dir==='above'?'> ':'< ')+nf(s.rules[0].threshold,0)+' '+s.unit+'   ·   reset '+nf(s.rules[0].clear,0)):(s.rules.length+' alert rules'));
+
+    const mk=(key,label,icon)=>{const active=st.page===key||(key==='overview'&&st.page==='detail')||(key==='manage'&&st.page==='config');return{key,label,icon,bar:active,go:()=>this.setState({page:key}),style:'display:flex;align-items:center;gap:11px;width:100%;text-align:left;border:none;cursor:pointer;padding:10px 12px;border-radius:9px;font-family:\'IBM Plex Sans\',sans-serif;font-size:13.5px;font-weight:'+(active?'600':'500')+';color:'+(active?'var(--fg)':'var(--muted)')+';background:'+(active?'var(--card-2)':'transparent')+';position:relative;',iconStyle:'width:18px;height:18px;border-radius:5px;flex:none;display:flex;align-items:center;justify-content:center;font:600 10px/1 \'IBM Plex Mono\',monospace;background:'+(active?'var(--primary)':'var(--card-2)')+';color:'+(active?'#fff':'var(--muted-2)')+';border:1px solid '+(active?'transparent':'var(--border)')+';'};};
+    const alerting=sensors.filter(s=>s.enabled&&s.state==='ALERTING');
+    const alertingCount=alerting.length;
+    const navAlerts=mk('alerts','Alerts','!');
+    navAlerts.badge=alertingCount?String(alertingCount):null;
+    navAlerts.badgeStyle='margin-left:auto;display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--alert);color:#fff;font:600 10.5px/1 \'IBM Plex Mono\',monospace;';
+    const nav=[mk('overview','Overview','O'),navAlerts,mk('aggregates','Aggregates','Σ'),mk('system','System','S'),mk('manage','Manage','M')];
+
+    const UNIT={TEMPERATURE:'°C',PRESSURE:'hPa',HUMIDITY:'%'};
+    const byType={};
+    ['TEMPERATURE','PRESSURE','HUMIDITY'].forEach(tp=>{const g=sensors.filter(s=>s.type===tp);const all=g.reduce((a,s)=>a.concat(s.series.map(r=>r.v)),[]);byType[tp]=all.length?{avg:all.reduce((a,b)=>a+b,0)/all.length,min:Math.min.apply(null,all),max:Math.max.apply(null,all),unit:g[0].unit,count:g.length}:{avg:0,min:0,max:0,unit:UNIT[tp],count:0};});
+
+    const cards=sensors.map(s=>{const stt=statusOf(s);const sp=this.spark(s);return{id:s.id,name:s.name,type:s.type,unit:s.unit,chip:s.type[0],latest:nf(s.latest,1),badgeStyle:badgeStyle(stt),badgeLabel:stt.label,dotStyle:dotStyle(stt.dot,stt.pulse),spark:sp.line,sparkArea:sp.area,sparkColor:s.enabled===false?'var(--muted-2)':(s.state==='ALERTING'?'var(--alert)':'var(--primary)'),rule:cardRule(s),open:()=>this.setState({page:'detail',selectedId:s.id})};});
+
+    const sel=sensors.find(s=>s.id===st.selectedId)||sensors[0];
+    const sstt=statusOf(sel);
+    const goOverview=()=>this.setState({page:'overview'});
+    const goManage=()=>this.setState({page:'manage'});
+    const cfgSensor=sensors.find(x=>x.id===st.configId);
+    const cfgName=cfgSensor?cfgSensor.name:'Sensor';
+    const crumbDefs={
+      overview:[{label:'Dashboard'},{label:'Overview'}],
+      alerts:[{label:'Dashboard',go:goOverview},{label:'Alerts'}],
+      aggregates:[{label:'Dashboard',go:goOverview},{label:'Aggregates'}],
+      system:[{label:'Dashboard',go:goOverview},{label:'System'}],
+      manage:[{label:'Dashboard',go:goOverview},{label:'Manage sensors'}],
+      config:[{label:'Dashboard',go:goOverview},{label:'Manage sensors',go:goManage},{label:cfgName}],
+      detail:[{label:'Dashboard',go:goOverview},{label:'Overview',go:goOverview},{label:sel.name}]
+    };
+    const crumbs=(crumbDefs[st.page]||crumbDefs.overview).map((c,i,arr)=>{const isLast=i===arr.length-1;return {label:c.label,go:c.go,sep:i>0,isLink:!!c.go&&!isLast,isCurrent:isLast,isStatic:!c.go&&!isLast};});
+    const segTop=(active,side)=>'padding:7px 14px;border:1px solid '+(active?'var(--primary)':'var(--border)')+';background:'+(active?'color-mix(in srgb,var(--primary) 12%,var(--card))':'var(--card)')+';color:'+(active?'var(--primary)':'var(--muted)')+';font:600 12px/1 \'IBM Plex Sans\';cursor:pointer;border-radius:'+(side==='l'?'8px 0 0 8px':'0 8px 8px 0')+';'+(side==='r'?'border-left:none;':'');
+    const ov={ isCards:st.overviewView!=='table', isTable:st.overviewView==='table', cardsStyle:segTop(st.overviewView!=='table','l'), tableStyle:segTop(st.overviewView==='table','r'), setCards:()=>this.setState({overviewView:'cards'}), setTable:()=>this.setState({overviewView:'table'}) };
+    const recent=sel.series.slice(-16).reverse().map((r,i)=>{const idx=sel.series.length-1-i;const prev=sel.series[idx-1];const dl=prev?r.v-prev.v:0;return{time:hhmm(r.t),value:nf(r.v,1),delta:(dl>0?'+':'')+nf(dl,1),deltaColor:dl>0.05?'var(--alert)':(dl<-0.05?'var(--ok)':'var(--muted-2)')};});
+    const hourly=sel.hourly.slice().reverse().map(h=>({label:h.label,avg:nf(h.avg,1),min:nf(h.min,1),max:nf(h.max,1),count:h.count}));
+    const alerts=sel.events.map(e=>({type:e.type,time:hhmm(e.t),value:nf(e.v,1),color:e.type==='RAISED'?'var(--alert)':'var(--ok)',bg:e.type==='RAISED'?'var(--alert-bg)':'var(--ok-bg)'}));
+    const pills=sensors.map(s=>{const a=s.id===sel.id;return{label:s.name,go:()=>this.setState({selectedId:s.id}),style:'border:1px solid '+(a?'var(--primary)':'var(--border)')+';background:'+(a?'color-mix(in srgb,var(--primary) 12%,var(--card))':'var(--card)')+';color:'+(a?'var(--primary)':'var(--muted)')+';padding:7px 13px;border-radius:999px;font-family:\'IBM Plex Sans\';font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;'};});
+    const dRules=(sel.ruleStates||[]).map(r=>{const fb=r.alerting?{label:'FIRING',fg:'var(--alert)',bg:'var(--alert-bg)'}:{label:'CLEAR',fg:'var(--ok)',bg:'var(--ok-bg)'};return{dirLabel:r.dir==='above'?'Above threshold':'Below threshold',threshold:nf(r.threshold,1)+' '+sel.unit,clear:nf(r.clear,1)+' '+sel.unit,badgeStyle:badgeStyle(fb),badgeLabel:fb.label,dotStyle:dotStyle(r.alerting?'var(--alert)':'var(--ok)',r.alerting)};});
+    const d={name:sel.name,type:sel.type,unit:sel.unit,latest:nf(sel.latest,1),badgeStyle:badgeStyle(sstt),badgeLabel:sstt.label,dotStyle:dotStyle(sstt.dot,sstt.pulse),lc:this.lineChart(sel,animate),ac:this.aggChart(sel),recent,hourly,alerts,hasAlerts:alerts.length>0,noAlerts:alerts.length===0,pills,rules:dRules,hasRules:dRules.length>0,noRules:dRules.length===0,configure:()=>this.openConfig(sel.id)};
+
+    const typeCards=['TEMPERATURE','PRESSURE','HUMIDITY'].map(tp=>({type:tp,avg:nf(byType[tp].avg,1),unit:byType[tp].unit,min:nf(byType[tp].min,1),max:nf(byType[tp].max,1),count:byType[tp].count}));
+    const cmp=sensors.map((s,idx)=>{const av=s.hourly.map(h=>h.avg),mn=Math.min.apply(null,av),mx=Math.max.apply(null,av),rg=(mx-mn)||1;const X=i=>PL+i/23*PW,Y=val=>PT+(1-(val-mn)/rg)*PH;return{name:s.name,color:PAL[idx%PAL.length],path:'M'+av.map((val,i)=>X(i).toFixed(1)+' '+Y(val).toFixed(1)).join(' L')};});
+    const aggY=[];for(let k=0;k<=4;k++){const val=k*25;aggY.push({y:(PT+(1-val/100)*PH).toFixed(1),label:val});}
+    const cmpX=[];sensors[0].hourly.forEach((h,i)=>{if(i%4===0)cmpX.push({x:(PL+i/23*PW).toFixed(1),label:h.label});});
+    const buckets=[];for(let h=18;h<24;h++){sensors.forEach(s=>{const b=s.hourly[h];buckets.push({sensor:s.name,unit:s.unit,hour:b.label,avg:nf(b.avg,1),min:nf(b.min,1),max:nf(b.max,1),count:b.count,hi:h});});}
+    buckets.sort((a,b)=>b.hi-a.hi);
+    const agg={typeCards,cmp,cmpX,yTicks:aggY,buckets};
+
+    const fmtDur=ms=>{const m=Math.max(0,Math.round(ms/60000));const h=Math.floor(m/60);return (h>0?h+'h ':'')+(m%60)+'m';};
+    const activeAlerts=alerting.map(s=>{const raised=s.events.find(e=>e.type==='RAISED');const fr=(s.ruleStates||[]).find(r=>r.alerting);const sp=this.spark(s);return{name:s.name,type:s.type,chip:s.type[0],value:nf(s.latest,1),unit:s.unit,rule:fr?((fr.dir==='above'?'rule > ':'rule < ')+nf(fr.threshold,0)+' '+s.unit):'',agoText:raised?('raised '+hhmm(raised.t)+' · '+fmtDur(this.NOW-raised.t)+' ago'):'',spark:sp.line,sparkArea:sp.area,open:()=>this.setState({page:'detail',selectedId:s.id})};});
+    const eventLog=[];sensors.forEach(s=>{s.events.forEach(e=>{eventLog.push({sensor:s.name,unit:s.unit,type:e.type,t:e.t,time:hhmm(e.t),value:nf(e.v,1),color:e.type==='RAISED'?'var(--alert)':'var(--ok)',bg:e.type==='RAISED'?'var(--alert-bg)':'var(--ok-bg)'});});});
+    eventLog.sort((a,b)=>b.t-a.t);
+    const al={active:activeAlerts,hasActive:activeAlerts.length>0,noActive:activeAlerts.length===0,log:eventLog};
+
+    const manage={count:sensors.length, openNew:()=>this.openAddSensor(), anyMenu:st.menuOpen!=null, closeMenu:()=>this.closeMenu(), rows:sensors.map(s=>{const stt=statusOf(s);const open=st.menuOpen===s.id;return{
+      id:s.id,name:s.name,type:s.type,unit:s.unit,
+      ruleText:ruleSummary(s), ruleColor:s.rules.length?'var(--muted)':'var(--muted-2)',
+      badgeStyle:badgeStyle(stt),badgeLabel:stt.label,dotStyle:dotStyle(stt.dot,stt.pulse),
+      menuOpen:open,
+      kebabStyle:'width:30px;height:30px;flex:none;display:flex;align-items:center;justify-content:center;border:1px solid '+(open?'var(--primary)':'var(--border)')+';border-radius:8px;background:'+(open?'color-mix(in srgb,var(--primary) 10%,var(--card))':'var(--card)')+';color:var(--muted);cursor:pointer;font-size:17px;line-height:1;padding:0;',
+      toggleMenu:e=>{if(e&&e.stopPropagation)e.stopPropagation();this.toggleMenu(s.id);},
+      configure:e=>{if(e&&e.stopPropagation)e.stopPropagation();this.openConfig(s.id);},
+      enabledLabel:s.enabled?'Pause sensor':'Resume sensor',
+      toggle:e=>{if(e&&e.stopPropagation)e.stopPropagation();this.toggleEnabled(s.id);},
+      del:e=>{if(e&&e.stopPropagation)e.stopPropagation();this.deleteSensor(s.id);},
+      rowClick:()=>this.openConfig(s.id)
+    };})};
+
+    const M=st.modal; let sm=null, cf=null, rm=null;
+    const seg=(active,side)=>'flex:1;padding:9px 0;border:1px solid '+(active?'var(--primary)':'var(--border)')+';background:'+(active?'color-mix(in srgb,var(--primary) 12%,var(--card))':'var(--card)')+';color:'+(active?'var(--primary)':'var(--muted)')+';font:600 12.5px/1 \'IBM Plex Sans\';cursor:pointer;border-radius:'+(side==='l'?'8px 0 0 8px':'0 8px 8px 0')+';'+(side==='r'?'border-left:none;':'');
+    if(M&&M.view==='sensor'){ sm={ name:M.name, type:M.type, unit:M.unit, onName:e=>this.setM({name:e.target.value}), onType:e=>this.onSensorType(e.target.value), save:()=>this.saveSensor(), close:()=>this.closeModal() }; }
+    if(st.page==='config'){ const cs=sensors.find(x=>x.id===st.configId);
+      if(cs){ const cstt=statusOf(cs);
+        cf={ id:cs.id, name:cs.name, type:cs.type, unit:cs.unit, chip:cs.type[0], latest:nf(cs.latest,1), badgeStyle:badgeStyle(cstt), badgeLabel:cstt.label, dotStyle:dotStyle(cstt.dot,cstt.pulse),
+          enabledLabel:cs.enabled?'Pause sensor':'Resume sensor',
+          hasRules:(cs.rules||[]).length>0, noRules:(cs.rules||[]).length===0,
+          rules:(cs.ruleStates||[]).map(r=>{const fb=r.alerting?{label:'FIRING',fg:'var(--alert)',bg:'var(--alert-bg)'}:{label:'CLEAR',fg:'var(--ok)',bg:'var(--ok-bg)'};return{title:(r.dir==='above'?'Above ':'Below ')+nf(r.threshold,1)+' '+cs.unit, sub:'reset at '+nf(r.clear,1)+' '+cs.unit, badgeStyle:badgeStyle(fb), badgeLabel:fb.label, edit:()=>this.openRuleEdit(cs.id,r.id), del:()=>this.deleteRule(cs.id,r.id)};}),
+          addRule:()=>this.openRuleNew(cs.id), del:()=>this.deleteSensor(cs.id), toggle:()=>this.toggleEnabled(cs.id), onName:e=>this.renameSensor(cs.id,e.target.value) };
+      }
+    }
+    if(M&&M.view==='rule'){ const dirAbove=M.dir==='above'; const cs=sensors.find(x=>x.id===M.sensorId);
+      rm={ title:M.ruleId?'Edit alert rule':'Add alert rule', saveLabel:M.ruleId?'Save rule':'Add rule', unit:cs?cs.unit:'', sensorName:cs?cs.name:'',
+        dir:M.dir, threshold:M.threshold, clear:M.clear, aboveStyle:seg(dirAbove,'l'), belowStyle:seg(!dirAbove,'r'),
+        ruleHint:dirAbove?'Fires when the reading rises above the threshold; clears only after it falls back below the reset value.':'Fires when the reading drops below the threshold; clears only after it rises back above the reset value.',
+        onThreshold:e=>this.setM({threshold:e.target.value}), onClear:e=>this.setM({clear:e.target.value}),
+        setAbove:()=>this.setM({dir:'above'}), setBelow:()=>this.setM({dir:'below'}),
+        save:()=>this.saveRule(), close:()=>this.backToConfig() };
+    }
+
+    const C=2*Math.PI*50, ratio=11.3, ratioMax=15, chunkTotal=1284, chunkComp=1201;
+    const sys={cards:[{label:'TOTAL STORAGE',value:'4.82',unit:'GB',sub:'across 6 hypertables'},{label:'TOTAL ROWS',value:'18.43',unit:'M',sub:'1,728 in last 24h'},{label:'INGEST RATE',value:'1,200',unit:'rows/s',sub:'~432 K / hour'},{label:'UPTIME',value:'99.98',unit:'%',sub:'30-day rolling'}],ratio:{dash:(C*ratio/ratioMax).toFixed(1),val:nf(ratio,1)+'×',sub:'54.6 GB → 4.82 GB'},chunks:{dash:(C*chunkComp/chunkTotal).toFixed(1),val:nf(100*chunkComp/chunkTotal,1)+'%',total:nf(chunkTotal,0),comp:nf(chunkComp,0)},storage:[{type:'Temperature',gb:'1.92',pct:40},{type:'Pressure',gb:'1.74',pct:36},{type:'Humidity',gb:'1.16',pct:24}]};
+
+    const titles={overview:['Overview','Real-time status across all sensors'],alerts:['Alerts','Active alerts and 24h event log'],detail:[sel.name,sel.type+' · '+sel.unit],aggregates:['Aggregates','Hourly roll-ups across all sensors'],system:['System','Storage & ingestion metrics'],manage:['Manage sensors','Create sensors and configure alert rules'],config:[cfgName,'Sensor settings & alert rules']};
+    const T=titles[st.page]||titles.overview;
+
+    return {
+      theme, primary,
+      nav,
+      title:T[0], subtitle:T[1],
+      toggle:()=>this.setState({theme:theme==='dark'?'light':'dark'}),
+      themeLabel: theme==='dark'?'Light':'Dark',
+      themeIconStyle:'width:13px;height:13px;border-radius:50%;'+(theme==='dark'?'background:var(--primary);':'background:transparent;border:2px solid var(--muted);'),
+      lastUpdated:hhmm(this.NOW),
+      alertCount:alerting.length, alertCountColor: alerting.length?'var(--alert)':'var(--fg)',
+      alertDotStyle:dotStyle(alerting.length?'var(--alert)':'var(--ok)',alerting.length>0),
+      alertText: alerting.length? (alerting.length+' active alert'+(alerting.length>1?'s':'')) : 'All systems OK',
+      showLoading:st.loading,
+      showOverview:!st.loading&&st.page==='overview',
+      showAlerts:!st.loading&&st.page==='alerts',
+      showManage:!st.loading&&st.page==='manage',
+      showSensorModal:!!sm, showConfig:!st.loading&&st.page==='config'&&!!cf, showRuleModal:!!rm,
+      goAlerts:()=>this.setState({page:'alerts'}),
+      showDetail:!st.loading&&st.page==='detail',
+      showAggregates:!st.loading&&st.page==='aggregates',
+      showSystem:!st.loading&&st.page==='system',
+      skel4:[0,1,2,3], skel6:[0,1,2,3,4,5],
+      kpiSensors:sensors.length, kpiAlerts:alerting.length, kpiPoints:nf(sensors.length*288,0),
+      kpiTypes:['TEMPERATURE','PRESSURE','HUMIDITY'].map(tp=>({type:tp,avg:nf(byType[tp].avg,1),unit:byType[tp].unit})),
+      cards, d, agg, sys, al, manage, sm, cf, rm, crumbs, ov
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -10,6 +10,10 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# CI never runs Puppeteer (visual QA is local-only), so skip its Chromium download.
+env:
+  PUPPETEER_SKIP_DOWNLOAD: 'true'
+
 jobs:
   build-and-test:
     name: Lint, build & unit test

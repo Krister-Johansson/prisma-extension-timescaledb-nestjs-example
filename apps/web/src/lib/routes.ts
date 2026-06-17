@@ -19,31 +19,37 @@ function path(...segments: Array<string | number>): RoutePath {
   return `/${joined}` as RoutePath;
 }
 
+function requireId(value: string, fn: string): string {
+  const id = value.trim();
+  if (id.length === 0) {
+    throw new Error(`${fn} requires a non-empty sensorId`);
+  }
+  return id;
+}
+
 /**
  * Central route registry — the single source of truth for paths. Every leaf is a
  * pure function returning an absolute path, so callers pass only the params they
- * need and never hard-code path strings. Refactoring a URL touches one place.
+ * need and never hard-code path strings. Mirrors the SENTINEL dashboard pages.
  *
- *   routes.home()                -> "/"
- *   routes.sensors.index()       -> "/sensors"
- *   routes.sensors.detail("t1")  -> "/sensors/t1"
- *   routes.aggregates()          -> "/aggregates"
- *   routes.system()              -> "/system"
- *
- * Nest deeper as the app grows, e.g. `routes.sensors.alert.edit(id)`.
+ *   routes.overview()              -> "/"
+ *   routes.alerts()                -> "/alerts"
+ *   routes.aggregates()            -> "/aggregates"
+ *   routes.system()                -> "/system"
+ *   routes.manage()                -> "/manage"
+ *   routes.sensors.detail("t1")   -> "/sensors/t1"
+ *   routes.sensors.config("t1")   -> "/sensors/t1/config"
  */
 export const routes = {
-  home: () => path(),
-  sensors: {
-    index: () => path('sensors'),
-    detail: (sensorId: string) => {
-      const id = sensorId.trim();
-      if (id.length === 0) {
-        throw new Error('routes.sensors.detail requires a non-empty sensorId');
-      }
-      return path('sensors', id);
-    },
-  },
+  overview: () => path(),
+  alerts: () => path('alerts'),
   aggregates: () => path('aggregates'),
   system: () => path('system'),
+  manage: () => path('manage'),
+  sensors: {
+    detail: (sensorId: string) =>
+      path('sensors', requireId(sensorId, 'routes.sensors.detail')),
+    config: (sensorId: string) =>
+      path('sensors', requireId(sensorId, 'routes.sensors.config'), 'config'),
+  },
 } as const;
