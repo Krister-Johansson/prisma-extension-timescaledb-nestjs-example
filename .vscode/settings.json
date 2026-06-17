@@ -6,6 +6,7 @@
         "initdb",
         "LOOKBACK",
         "rollup",
+        "sparkline",
         "timescaledb"
     ]
 }

@@ -5,11 +5,17 @@ type GqlSensor = SensorsListQuery['sensors'][number];
 
 const round = (n: number) => Math.round(n * 10) / 10;
 
-/** Evenly sample a series down to at most `n` points for the sparkline. */
+/**
+ * Evenly sample a series down to at most `n` points for the sparkline, always
+ * keeping the first and last (newest) points.
+ */
 function downsample(values: number[], n: number): number[] {
-  if (values.length <= n) return values;
-  const step = values.length / n;
-  return Array.from({ length: n }, (_, i) => values[Math.floor(i * step)]);
+  if (values.length <= n || n < 2) return values;
+  const last = values.length - 1;
+  return Array.from(
+    { length: n },
+    (_, i) => values[Math.round((i / (n - 1)) * last)],
+  );
 }
 
 /**
