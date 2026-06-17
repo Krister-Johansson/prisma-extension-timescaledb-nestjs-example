@@ -17,6 +17,9 @@ jobs:
     steps:
       # Actions pinned to commit SHAs for supply-chain safety (comment tracks tag).
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          # Read-only CI; no authenticated git ops needed, so don't persist the token.
+          persist-credentials: false
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:

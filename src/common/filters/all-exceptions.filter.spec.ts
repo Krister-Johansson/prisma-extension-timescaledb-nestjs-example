@@ -83,4 +83,15 @@ describe('AllExceptionsFilter', () => {
     expect(status).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
     expect(body.message).toMatchObject({ error: 'boom' });
   });
+
+  it('exposes a 5xx HttpException response in development', () => {
+    makeFilter(NodeEnv.Development).catch(
+      new InternalServerErrorException('sensitive detail'),
+      host,
+    );
+
+    const [, body, status] = reply.mock.calls[0] as ReplyArgs;
+    expect(status).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
+    expect(body.message).toMatchObject({ message: 'sensitive detail' });
+  });
 });
