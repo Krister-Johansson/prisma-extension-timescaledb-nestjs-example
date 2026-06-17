@@ -4,6 +4,7 @@
         "hypertable",
         "hypertables",
         "initdb",
+        "LOOKBACK",
         "rollup",
         "timescaledb"
     ]

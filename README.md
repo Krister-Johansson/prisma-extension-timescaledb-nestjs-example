@@ -154,20 +154,18 @@ query { alertEvents(sensorId: "temp-1") { kind value message } }
 
 ## Timescale admin
 
-A small admin surface wraps the extension's `$timescale` management API — hypertable
-introspection plus retention/compression/chunk operations. These mutations are
-**destructive**, so they're protected by an `AdminGuard`: set `ADMIN_TOKEN` and send it
-as an `x-admin-token` header. If `ADMIN_TOKEN` is unset the admin API is open in
-development but denied in production.
+A small **read-only** admin surface exposes the extension's `$timescale` introspection:
 
 ```graphql
 query { hypertableStats(model: SensorReading) { totalBytes approximateRowCount totalChunks compressedChunks } }
-
-mutation { addRetentionPolicy(model: SensorReading, dropAfter: "90 days") }
-mutation { addCompressionPolicy(model: SensorReading, after: "7 days", segmentBy: ["sensorId"], orderBy: "time DESC") }
-mutation { setChunkInterval(model: SensorReading, interval: "1 day") }
-mutation { dropChunks(model: SensorReading, olderThan: "180 days") } # returns dropped chunk names
 ```
+
+Policy *configuration* (retention, compression, chunk interval, chunk skipping) is
+declared declaratively in `prisma/schema.prisma` via the `///` annotations and applied
+by migrations — it's the source of truth, so it's intentionally **not** mutated at
+runtime. (If you weren't using the generator, the package also exposes a runtime
+`$timescale.addRetentionPolicy(...)` / `addCompressionPolicy(...)` API for the
+manual-config path.)
 
 ## Testing
 
