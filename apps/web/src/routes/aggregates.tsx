@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { PagePlaceholder } from '@/components/layout/page-placeholder';
+import { Aggregates } from '@/components/aggregates/aggregates';
 
 export const Route = createFileRoute('/aggregates')({
   staticData: {
@@ -7,5 +7,5 @@ export const Route = createFileRoute('/aggregates')({
     subtitle: 'Hourly roll-ups across all sensors',
     crumb: 'Aggregates',
   },
-  component: () => <PagePlaceholder name="Aggregates" />,
+  component: Aggregates,
 });
