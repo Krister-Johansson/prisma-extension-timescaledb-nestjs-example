@@ -9,7 +9,7 @@ transactionally through Prisma into a TimescaleDB **hypertable**, rolled up by
 **continuous aggregates** for export, and watched by per-sensor **alert rules** with a
 **hysteresis reset band** so values oscillating around a threshold don't re-fire alerts.
 
-> Status: work in progress, built up across small PRs. See the roadmap below.
+> Built up across small, reviewed PRs — see the roadmap below for the feature tour.
 
 ## Stack
 
@@ -172,9 +172,18 @@ mutation { dropChunks(model: SensorReading, olderThan: "180 days") } # returns d
 ## Testing
 
 ```bash
-npm test        # unit tests
-npm run test:e2e
+npm test          # unit tests (pure hysteresis state machine, exception filters)
+
+# end-to-end against a real TimescaleDB:
+npm run db:up
+npm run db:deploy
+npm run test:e2e  # full GraphQL flow: create → ingest → alert → rollup → cagg → admin
 ```
+
+The e2e suite boots the Nest app and drives the whole pipeline over GraphQL against
+the Docker TimescaleDB. It runs in its own CI job with a `timescale/timescaledb`
+service container. (`test:e2e` runs Node with `--experimental-vm-modules` because the
+Prisma 7 client loads its WASM query compiler via dynamic `import()`.)
 
 ## Roadmap
 
@@ -185,7 +194,7 @@ npm run test:e2e
 5. ✅ Readings ingest + `timeBucket` queries + continuous-aggregate export
 6. ✅ Alerts with hysteresis + unit tests
 7. ✅ Timescale admin module (`$timescale` introspection & policies)
-8. End-to-end tests
+8. ✅ End-to-end tests + CI e2e job
 
 ## License
 
