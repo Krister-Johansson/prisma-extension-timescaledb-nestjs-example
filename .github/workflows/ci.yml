@@ -15,9 +15,10 @@ jobs:
     name: Lint, build & unit test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # Actions pinned to commit SHAs for supply-chain safety (comment tracks tag).
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: npm
@@ -33,3 +34,6 @@ jobs:
 
       - name: Unit tests
         run: npm test
+
+      # End-to-end tests run in a dedicated job (with a TimescaleDB service)
+      # once the database is introduced — see the e2e/CI PR in the roadmap.

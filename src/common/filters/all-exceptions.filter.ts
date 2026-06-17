@@ -7,6 +7,8 @@ import {
   Logger,
 } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
+import { ConfigService } from '@nestjs/config';
+import { EnvironmentVariables, NodeEnv } from '../../config/env.validation';
 
 export interface ErrorResponseBody {
   statusCode: number;
@@ -28,7 +30,10 @@ export interface ErrorResponseBody {
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
 
-  constructor(private readonly httpAdapterHost: HttpAdapterHost) {}
+  constructor(
+    private readonly httpAdapterHost: HttpAdapterHost,
+    private readonly config: ConfigService<EnvironmentVariables, true>,
+  ) {}
 
   catch(exception: unknown, host: ArgumentsHost): void {
     // `httpAdapter` is resolved here (not in the constructor) because it may not
@@ -40,11 +45,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
       exception instanceof HttpException
         ? exception.getStatus()
         : HttpStatus.INTERNAL_SERVER_ERROR;
-
-    const message =
-      exception instanceof HttpException
-        ? exception.getResponse()
-        : 'Internal server error';
 
     const isServerError = httpStatus >= 500;
     if (isServerError) {
@@ -59,9 +59,39 @@ export class AllExceptionsFilter implements ExceptionFilter {
       statusCode: httpStatus,
       timestamp: new Date().toISOString(),
       path: httpAdapter.getRequestUrl(ctx.getRequest()) as string,
-      message,
+      message: this.resolveMessage(exception, isServerError),
     };
 
     httpAdapter.reply(ctx.getResponse(), responseBody, httpStatus);
+  }
+
+  /**
+   * 4xx responses pass through their (client-facing) payload. 5xx responses are
+   * masked with a generic message in production to avoid leaking internals — but
+   * in development we surface the real error to make debugging easier.
+   */
+  private resolveMessage(
+    exception: unknown,
+    isServerError: boolean,
+  ): string | object {
+    if (!isServerError) {
+      return exception instanceof HttpException
+        ? exception.getResponse()
+        : 'Internal server error';
+    }
+
+    const isDev =
+      this.config.get('NODE_ENV', { infer: true }) === NodeEnv.Development;
+    if (!isDev) {
+      return 'Internal server error';
+    }
+
+    if (exception instanceof HttpException) {
+      return exception.getResponse();
+    }
+    if (exception instanceof Error) {
+      return { error: exception.message, stack: exception.stack };
+    }
+    return String(exception);
   }
 }

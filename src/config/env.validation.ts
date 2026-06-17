@@ -37,7 +37,10 @@ export function validate(
 
   const errors = validateSync(validated, { skipMissingProperties: false });
   if (errors.length > 0) {
-    throw new Error(errors.toString());
+    throw new Error(
+      'Environment validation failed:\n' +
+        errors.map((error) => error.toString()).join('\n'),
+    );
   }
 
   return validated;

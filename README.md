@@ -13,6 +13,9 @@ transactionally through Prisma into a TimescaleDB **hypertable**, rolled up by
 
 ## Stack
 
+> _Currently installed: NestJS, ESLint, Jest. Prisma, GraphQL/Apollo, and the
+> TimescaleDB packages below are added in later PRs (see the roadmap)._
+
 - NestJS 11 (code-first GraphQL via `@nestjs/apollo`)
 - Prisma 7 with the `@prisma/adapter-pg` driver adapter
 - `prisma-extension-timescaledb` for hypertables, continuous aggregates, retention &
