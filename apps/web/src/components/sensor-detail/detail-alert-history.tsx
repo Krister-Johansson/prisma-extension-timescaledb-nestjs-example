@@ -28,7 +28,7 @@ export function DetailAlertHistory({ sensor }: { sensor: Sensor }) {
             No alerts in the last 24h
           </div>
           <div className="mt-1 text-xs text-muted-foreground">
-            This sensor stayed within its threshold band the entire window.
+            No alert events were recorded for this sensor in the last 24 hours.
           </div>
         </div>
       ) : (

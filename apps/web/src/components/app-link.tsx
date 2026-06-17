@@ -10,6 +10,7 @@ export interface AppLinkProps {
   children: ReactNode;
   className?: string;
   activeOptions?: ComponentProps<typeof Link>['activeOptions'];
+  'aria-current'?: ComponentProps<typeof Link>['aria-current'];
 }
 
 /**

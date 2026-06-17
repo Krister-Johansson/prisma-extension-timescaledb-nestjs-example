@@ -25,8 +25,8 @@ export function DetailRawChart({ sensor }: { sensor: Sensor }) {
   const color = sensor.status === 'ALERTING' ? 'var(--alert)' : 'var(--primary)';
 
   const values = data.map((d) => d.value);
-  let lo = Math.min(...values);
-  let hi = Math.max(...values);
+  let lo = values.length ? Math.min(...values) : 0;
+  let hi = values.length ? Math.max(...values) : 1;
   if (sensor.rule) {
     lo = Math.min(lo, sensor.rule.threshold, sensor.rule.clearThreshold);
     hi = Math.max(hi, sensor.rule.threshold, sensor.rule.clearThreshold);

@@ -93,6 +93,7 @@ export function alertHistory(sensor: Sensor): AlertEvent[] {
     return [];
   }
   const rs = readings(sensor);
+  if (rs.length === 0) return [];
   const raised = rs[Math.floor(rs.length * 0.55)];
   const events: AlertEvent[] = [
     { id: 'a1', kind: 'RAISED', ts: raised.ts, time: raised.time, value: raised.value },
