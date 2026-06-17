@@ -13,6 +13,14 @@ export default defineConfig({
   server: {
     // 3001 so it doesn't clash with the API on 3000.
     port: 3001,
+    // Proxy GraphQL to the API in dev so the browser stays same-origin
+    // (no CORS needed). Override the target with VITE_API_PROXY if needed.
+    proxy: {
+      '/graphql': {
+        target: process.env.VITE_API_PROXY ?? 'http://localhost:3000',
+        changeOrigin: true,
+      },
+    },
   },
   plugins: [
     tailwindcss(),

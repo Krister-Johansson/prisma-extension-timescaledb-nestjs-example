@@ -1,0 +1,12 @@
+query SensorsList {
+  sensors {
+    id
+    name
+    type
+    unit
+    readings {
+      time
+      value
+    }
+  }
+}
