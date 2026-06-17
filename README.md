@@ -28,10 +28,18 @@ transactionally through Prisma into a TimescaleDB **hypertable**, rolled up by
 ```bash
 npm install
 cp .env.example .env
+npm run db:up      # start TimescaleDB (+ shadow DB) via Docker Compose
 npm run start:dev
 ```
 
-(The database, schema, and GraphQL API arrive in subsequent PRs — see the roadmap.)
+`npm run db:up` starts a `timescale/timescaledb` container (a TimescaleDB-bundled
+Postgres — not vanilla Postgres) with an `app` database and an empty `shadow`
+database. It publishes host port **5433** (not 5432) so it can run alongside another
+local Postgres. The shadow DB lives on the same server because `prisma migrate dev`
+validates migrations against it, and TimescaleDB's `CREATE EXTENSION` must run there
+too. Stop it with `npm run db:down`; tail logs with `npm run db:logs`.
+
+(The Prisma schema and GraphQL API arrive in subsequent PRs — see the roadmap.)
 
 ## Configuration
 
@@ -59,7 +67,7 @@ npm run test:e2e
 ## Roadmap
 
 1. ✅ Scaffold app, config validation, global exception filter, tooling, CI, CodeRabbit
-2. Docker Compose TimescaleDB + shadow database
+2. ✅ Docker Compose TimescaleDB + shadow database
 3. Prisma 7 + timescale extension + schema (hypertable, continuous aggregates, alerts) + Prisma exception filter
 4. GraphQL + Sensor module + DataLoader + GraphQL-aware exception filter
 5. Readings ingest + `timeBucket` queries + continuous-aggregate export
