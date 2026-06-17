@@ -1,12 +1,18 @@
+import { join } from 'node:path';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER } from '@nestjs/core';
+import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
+import { GraphQLModule } from '@nestjs/graphql';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { PrismaClientExceptionFilter } from './common/filters/prisma-client-exception.filter';
 import { validate } from './config/env.validation';
+import { createLoaders } from './dataloader/loaders';
+import { ExtendedPrismaClient, PRISMA_CLIENT } from './prisma/prisma-client';
 import { PrismaModule } from './prisma/prisma.module';
+import { SensorModule } from './sensor/sensor.module';
 
 @Module({
   imports: [
@@ -15,6 +21,17 @@ import { PrismaModule } from './prisma/prisma.module';
       validate,
     }),
     PrismaModule,
+    GraphQLModule.forRootAsync<ApolloDriverConfig>({
+      driver: ApolloDriver,
+      inject: [PRISMA_CLIENT],
+      useFactory: (prisma: ExtendedPrismaClient) => ({
+        autoSchemaFile: join(process.cwd(), 'src/schema.gql'),
+        sortSchema: true,
+        // Fresh DataLoaders per request (they cache only within a request).
+        context: () => ({ loaders: createLoaders(prisma) }),
+      }),
+    }),
+    SensorModule,
   ],
   controllers: [AppController],
   providers: [

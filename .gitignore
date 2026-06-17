@@ -6,6 +6,9 @@
 # Prisma generated client + timescale registry (regenerated via `prisma generate`)
 /src/generated
 
+# Code-first GraphQL schema (regenerated at app boot)
+/src/schema.gql
+
 # Logs
 logs
 *.log

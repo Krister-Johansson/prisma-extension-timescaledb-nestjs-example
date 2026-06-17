@@ -13,14 +13,16 @@ transactionally through Prisma into a TimescaleDB **hypertable**, rolled up by
 
 ## Stack
 
-> _Currently installed: NestJS, Prisma 7 + TimescaleDB extension, Docker Compose DB.
-> GraphQL/Apollo and `prisma-nestjs-graphql` are added in later PRs (see the roadmap)._
+> _Currently installed: NestJS, Prisma 7 + TimescaleDB extension, code-first GraphQL
+> (Apollo) with DataLoader, Docker Compose DB. Readings ingestion / `timeBucket` and
+> the alerts engine arrive in later PRs (see the roadmap)._
 
 - NestJS 11 (code-first GraphQL via `@nestjs/apollo`)
 - Prisma 7 with the `@prisma/adapter-pg` driver adapter
 - `prisma-extension-timescaledb` for hypertables, continuous aggregates, retention &
   compression policies, and typed `timeBucket(...)` queries
-- `prisma-nestjs-graphql` to generate GraphQL where-inputs from the schema
+- Hand-written GraphQL `@InputType`s for filters (Prisma 7's client generator isn't
+  compatible with `prisma-nestjs-graphql`)
 - PostgreSQL + TimescaleDB via Docker Compose
 
 ## Getting started
@@ -41,7 +43,8 @@ local Postgres. The shadow DB lives on the same server because `prisma migrate d
 validates migrations against it, and TimescaleDB's `CREATE EXTENSION` must run there
 too. Stop it with `npm run db:down`; tail logs with `npm run db:logs`.
 
-(The GraphQL API arrives in subsequent PRs — see the roadmap.)
+(Readings ingestion, `timeBucket` queries, and the alerts engine arrive in subsequent
+PRs — see the roadmap.)
 
 ## Database & migrations
 
@@ -87,7 +90,25 @@ app refuses to start if they are invalid.
 Errors are handled by **global exception filters** (`src/common/filters/`) registered via
 `APP_FILTER`, producing a consistent error envelope. The catch-all filter lands first,
 then a `PrismaClientExceptionFilter` maps known Prisma errors (P2002→409, P2025→404,
-P2003→409). GraphQL-context awareness is layered on in the GraphQL PR.
+P2003→409). Both are **context-aware**: REST requests get the HTTP envelope, GraphQL
+operations get a `GraphQLError` with `extensions.code`/`statusCode`.
+
+## GraphQL
+
+Code-first GraphQL (`@nestjs/apollo`) is served at `/graphql`. Filter types are
+hand-written `@InputType`s (the `prisma-nestjs-graphql` generator isn't compatible with
+Prisma 7's client). `Sensor.readings` is resolved with a per-request **DataLoader**,
+batching reads by `sensorId` to avoid the N+1 problem.
+
+```graphql
+query {
+  sensors(where: { type: TEMPERATURE }) {
+    name
+    unit
+    readings { time value } # batched via DataLoader
+  }
+}
+```
 
 ## Testing
 
@@ -101,7 +122,7 @@ npm run test:e2e
 1. ✅ Scaffold app, config validation, global exception filter, tooling, CI, CodeRabbit
 2. ✅ Docker Compose TimescaleDB + shadow database
 3. ✅ Prisma 7 + timescale extension + schema (hypertable, continuous aggregates, alerts) + Prisma exception filter
-4. GraphQL + Sensor module + DataLoader + GraphQL-aware exception filter
+4. ✅ GraphQL + Sensor module + DataLoader + GraphQL-aware exception filter
 5. Readings ingest + `timeBucket` queries + continuous-aggregate export
 6. Alerts with hysteresis + unit tests
 7. Timescale admin module (`$timescale` introspection & policies)

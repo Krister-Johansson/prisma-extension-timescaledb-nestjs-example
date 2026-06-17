@@ -19,6 +19,7 @@ describe('AllExceptionsFilter', () => {
   let getRequestUrl: jest.Mock;
 
   const host = {
+    getType: () => 'http',
     switchToHttp: () => ({
       getRequest: () => ({}),
       getResponse: () => ({}),

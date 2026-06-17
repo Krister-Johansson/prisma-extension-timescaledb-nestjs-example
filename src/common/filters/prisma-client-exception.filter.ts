@@ -6,15 +6,16 @@ import {
   Logger,
 } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
+import { GqlContextType } from '@nestjs/graphql';
+import { GraphQLError } from 'graphql';
 import { Prisma } from '../../generated/prisma/client.js';
-import { ErrorResponseBody } from './all-exceptions.filter';
+import { ErrorResponseBody, toGraphQLError } from './all-exceptions.filter';
 
 /**
- * Maps Prisma known-request errors to sensible HTTP responses using the same
- * envelope as {@link AllExceptionsFilter}. Registered after the catch-all so its
- * narrower `@Catch(...)` target takes precedence for Prisma errors.
- *
- * GraphQL-context awareness is layered on when the GraphQL module is added.
+ * Maps Prisma known-request errors to sensible responses using the same envelope
+ * as {@link AllExceptionsFilter}. Registered after the catch-all so its narrower
+ * `@Catch(...)` target takes precedence for Prisma errors. Context-aware: HTTP
+ * envelope for REST, GraphQLError for GraphQL.
  */
 @Catch(Prisma.PrismaClientKnownRequestError)
 export class PrismaClientExceptionFilter implements ExceptionFilter {
@@ -25,15 +26,19 @@ export class PrismaClientExceptionFilter implements ExceptionFilter {
   catch(
     exception: Prisma.PrismaClientKnownRequestError,
     host: ArgumentsHost,
-  ): void {
-    const { httpAdapter } = this.httpAdapterHost;
-    const ctx = host.switchToHttp();
+  ): void | GraphQLError {
     const { status, message } = this.map(exception);
 
     if (status >= 500) {
       this.logger.error(`Prisma ${exception.code}: ${exception.message}`);
     }
 
+    if (host.getType<GqlContextType>() === 'graphql') {
+      return toGraphQLError(status, message);
+    }
+
+    const { httpAdapter } = this.httpAdapterHost;
+    const ctx = host.switchToHttp();
     const responseBody: ErrorResponseBody = {
       statusCode: status,
       timestamp: new Date().toISOString(),

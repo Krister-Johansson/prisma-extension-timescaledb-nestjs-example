@@ -1,8 +1,10 @@
 {
     "cSpell.words": [
         "hyperfunctions",
+        "hypertable",
         "hypertables",
         "initdb",
+        "rollup",
         "timescaledb"
     ]
 }
