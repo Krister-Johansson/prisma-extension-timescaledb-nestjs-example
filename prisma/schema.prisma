@@ -62,8 +62,8 @@ model SensorReading {
   value    Float
   sensor   Sensor   @relation(fields: [sensorId], references: [id], onDelete: Cascade)
 
+  // The composite primary key already indexes (sensorId, time).
   @@id([sensorId, time])
-  @@index([sensorId, time])
 }
 
 /// Hourly rollup continuous aggregate — the timeseries "export" layer.
@@ -74,7 +74,7 @@ view SensorReadingHourly {
   avgValue Float    /// @timescale.aggregate(fn: "avg", column: "value")
   minValue Float    /// @timescale.aggregate(fn: "min", column: "value")
   maxValue Float    /// @timescale.aggregate(fn: "max", column: "value")
-  samples  Int      /// @timescale.aggregate(fn: "count", column: "value")
+  samples  BigInt   /// @timescale.aggregate(fn: "count", column: "value")
 
   @@unique([sensorId, bucket])
 }

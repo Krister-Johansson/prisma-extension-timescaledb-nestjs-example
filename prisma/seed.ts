@@ -70,7 +70,12 @@ async function main(prisma: ExtendedPrismaClient) {
   );
 }
 
-const prisma = createPrismaClient(process.env.DATABASE_URL ?? '');
+const databaseUrl = process.env.DATABASE_URL;
+if (!databaseUrl) {
+  throw new Error('DATABASE_URL is required to run the seed');
+}
+
+const prisma = createPrismaClient(databaseUrl);
 main(prisma)
   .catch((error) => {
     console.error(error);

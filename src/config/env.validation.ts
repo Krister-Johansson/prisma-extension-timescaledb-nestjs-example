@@ -19,12 +19,22 @@ export class EnvironmentVariables {
   @Max(65535)
   PORT: number = 3000;
 
-  // postgres:// connection strings — `require_tld: false` so localhost passes.
-  @IsUrl({ protocols: ['postgresql', 'postgres'], require_tld: false })
+  // postgres:// connection strings. `require_protocol` forces the scheme to be
+  // present (otherwise validator.js accepts bare hosts); `require_tld: false`
+  // lets `localhost` pass.
+  @IsUrl({
+    protocols: ['postgresql', 'postgres'],
+    require_protocol: true,
+    require_tld: false,
+  })
   DATABASE_URL!: string;
 
   // Shadow DB used by `prisma migrate dev`; lives on the same TimescaleDB server.
-  @IsUrl({ protocols: ['postgresql', 'postgres'], require_tld: false })
+  @IsUrl({
+    protocols: ['postgresql', 'postgres'],
+    require_protocol: true,
+    require_tld: false,
+  })
   SHADOW_DATABASE_URL!: string;
 }
 

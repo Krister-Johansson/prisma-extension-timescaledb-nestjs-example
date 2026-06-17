@@ -43,7 +43,15 @@ CREATE TABLE "AlertRule" (
     "lastFiredAt" TIMESTAMP(3),
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "AlertRule_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "AlertRule_pkey" PRIMARY KEY ("id"),
+    -- Enforce the hysteresis band at the DB layer (Prisma can't express CHECK
+    -- constraints declaratively): the clear threshold must sit on the resetting
+    -- side of the trigger threshold.
+    CONSTRAINT "AlertRule_hysteresis_band_check" CHECK (
+        ("direction" = 'ABOVE' AND "clearThreshold" < "threshold")
+        OR
+        ("direction" = 'BELOW' AND "clearThreshold" > "threshold")
+    )
 );
 
 -- CreateTable
@@ -57,9 +65,6 @@ CREATE TABLE "AlertEvent" (
 
     CONSTRAINT "AlertEvent_pkey" PRIMARY KEY ("id")
 );
-
--- CreateIndex
-CREATE INDEX "SensorReading_sensorId_time_idx" ON "SensorReading"("sensorId", "time");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "AlertRule_sensorId_key" ON "AlertRule"("sensorId");
