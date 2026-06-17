@@ -34,12 +34,20 @@ export class ReadingService {
       },
     });
 
-    await this.pubSub.publish(TOPICS.readingIngested, {
-      readingIngested: reading,
-    });
+    // Both the publish and the alert evaluation are best-effort: the reading is
+    // already persisted, so a failure here must not fail the ingest (a client
+    // retry would duplicate the row).
+    try {
+      await this.pubSub.publish(TOPICS.readingIngested, {
+        readingIngested: reading,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Subscription publish failed for sensor ${input.sensorId}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
 
-    // Alert evaluation is best-effort: a failure here must not fail the ingest
-    // (the reading is already persisted, and a client retry would duplicate it).
     try {
       await this.alertService.evaluateReading(input.sensorId, input.value);
     } catch (error) {
