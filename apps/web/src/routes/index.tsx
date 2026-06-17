@@ -1,8 +1,17 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { routes } from '../lib/routes';
 
 export const Route = createFileRoute('/')({
   component: Home,
 });
+
+const PLANNED = [
+  routes.home(),
+  routes.sensors.index(),
+  routes.sensors.detail(':sensorId'),
+  routes.aggregates(),
+  routes.system(),
+];
 
 function Home() {
   return (
@@ -18,6 +27,15 @@ function Home() {
         monorepo. The dashboard UI (sensors, time-series, aggregates, alerts) is
         generated from the brief in <code>apps/web/DESIGN.md</code>.
       </p>
+      <p className="mt-6 text-sm text-slate-500">
+        Paths come from the <code>routes</code> registry (
+        <code>src/lib/routes.ts</code>):
+      </p>
+      <ul className="mt-2 font-mono text-sm text-slate-600">
+        {PLANNED.map((p) => (
+          <li key={p}>{p}</li>
+        ))}
+      </ul>
     </main>
   );
 }
