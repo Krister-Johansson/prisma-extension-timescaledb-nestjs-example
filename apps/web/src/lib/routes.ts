@@ -1,13 +1,22 @@
+declare const routePathBrand: unique symbol;
+
 /**
- * Build an absolute path from segments. Numbers are stringified; empty segments
- * are dropped. `path()` -> "/", `path('sensors', 1)` -> "/sensors/1".
+ * A path produced by the `routes` registry. Branding it means consumers (e.g.
+ * `AppLink`) only accept registry-built paths — ad-hoc string literals won't
+ * type-check, so the registry is the enforced single source of truth.
  */
-function path(...segments: Array<string | number>): string {
+export type RoutePath = string & { readonly [routePathBrand]: true };
+
+/**
+ * Build an absolute path from segments. Each segment is URL-encoded (so ids with
+ * reserved characters are safe); empty segments are dropped. `path()` -> "/".
+ */
+function path(...segments: Array<string | number>): RoutePath {
   const joined = segments
-    .map((segment) => String(segment))
+    .map((segment) => encodeURIComponent(String(segment)))
     .filter((segment) => segment.length > 0)
     .join('/');
-  return `/${joined}`;
+  return `/${joined}` as RoutePath;
 }
 
 /**
@@ -27,7 +36,13 @@ export const routes = {
   home: () => path(),
   sensors: {
     index: () => path('sensors'),
-    detail: (sensorId: string) => path('sensors', sensorId),
+    detail: (sensorId: string) => {
+      const id = sensorId.trim();
+      if (id.length === 0) {
+        throw new Error('routes.sensors.detail requires a non-empty sensorId');
+      }
+      return path('sensors', id);
+    },
   },
   aggregates: () => path('aggregates'),
   system: () => path('system'),

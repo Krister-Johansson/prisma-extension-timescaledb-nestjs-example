@@ -1,11 +1,12 @@
 import { Link } from '@tanstack/react-router';
 import type { ComponentProps, ReactNode } from 'react';
+import type { RoutePath } from '../lib/routes';
 
 type LinkTo = ComponentProps<typeof Link>['to'];
 
 export interface AppLinkProps {
-  /** An absolute path built by the `routes` registry (see lib/routes.ts). */
-  to: string;
+  /** A path built by the `routes` registry — ad-hoc strings won't type-check. */
+  to: RoutePath;
   children: ReactNode;
   className?: string;
   activeOptions?: ComponentProps<typeof Link>['activeOptions'];

@@ -8,7 +8,7 @@ export const Route = createFileRoute('/')({
 const PLANNED = [
   routes.home(),
   routes.sensors.index(),
-  routes.sensors.detail(':sensorId'),
+  routes.sensors.detail('temp-1'),
   routes.aggregates(),
   routes.system(),
 ];
