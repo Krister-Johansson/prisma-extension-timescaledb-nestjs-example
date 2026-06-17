@@ -4,8 +4,10 @@ import {
   Injectable,
   Logger,
 } from '@nestjs/common';
+import { PubSub } from 'graphql-subscriptions';
 import { PRISMA_CLIENT } from '../prisma/prisma-client';
 import type { ExtendedPrismaClient } from '../prisma/prisma-client';
+import { PUB_SUB, TOPICS } from '../pubsub/pubsub.module';
 import { SetAlertRuleInput } from './dto/set-alert-rule.input';
 import { evaluate, validateBand } from './alert.hysteresis';
 
@@ -15,6 +17,7 @@ export class AlertService {
 
   constructor(
     @Inject(PRISMA_CLIENT) private readonly prisma: ExtendedPrismaClient,
+    @Inject(PUB_SUB) private readonly pubSub: PubSub,
   ) {}
 
   /** Create or replace the alert rule for a sensor. */
@@ -80,7 +83,7 @@ export class AlertService {
     // Compare-and-swap: only flip the rule (and record the event) if the state is
     // still what we evaluated against. Concurrent ingests for the same sensor then
     // can't both fire the same transition.
-    const committed = await this.prisma.$transaction(async (tx) => {
+    const event = await this.prisma.$transaction(async (tx) => {
       const { count } = await tx.alertRule.updateMany({
         where: { sensorId, state: rule.state },
         data: {
@@ -89,15 +92,14 @@ export class AlertService {
         },
       });
       if (count === 0) {
-        return false; // another ingest already transitioned this rule
+        return null; // another ingest already transitioned this rule
       }
-      await tx.alertEvent.create({
+      return tx.alertEvent.create({
         data: { sensorId, kind: decision.transition, value, message },
       });
-      return true;
     });
 
-    if (!committed) {
+    if (!event) {
       return;
     }
     if (raised) {
@@ -105,5 +107,6 @@ export class AlertService {
     } else {
       this.logger.log(message);
     }
+    await this.pubSub.publish(TOPICS.alertFired, { alertFired: event });
   }
 }
