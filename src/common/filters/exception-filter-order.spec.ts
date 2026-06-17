@@ -47,19 +47,26 @@ async function boot(filters: Provider[]) {
   return app;
 }
 
-const httpServer = (app: Awaited<ReturnType<typeof boot>>): Server =>
-  app.getHttpServer() as Server;
-
 describe('global exception filter ordering', () => {
-  it('routes a Prisma P2002 error to the Prisma filter (409)', async () => {
-    const app = await boot(appModuleFilterOrder);
-    await request(httpServer(app)).get('/prisma').expect(409);
+  let app: Awaited<ReturnType<typeof boot>>;
+
+  beforeEach(async () => {
+    app = await boot(appModuleFilterOrder);
+  });
+
+  afterEach(async () => {
     await app.close();
   });
 
+  it('routes a Prisma P2002 error to the Prisma filter (409)', async () => {
+    await request(app.getHttpServer() as Server)
+      .get('/prisma')
+      .expect(409);
+  });
+
   it('routes a generic error to the catch-all filter (500)', async () => {
-    const app = await boot(appModuleFilterOrder);
-    await request(httpServer(app)).get('/generic').expect(500);
-    await app.close();
+    await request(app.getHttpServer() as Server)
+      .get('/generic')
+      .expect(500);
   });
 });
