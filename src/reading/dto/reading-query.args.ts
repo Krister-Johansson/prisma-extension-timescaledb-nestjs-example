@@ -1,9 +1,6 @@
 import { ArgsType, Field, GraphQLISODateTime, ID } from '@nestjs/graphql';
 import { IsDate, IsOptional, IsString, Matches } from 'class-validator';
-
-// PostgreSQL interval like "1 hour", "30 minutes", "7 days".
-const INTERVAL_PATTERN =
-  /^\d+\s+(microsecond|millisecond|second|minute|hour|day|week|month|year)s?$/;
+import { INTERVAL_PATTERN } from '../../common/interval';
 
 @ArgsType()
 export class ReadingBucketArgs {

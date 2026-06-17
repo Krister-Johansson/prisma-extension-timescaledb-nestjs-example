@@ -152,6 +152,23 @@ mutation {
 query { alertEvents(sensorId: "temp-1") { kind value message } }
 ```
 
+## Timescale admin
+
+A small admin surface wraps the extension's `$timescale` management API — hypertable
+introspection plus retention/compression/chunk operations. These mutations are
+**destructive**, so they're protected by an `AdminGuard`: set `ADMIN_TOKEN` and send it
+as an `x-admin-token` header. If `ADMIN_TOKEN` is unset the admin API is open in
+development but denied in production.
+
+```graphql
+query { hypertableStats(model: SensorReading) { totalBytes approximateRowCount totalChunks compressedChunks } }
+
+mutation { addRetentionPolicy(model: SensorReading, dropAfter: "90 days") }
+mutation { addCompressionPolicy(model: SensorReading, after: "7 days", segmentBy: ["sensorId"], orderBy: "time DESC") }
+mutation { setChunkInterval(model: SensorReading, interval: "1 day") }
+mutation { dropChunks(model: SensorReading, olderThan: "180 days") } # returns dropped chunk names
+```
+
 ## Testing
 
 ```bash
@@ -167,7 +184,7 @@ npm run test:e2e
 4. ✅ GraphQL + Sensor module + DataLoader + GraphQL-aware exception filter
 5. ✅ Readings ingest + `timeBucket` queries + continuous-aggregate export
 6. ✅ Alerts with hysteresis + unit tests
-7. Timescale admin module (`$timescale` introspection & policies)
+7. ✅ Timescale admin module (`$timescale` introspection & policies)
 8. End-to-end tests
 
 ## License

@@ -15,6 +15,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { SensorModule } from './sensor/sensor.module';
 import { ReadingModule } from './reading/reading.module';
 import { AlertModule } from './alert/alert.module';
+import { TimescaleAdminModule } from './timescale-admin/timescale-admin.module';
 
 @Module({
   imports: [
@@ -29,13 +30,18 @@ import { AlertModule } from './alert/alert.module';
       useFactory: (prisma: ExtendedPrismaClient) => ({
         autoSchemaFile: join(process.cwd(), 'src/schema.gql'),
         sortSchema: true,
-        // Fresh DataLoaders per request (they cache only within a request).
-        context: () => ({ loaders: createLoaders(prisma) }),
+        // `req` is exposed so guards can read headers; fresh DataLoaders per
+        // request (they cache only within a request).
+        context: ({ req }: { req: unknown }) => ({
+          req,
+          loaders: createLoaders(prisma),
+        }),
       }),
     }),
     SensorModule,
     ReadingModule,
     AlertModule,
+    TimescaleAdminModule,
   ],
   controllers: [AppController],
   providers: [

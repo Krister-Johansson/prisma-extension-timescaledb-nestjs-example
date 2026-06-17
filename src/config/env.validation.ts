@@ -1,5 +1,14 @@
 import { plainToInstance } from 'class-transformer';
-import { IsEnum, IsInt, IsUrl, Max, Min, validateSync } from 'class-validator';
+import {
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUrl,
+  Max,
+  Min,
+  validateSync,
+} from 'class-validator';
 
 export enum NodeEnv {
   Development = 'development',
@@ -36,6 +45,12 @@ export class EnvironmentVariables {
     require_tld: false,
   })
   SHADOW_DATABASE_URL!: string;
+
+  // Shared secret guarding the destructive Timescale admin mutations. If unset,
+  // the admin API is open in development but denied in production.
+  @IsOptional()
+  @IsString()
+  ADMIN_TOKEN?: string;
 }
 
 /**

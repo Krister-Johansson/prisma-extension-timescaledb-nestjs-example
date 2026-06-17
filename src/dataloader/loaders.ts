@@ -9,6 +9,7 @@ export interface Loaders {
 }
 
 export interface GraphQLContext {
+  req?: unknown;
   loaders: Loaders;
 }
 
