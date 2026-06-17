@@ -20,6 +20,9 @@ export function SensorSparkline({
   status: SensorStatus;
 }) {
   const color = COLOR[status];
+  if (series.length < 2) {
+    return <svg viewBox={`0 0 ${W} ${H}`} className="block h-9 w-full" aria-hidden="true" />;
+  }
   const min = Math.min(...series);
   const max = Math.max(...series);
   const span = max - min || 1;

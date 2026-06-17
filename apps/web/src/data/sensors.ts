@@ -6,12 +6,16 @@ export const UNIT: Record<SensorType, string> = {
   HUMIDITY: '%',
 };
 
-const POINTS = 48; // 24h at 30-min spacing
+// Real ingestion rate (1 reading / 5 min) drives the KPI count. The `series`
+// below is a separate, coarser 30-min downsample used only for the sparklines —
+// 288 points per card would be needless detail at sparkline size.
+const READINGS_PER_DAY = 288;
+const SPARK_POINTS = 48; // 24h at 30-min spacing (display only)
 
-/** Deterministic 24h series (no RNG, so mock data + screenshots are stable). */
+/** Deterministic 24h sparkline series (no RNG, so mock + screenshots are stable). */
 function series(base: number, amp: number, freq: number, drift = 0): number[] {
-  return Array.from({ length: POINTS }, (_, i) => {
-    const v = base + Math.sin((i / POINTS) * Math.PI * freq) * amp + (i / POINTS) * drift;
+  return Array.from({ length: SPARK_POINTS }, (_, i) => {
+    const v = base + Math.sin((i / SPARK_POINTS) * Math.PI * freq) * amp + (i / SPARK_POINTS) * drift;
     return Math.round(v * 10) / 10;
   });
 }
@@ -132,5 +136,5 @@ export function averagesByType(sensors: Sensor[] = SENSORS): TypeAverage[] {
 
 /** ~288 readings/day per sensor (1 / 5 min), as in the design KPI. */
 export function totalDataPoints(sensors: Sensor[] = SENSORS): number {
-  return sensors.length * 288;
+  return sensors.length * READINGS_PER_DAY;
 }
