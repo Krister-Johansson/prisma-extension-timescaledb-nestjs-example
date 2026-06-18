@@ -7,19 +7,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { writeAlertRuleToCache } from '@/data/alert-rule-cache';
+import { addAlertRuleToCache } from '@/data/alert-rule-cache';
 import {
-  type SensorAlertRuleQuery,
-  SetAlertRuleDocument,
+  CreateAlertRuleDocument,
+  type SensorAlertRulesQuery,
+  UpdateAlertRuleDocument,
 } from '@/graphql/alert-rules.generated';
 import { AlertRuleForm, type AlertRuleFormInput } from './alert-rule-form';
 
-type LiveRule = NonNullable<SensorAlertRuleQuery['alertRule']>;
+type LiveRule = SensorAlertRulesQuery['alertRules'][number];
 
 /**
- * Create/edit the sensor's alert rule (controlled). Owns the optimistic
- * setAlertRule mutation; the cache write links the upserted rule to the
- * alertRule(sensorId) field so it shows immediately.
+ * Create or edit an alert rule (controlled). Owns the optimistic mutation:
+ * create appends to the sensor's rule list; edit normalizes by id.
  */
 export function AlertRuleDialog({
   sensorId,
@@ -34,7 +34,10 @@ export function AlertRuleDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const [setAlertRule, { loading }] = useMutation(SetAlertRuleDocument);
+  const [createRule, { loading: creating }] =
+    useMutation(CreateAlertRuleDocument);
+  const [updateRule, { loading: updating }] =
+    useMutation(UpdateAlertRuleDocument);
   const isEdit = rule !== null;
 
   const defaultValues: AlertRuleFormInput = rule
@@ -60,32 +63,52 @@ export function AlertRuleDialog({
           key={open ? (rule?.id ?? 'new') : 'closed'}
           defaultValues={defaultValues}
           unit={unit}
-          pending={loading}
+          pending={creating || updating}
           onSubmit={(values) => {
-            const enabled = rule?.enabled ?? true;
-            setAlertRule({
-              variables: { input: { sensorId, ...values, enabled } },
-              optimisticResponse: {
-                setAlertRule: {
-                  __typename: 'AlertRule',
-                  id: rule?.id ?? `temp:${sensorId}`,
-                  sensorId,
-                  enabled,
-                  state: rule?.state ?? 'OK',
-                  ...values,
+            if (rule) {
+              void updateRule({
+                variables: {
+                  id: rule.id,
+                  input: { ...values, enabled: rule.enabled },
                 },
-              },
-              update: (cache, { data }) => {
-                if (data?.setAlertRule)
-                  writeAlertRuleToCache(cache, data.setAlertRule);
-              },
-              onCompleted: () => {
-                onOpenChange(false);
-                toast.success(isEdit ? 'Alert rule updated' : 'Alert rule created');
-              },
-              // Errors are surfaced globally by the Apollo ErrorLink; swallow the
-              // rejection so it isn't unhandled (dialog stays open to retry).
-            }).catch(() => {});
+                optimisticResponse: {
+                  updateAlertRule: {
+                    __typename: 'AlertRule',
+                    id: rule.id,
+                    sensorId,
+                    enabled: rule.enabled,
+                    state: rule.state,
+                    ...values,
+                  },
+                },
+                onCompleted: () => {
+                  onOpenChange(false);
+                  toast.success('Alert rule updated');
+                },
+              }).catch(() => {});
+            } else {
+              void createRule({
+                variables: { input: { sensorId, ...values, enabled: true } },
+                optimisticResponse: {
+                  createAlertRule: {
+                    __typename: 'AlertRule',
+                    id: crypto.randomUUID(),
+                    sensorId,
+                    enabled: true,
+                    state: 'OK',
+                    ...values,
+                  },
+                },
+                update: (cache, { data }) => {
+                  if (data?.createAlertRule)
+                    addAlertRuleToCache(cache, data.createAlertRule);
+                },
+                onCompleted: () => {
+                  onOpenChange(false);
+                  toast.success('Alert rule created');
+                },
+              }).catch(() => {});
+            }
           }}
         />
       </DialogContent>

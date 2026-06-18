@@ -47,7 +47,7 @@ model Sensor {
   unit      String
   createdAt DateTime       @default(now())
   readings  SensorReading[]
-  rule      AlertRule?
+  rules     AlertRule[]
   events    AlertEvent[]
 }
 
@@ -79,12 +79,13 @@ view SensorReadingHourly {
   @@unique([sensorId, bucket])
 }
 
-/// Per-sensor alert rule with a hysteresis reset band: fire when `threshold` is
+/// A sensor alert rule with a hysteresis reset band: fire when `threshold` is
 /// crossed, clear only once the value returns past `clearThreshold`. The gap
 /// between them absorbs oscillation around the threshold (no alert flapping).
+/// A sensor can have many rules (e.g. a warning and a critical threshold).
 model AlertRule {
   id             String         @id @default(uuid())
-  sensorId       String         @unique
+  sensorId       String
   sensor         Sensor         @relation(fields: [sensorId], references: [id], onDelete: Cascade)
   direction      AlertDirection @default(ABOVE)
   threshold      Float
@@ -93,7 +94,10 @@ model AlertRule {
   enabled        Boolean        @default(true)
   state          AlertState     @default(OK)
   lastFiredAt    DateTime?
+  createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
+
+  @@index([sensorId])
 }
 
 /// Audit trail of raised/cleared alerts.

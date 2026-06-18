@@ -39,6 +39,16 @@ enum AlertState {
   OK
 }
 
+input CreateAlertRuleInput {
+  """Hysteresis reset band edge (must be on the resetting side)."""
+  clearThreshold: Float!
+  direction: AlertDirection! = ABOVE
+  enabled: Boolean! = true
+  sensorId: ID!
+  severity: String! = "WARNING"
+  threshold: Float!
+}
+
 input CreateSensorInput {
   name: String!
   type: SensorType!
@@ -77,18 +87,19 @@ input IngestReadingInput {
 }
 
 type Mutation {
+  createAlertRule(input: CreateAlertRuleInput!): AlertRule!
   createSensor(input: CreateSensorInput!): Sensor!
-  deleteAlertRule(sensorId: ID!): AlertRule!
+  deleteAlertRule(id: ID!): AlertRule!
   deleteSensor(id: ID!): Sensor!
   ingestReading(input: IngestReadingInput!): SensorReading!
   refreshSensorReadingHourly(end: DateTime, start: DateTime): Boolean!
-  setAlertRule(input: SetAlertRuleInput!): AlertRule!
+  updateAlertRule(id: ID!, input: UpdateAlertRuleInput!): AlertRule!
   updateSensor(id: ID!, input: UpdateSensorInput!): Sensor!
 }
 
 type Query {
   alertEvents(sensorId: ID, take: Int): [AlertEvent!]!
-  alertRule(sensorId: ID!): AlertRule
+  alertRules(sensorId: ID!): [AlertRule!]!
   hypertableStats(model: HypertableModel!): HypertableStats!
   sensor(id: ID!): Sensor!
   sensorReadingsBucketed(
@@ -147,19 +158,18 @@ input SensorWhereInput {
   type: SensorType
 }
 
-input SetAlertRuleInput {
-  """Hysteresis reset band edge (must be on the resetting side)."""
-  clearThreshold: Float!
-  direction: AlertDirection! = ABOVE
-  enabled: Boolean! = true
-  sensorId: ID!
-  severity: String! = "WARNING"
-  threshold: Float!
-}
-
 type Subscription {
   alertFired(sensorId: ID): AlertEvent!
   readingIngested(sensorId: ID): SensorReading!
+}
+
+input UpdateAlertRuleInput {
+  """Hysteresis reset band edge (must be on the resetting side)."""
+  clearThreshold: Float!
+  direction: AlertDirection!
+  enabled: Boolean!
+  severity: String!
+  threshold: Float!
 }
 
 input UpdateSensorInput {

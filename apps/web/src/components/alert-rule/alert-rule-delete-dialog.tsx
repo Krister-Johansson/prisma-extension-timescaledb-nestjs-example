@@ -37,8 +37,8 @@ export function AlertRuleDeleteDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Delete this alert rule?</AlertDialogTitle>
           <AlertDialogDescription>
-            The sensor will stop raising alerts until you add a new rule. This
-            can&apos;t be undone.
+            This permanently removes the rule. The sensor&apos;s other rules (if
+            any) keep running. This can&apos;t be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -48,7 +48,7 @@ export function AlertRuleDeleteDialog({
             onClick={(e) => {
               e.preventDefault();
               void deleteAlertRule({
-                variables: { sensorId },
+                variables: { id: ruleId },
                 optimisticResponse: {
                   deleteAlertRule: {
                     __typename: 'AlertRule',

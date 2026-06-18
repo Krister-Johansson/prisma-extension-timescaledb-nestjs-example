@@ -5,10 +5,12 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PubSub } from 'graphql-subscriptions';
+import { AlertDirection } from '../generated/prisma/enums.js';
 import { PRISMA_CLIENT } from '../prisma/prisma-client';
 import type { ExtendedPrismaClient } from '../prisma/prisma-client';
 import { PUB_SUB, TOPICS } from '../pubsub/pubsub.module';
-import { SetAlertRuleInput } from './dto/set-alert-rule.input';
+import { CreateAlertRuleInput } from './dto/create-alert-rule.input';
+import { UpdateAlertRuleInput } from './dto/update-alert-rule.input';
 import { evaluate, validateBand } from './alert.hysteresis';
 
 @Injectable()
@@ -20,8 +22,36 @@ export class AlertService {
     @Inject(PUB_SUB) private readonly pubSub: PubSub,
   ) {}
 
-  /** Create or replace the alert rule for a sensor. */
-  setRule(input: SetAlertRuleInput) {
+  /** Create a new alert rule for a sensor (a sensor may have several). */
+  createRule(input: CreateAlertRuleInput) {
+    this.assertBand(input);
+    return this.prisma.alertRule.create({ data: input });
+  }
+
+  /** Replace an existing rule's fields. Throws P2025 (→ 404) if missing. */
+  updateRule(id: string, input: UpdateAlertRuleInput) {
+    this.assertBand(input);
+    return this.prisma.alertRule.update({ where: { id }, data: input });
+  }
+
+  /** All rules for a sensor, oldest first. */
+  rulesFor(sensorId: string) {
+    return this.prisma.alertRule.findMany({
+      where: { sensorId },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  /** Delete a rule by id. Throws P2025 (→ 404) if missing. */
+  removeRule(id: string) {
+    return this.prisma.alertRule.delete({ where: { id } });
+  }
+
+  private assertBand(input: {
+    direction: AlertDirection;
+    threshold: number;
+    clearThreshold: number;
+  }) {
     const bandError = validateBand(
       input.direction,
       input.threshold,
@@ -30,28 +60,6 @@ export class AlertService {
     if (bandError) {
       throw new BadRequestException(bandError);
     }
-
-    const data = {
-      direction: input.direction,
-      threshold: input.threshold,
-      clearThreshold: input.clearThreshold,
-      severity: input.severity,
-      enabled: input.enabled,
-    };
-    return this.prisma.alertRule.upsert({
-      where: { sensorId: input.sensorId },
-      create: { sensorId: input.sensorId, ...data },
-      update: data,
-    });
-  }
-
-  ruleFor(sensorId: string) {
-    return this.prisma.alertRule.findUnique({ where: { sensorId } });
-  }
-
-  /** Delete a sensor's alert rule. Throws P2025 (→ 404) if there is none. */
-  removeRule(sensorId: string) {
-    return this.prisma.alertRule.delete({ where: { sensorId } });
   }
 
   events(sensorId?: string, take = 50) {
@@ -65,53 +73,52 @@ export class AlertService {
   }
 
   /**
-   * Evaluate a freshly ingested reading against the sensor's rule and, on a
-   * state transition, persist an AlertEvent + flip the rule state in one
-   * transaction. Called from the ingest path.
+   * Evaluate a freshly ingested reading against every enabled rule on the sensor
+   * and, on a state transition, persist an AlertEvent + flip that rule's state in
+   * one transaction. Each rule is evaluated independently. Called from ingest.
    */
   async evaluateReading(sensorId: string, value: number): Promise<void> {
-    const rule = await this.prisma.alertRule.findUnique({
-      where: { sensorId },
+    const rules = await this.prisma.alertRule.findMany({
+      where: { sensorId, enabled: true },
     });
-    if (!rule || !rule.enabled) {
-      return;
-    }
 
-    const decision = evaluate(rule, value);
-    if (decision.transition === 'NONE') {
-      return;
-    }
-
-    const raised = decision.transition === 'RAISED';
-    const message = `Sensor ${sensorId} alert ${raised ? 'RAISED' : 'CLEARED'}: value ${value} (${rule.direction} threshold ${rule.threshold}, reset ${rule.clearThreshold})`;
-
-    // Compare-and-swap: only flip the rule (and record the event) if the state is
-    // still what we evaluated against. Concurrent ingests for the same sensor then
-    // can't both fire the same transition.
-    const event = await this.prisma.$transaction(async (tx) => {
-      const { count } = await tx.alertRule.updateMany({
-        where: { sensorId, state: rule.state },
-        data: {
-          state: decision.nextState,
-          ...(raised ? { lastFiredAt: new Date() } : {}),
-        },
-      });
-      if (count === 0) {
-        return null; // another ingest already transitioned this rule
+    for (const rule of rules) {
+      const decision = evaluate(rule, value);
+      if (decision.transition === 'NONE') {
+        continue;
       }
-      return tx.alertEvent.create({
-        data: { sensorId, kind: decision.transition, value, message },
-      });
-    });
 
-    if (!event) {
-      return;
+      const raised = decision.transition === 'RAISED';
+      const message = `Sensor ${sensorId} alert ${raised ? 'RAISED' : 'CLEARED'}: value ${value} (${rule.direction} threshold ${rule.threshold}, reset ${rule.clearThreshold})`;
+
+      // Compare-and-swap on this rule: only flip it (and record the event) if its
+      // state is still what we evaluated against, so concurrent ingests can't both
+      // fire the same transition.
+      const event = await this.prisma.$transaction(async (tx) => {
+        const { count } = await tx.alertRule.updateMany({
+          where: { id: rule.id, state: rule.state },
+          data: {
+            state: decision.nextState,
+            ...(raised ? { lastFiredAt: new Date() } : {}),
+          },
+        });
+        if (count === 0) {
+          return null; // another ingest already transitioned this rule
+        }
+        return tx.alertEvent.create({
+          data: { sensorId, kind: decision.transition, value, message },
+        });
+      });
+
+      if (!event) {
+        continue;
+      }
+      if (raised) {
+        this.logger.warn(message);
+      } else {
+        this.logger.log(message);
+      }
+      await this.pubSub.publish(TOPICS.alertFired, { alertFired: event });
     }
-    if (raised) {
-      this.logger.warn(message);
-    } else {
-      this.logger.log(message);
-    }
-    await this.pubSub.publish(TOPICS.alertFired, { alertFired: event });
   }
 }

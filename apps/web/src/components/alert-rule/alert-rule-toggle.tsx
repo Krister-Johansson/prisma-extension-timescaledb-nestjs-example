@@ -1,17 +1,16 @@
 import { useMutation } from '@apollo/client/react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { writeAlertRuleToCache } from '@/data/alert-rule-cache';
 import {
-  type SensorAlertRuleQuery,
-  SetAlertRuleDocument,
+  type SensorAlertRulesQuery,
+  UpdateAlertRuleDocument,
 } from '@/graphql/alert-rules.generated';
 
-type LiveRule = NonNullable<SensorAlertRuleQuery['alertRule']>;
+type LiveRule = SensorAlertRulesQuery['alertRules'][number];
 
-/** Enable/disable the rule via setAlertRule (optimistic), keeping its thresholds. */
+/** Enable/disable a rule via updateAlertRule (optimistic), keeping its thresholds. */
 export function AlertRuleToggle({ rule }: { rule: LiveRule }) {
-  const [setAlertRule, { loading }] = useMutation(SetAlertRuleDocument);
+  const [updateRule, { loading }] = useMutation(UpdateAlertRuleDocument);
   const next = !rule.enabled;
 
   return (
@@ -20,10 +19,10 @@ export function AlertRuleToggle({ rule }: { rule: LiveRule }) {
       size="sm"
       disabled={loading}
       onClick={() => {
-        void setAlertRule({
+        void updateRule({
           variables: {
+            id: rule.id,
             input: {
-              sensorId: rule.sensorId,
               direction: rule.direction,
               threshold: rule.threshold,
               clearThreshold: rule.clearThreshold,
@@ -32,11 +31,7 @@ export function AlertRuleToggle({ rule }: { rule: LiveRule }) {
             },
           },
           optimisticResponse: {
-            setAlertRule: { ...rule, enabled: next },
-          },
-          update: (cache, { data }) => {
-            if (data?.setAlertRule)
-              writeAlertRuleToCache(cache, data.setAlertRule);
+            updateAlertRule: { ...rule, enabled: next },
           },
           onCompleted: () =>
             toast.success(next ? 'Alert rule enabled' : 'Alert rule disabled'),

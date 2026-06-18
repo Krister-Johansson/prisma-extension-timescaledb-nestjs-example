@@ -1,7 +1,7 @@
-# One alert rule per sensor (AlertRule.sensorId is unique). `setAlertRule`
-# upserts it; `deleteAlertRule` removes it.
-query SensorAlertRule($sensorId: ID!) {
-  alertRule(sensorId: $sensorId) {
+# A sensor can have many alert rules. createAlertRule / updateAlertRule(id) /
+# deleteAlertRule(id) manage them; alertRules(sensorId) lists them.
+query SensorAlertRules($sensorId: ID!) {
+  alertRules(sensorId: $sensorId) {
     __typename
     id
     sensorId
@@ -14,8 +14,8 @@ query SensorAlertRule($sensorId: ID!) {
   }
 }
 
-mutation SetAlertRule($input: SetAlertRuleInput!) {
-  setAlertRule(input: $input) {
+mutation CreateAlertRule($input: CreateAlertRuleInput!) {
+  createAlertRule(input: $input) {
     __typename
     id
     sensorId
@@ -28,8 +28,22 @@ mutation SetAlertRule($input: SetAlertRuleInput!) {
   }
 }
 
-mutation DeleteAlertRule($sensorId: ID!) {
-  deleteAlertRule(sensorId: $sensorId) {
+mutation UpdateAlertRule($id: ID!, $input: UpdateAlertRuleInput!) {
+  updateAlertRule(id: $id, input: $input) {
+    __typename
+    id
+    sensorId
+    direction
+    threshold
+    clearThreshold
+    severity
+    enabled
+    state
+  }
+}
+
+mutation DeleteAlertRule($id: ID!) {
+  deleteAlertRule(id: $id) {
     __typename
     id
     sensorId
