@@ -63,10 +63,15 @@ export function DetailRangePicker({
     .filter((b) => b.count > 0)
     .map((b) => new Date(b.bucket));
 
-  const handleSelect = (next: DateRange | undefined) => {
-    setCalRange(next);
-    if (next?.from && next?.to) {
-      onApplyDates(toDateInput(next.from.getTime()), toDateInput(next.to.getTime()));
+  // Just store the selection — react-day-picker fills `to` on the first click,
+  // so auto-applying here would lock you to a single day. The user confirms a
+  // (possibly multi-day) range with the Apply button below.
+  const applyRange = () => {
+    if (calRange?.from && calRange?.to) {
+      onApplyDates(
+        toDateInput(calRange.from.getTime()),
+        toDateInput(calRange.to.getTime()),
+      );
       setOpen(false);
     }
   };
@@ -111,25 +116,52 @@ export function DetailRangePicker({
               </Button>
             ))}
           </div>
-          <Calendar
-            mode="range"
-            captionLayout="dropdown"
-            startMonth={new Date(2000, 0)}
-            endMonth={new Date(nowMs)}
-            defaultMonth={new Date(window.startMs)}
-            selected={calRange}
-            onSelect={handleSelect}
-            numberOfMonths={2}
-            autoFocus
-            modifiers={{ hasData: dataDays }}
-            modifiersClassNames={{
-              hasData: cn(
-                'relative after:pointer-events-none after:absolute',
-                'after:bottom-1 after:left-1/2 after:size-1 after:-translate-x-1/2',
-                'after:rounded-full after:bg-primary',
-              ),
-            }}
-          />
+          <div className="flex flex-col">
+            <Calendar
+              mode="range"
+              captionLayout="dropdown"
+              startMonth={new Date(2000, 0)}
+              endMonth={new Date(nowMs)}
+              defaultMonth={new Date(window.startMs)}
+              selected={calRange}
+              onSelect={setCalRange}
+              numberOfMonths={2}
+              autoFocus
+              modifiers={{ hasData: dataDays }}
+              modifiersClassNames={{
+                hasData: cn(
+                  'relative after:pointer-events-none after:absolute',
+                  'after:bottom-1 after:left-1/2 after:size-1 after:-translate-x-1/2',
+                  'after:rounded-full after:bg-primary',
+                ),
+              }}
+            />
+            <div className="flex items-center justify-between border-t border-border p-2.5">
+              <span className="font-mono text-[11px] text-muted-2">
+                {calRange?.from
+                  ? calRange.to
+                    ? `${toDateInput(calRange.from.getTime())} → ${toDateInput(calRange.to.getTime())}`
+                    : 'Pick an end date…'
+                  : 'Pick a start date…'}
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={!(calRange?.from && calRange?.to)}
+                  onClick={applyRange}
+                >
+                  Apply
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       </PopoverContent>
     </Popover>
