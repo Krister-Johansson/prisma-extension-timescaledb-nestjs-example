@@ -7,6 +7,11 @@ import {
 import { PRISMA_CLIENT } from '../prisma/prisma-client';
 import type { ExtendedPrismaClient } from '../prisma/prisma-client';
 
+// A single advisory-lock key so all tree-structure mutations (move / delete-
+// reparent) serialize — otherwise two concurrent cross-moves could each pass the
+// cycle check and persist a cycle.
+const TREE_LOCK_KEY = 815411;
+
 @Injectable()
 export class GroupService {
   constructor(
@@ -18,17 +23,25 @@ export class GroupService {
     return this.prisma.sensorGroup.findMany({ orderBy: { name: 'asc' } });
   }
 
-  /** This group's id plus all of its descendants' ids (recursive CTE). */
+  /** This group's id plus all of its descendants' ids. `UNION` (not `UNION ALL`)
+   * makes the recursion terminate even if the data somehow contains a cycle. */
   async descendantIds(id: string): Promise<string[]> {
     const rows = await this.prisma.$queryRaw<{ id: string }[]>`
       WITH RECURSIVE sub AS (
         SELECT id FROM "SensorGroup" WHERE id = ${id}
-        UNION ALL
+        UNION
         SELECT g.id FROM "SensorGroup" g JOIN sub ON g."parentId" = sub.id
       )
       SELECT id FROM sub
     `;
     return rows.map((r) => r.id);
+  }
+
+  /** Trim an optional id; treat empty/whitespace as "none" so a stray `""`
+   * becomes a controlled null (root / ungrouped) rather than a DB FK error. */
+  private normalizeId(id?: string | null): string | null {
+    const trimmed = id?.trim();
+    return trimmed ? trimmed : null;
   }
 
   private async requireGroup(id: string) {
@@ -38,10 +51,9 @@ export class GroupService {
   }
 
   async create(name: string, parentId?: string | null) {
-    if (parentId) await this.requireGroup(parentId);
-    return this.prisma.sensorGroup.create({
-      data: { name, parentId: parentId ?? null },
-    });
+    const pid = this.normalizeId(parentId);
+    if (pid) await this.requireGroup(pid);
+    return this.prisma.sensorGroup.create({ data: { name, parentId: pid } });
   }
 
   async rename(id: string, name: string) {
@@ -49,48 +61,70 @@ export class GroupService {
     return this.prisma.sensorGroup.update({ where: { id }, data: { name } });
   }
 
-  /** Move a group under a new parent (or to root). Rejects cycles. */
+  /** Move a group under a new parent (or to root). Cycle check + update run in
+   * one transaction under an advisory lock, so concurrent moves can't race into
+   * a cycle. */
   async move(id: string, parentId?: string | null) {
-    await this.requireGroup(id);
-    if (parentId) {
-      await this.requireGroup(parentId);
-      const descendants = await this.descendantIds(id); // includes self
-      if (descendants.includes(parentId)) {
-        throw new BadRequestException(
-          'Cannot move a group under itself or one of its descendants.',
-        );
+    const pid = this.normalizeId(parentId);
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${TREE_LOCK_KEY})`;
+
+      const group = await tx.sensorGroup.findUnique({ where: { id } });
+      if (!group) throw new NotFoundException(`Group ${id} not found`);
+
+      if (pid) {
+        const parent = await tx.sensorGroup.findUnique({ where: { id: pid } });
+        if (!parent) throw new NotFoundException(`Group ${pid} not found`);
+
+        const rows = await tx.$queryRaw<{ id: string }[]>`
+          WITH RECURSIVE sub AS (
+            SELECT id FROM "SensorGroup" WHERE id = ${id}
+            UNION
+            SELECT g.id FROM "SensorGroup" g JOIN sub ON g."parentId" = sub.id
+          )
+          SELECT id FROM sub
+        `;
+        if (rows.some((r) => r.id === pid)) {
+          throw new BadRequestException(
+            'Cannot move a group under itself or one of its descendants.',
+          );
+        }
       }
-    }
-    return this.prisma.sensorGroup.update({
-      where: { id },
-      data: { parentId: parentId ?? null },
+
+      return tx.sensorGroup.update({ where: { id }, data: { parentId: pid } });
     });
   }
 
   /** Delete a group, reparenting its children and sensors to its parent (or to
-   * root / ungrouped if it was a root). No subtree or sensor is lost. */
+   * root / ungrouped if it was a root). Serialized with moves via the same lock
+   * so a concurrent move can't strand a subtree. */
   async remove(id: string): Promise<boolean> {
-    const group = await this.requireGroup(id);
-    await this.prisma.$transaction([
-      this.prisma.sensorGroup.updateMany({
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${TREE_LOCK_KEY})`;
+
+      const group = await tx.sensorGroup.findUnique({ where: { id } });
+      if (!group) throw new NotFoundException(`Group ${id} not found`);
+
+      await tx.sensorGroup.updateMany({
         where: { parentId: id },
         data: { parentId: group.parentId },
-      }),
-      this.prisma.sensor.updateMany({
+      });
+      await tx.sensor.updateMany({
         where: { groupId: id },
         data: { groupId: group.parentId },
-      }),
-      this.prisma.sensorGroup.delete({ where: { id } }),
-    ]);
-    return true;
+      });
+      await tx.sensorGroup.delete({ where: { id } });
+      return true;
+    });
   }
 
-  /** Put a sensor into a group (or `null` to ungroup it). */
+  /** Put a sensor into a group (or `null`/empty to ungroup it). */
   async assignSensor(sensorId: string, groupId?: string | null) {
-    if (groupId) await this.requireGroup(groupId);
+    const gid = this.normalizeId(groupId);
+    if (gid) await this.requireGroup(gid);
     return this.prisma.sensor.update({
       where: { id: sensorId },
-      data: { groupId: groupId ?? null },
+      data: { groupId: gid },
     });
   }
 
