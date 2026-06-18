@@ -42,10 +42,12 @@ export function DetailRangePicker({
 }) {
   const [open, setOpen] = useState(false);
   const [calRange, setCalRange] = useState<DateRange | undefined>();
-  // A stable "now" for the data-days lookup window (computed once per mount).
-  const [nowMs] = useState(() => Date.now());
+  // The data-days lookup window, refreshed each time the popover opens so the
+  // markers reflect "now", not the original mount time.
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
-  // Which days have readings (count > 0) over the last year — only while open.
+  // Which days have readings (count > 0) over the last year — only while open,
+  // and re-fetched from the network so newly-ingested days show up.
   const { data } = useQuery(SensorReadingsBucketedDocument, {
     variables: {
       sensorId,
@@ -54,6 +56,7 @@ export function DetailRangePicker({
       end: new Date(nowMs).toISOString(),
     },
     skip: !open,
+    fetchPolicy: 'cache-and-network',
     context: { suppressErrorToast: true },
   });
   const dataDays = (data?.sensorReadingsBucketed ?? [])
@@ -77,7 +80,10 @@ export function DetailRangePicker({
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
-        if (next) setCalRange(undefined);
+        if (next) {
+          setNowMs(Date.now());
+          setCalRange(undefined);
+        }
       }}
     >
       <PopoverTrigger asChild>
