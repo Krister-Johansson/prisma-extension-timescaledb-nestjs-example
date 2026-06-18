@@ -1,10 +1,18 @@
 import { useQuery } from '@apollo/client/react';
+import { useEffect } from 'react';
 import { RelativeTime } from '@/components/common/relative-time';
 import { Skeleton } from '@/components/ui/skeleton';
-import { SensorAlertEventsDocument } from '@/graphql/alert-events.generated';
+import {
+  AlertFiredDocument,
+  SensorAlertEventsDocument,
+  type SensorAlertEventsQuery,
+} from '@/graphql/alert-events.generated';
 import { cn } from '@/lib/utils';
 
-/** Recent raised/cleared alerts for a sensor (newest first), polled for live updates. */
+const MAX_EVENTS = 20;
+
+/** Recent raised/cleared alerts for a sensor (newest first), updated live via
+ * the alertFired subscription (with a slow poll as a reconnection fallback). */
 export function DetailAlertHistory({
   sensorId,
   unit,
@@ -12,11 +20,33 @@ export function DetailAlertHistory({
   sensorId: string;
   unit: string;
 }) {
-  const { data, loading } = useQuery(SensorAlertEventsDocument, {
-    variables: { sensorId, take: 20 },
-    pollInterval: 10_000,
+  const { data, loading, subscribeToMore } = useQuery(SensorAlertEventsDocument, {
+    variables: { sensorId, take: MAX_EVENTS },
+    pollInterval: 30_000,
     context: { suppressErrorToast: true },
   });
+
+  useEffect(
+    () =>
+      subscribeToMore({
+        document: AlertFiredDocument,
+        variables: { sensorId },
+        updateQuery: (prev, { subscriptionData }) => {
+          // Runtime data is the complete query result; the param is typed
+          // deep-partial, so narrow it back to the full shape.
+          const current = prev as SensorAlertEventsQuery;
+          const event = subscriptionData.data?.alertFired;
+          if (!event || current.alertEvents.some((e) => e.id === event.id)) {
+            return current;
+          }
+          return {
+            alertEvents: [event, ...current.alertEvents].slice(0, MAX_EVENTS),
+          };
+        },
+      }),
+    [sensorId, subscribeToMore],
+  );
+
   const events = data?.alertEvents ?? [];
 
   return (
