@@ -30,21 +30,28 @@ export function DetailAlertRule({
   sensorId: string;
   unit: string;
 }) {
-  const { data, loading } = useQuery(SensorAlertRuleDocument, {
+  const { data, loading, error } = useQuery(SensorAlertRuleDocument, {
     variables: { sensorId },
     context: { suppressErrorToast: true },
   });
   const rule = data?.alertRule ?? null;
+  const loadError = Boolean(error) && !data;
 
   return (
     <div className="rounded-[14px] border border-border bg-card p-5 shadow-sm">
       <div className="mb-3 flex items-center justify-between gap-3">
         <h3 className="text-sm font-semibold">Alert rule</h3>
-        {!loading && rule ? <SensorStatusBadge status={ruleStatus(rule)} /> : null}
+        {!loading && !loadError && rule ? (
+          <SensorStatusBadge status={ruleStatus(rule)} />
+        ) : null}
       </div>
 
       {loading ? (
         <Skeleton className="h-9 w-full rounded-md" />
+      ) : loadError ? (
+        <div className="text-[12.5px] text-muted-foreground">
+          Couldn&apos;t load the alert rule.
+        </div>
       ) : rule ? (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="font-mono text-[12.5px] text-muted-foreground">
