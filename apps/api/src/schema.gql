@@ -141,6 +141,13 @@ type Query {
     sensorId: ID!
     start: DateTime!
   ): [ReadingBucket!]!
+  sensorReadingsBucketedMulti(
+    """time_bucket interval, e.g. "1 hour"."""
+    bucket: String! = "1 hour"
+    end: DateTime!
+    sensorIds: [ID!]!
+    start: DateTime!
+  ): [SensorBucket!]!
   sensorReadingsHourly(end: DateTime, sensorId: ID, start: DateTime): [SensorReadingHourly!]!
   sensors(where: SensorWhereInput): [Sensor!]!
 }
@@ -163,6 +170,15 @@ type Sensor {
   rules: [AlertRule!]!
   type: SensorType!
   unit: String!
+}
+
+type SensorBucket {
+  avg: Float
+  bucket: DateTime!
+  count: Int!
+  max: Float
+  min: Float
+  sensorId: ID!
 }
 
 type SensorGroup {
