@@ -21,8 +21,10 @@ type Match = ReturnType<typeof useMatches>[number];
  * (not in the route tree), so their trail is composed explicitly:
  *   Dashboard / Manage / Sensor / <name>           (detail)
  *   Dashboard / Manage / Sensor / <name> / Settings (config)
- * The name comes from the live SensorDetail cache, so until it resolves the
- * trail is just `… / Sensor`. Other pages map their route `crumb`s directly.
+ * The name comes from the live SensorDetail cache; until it resolves the detail
+ * trail ends at `… / Sensor` and the config trail at `… / Sensor / Settings` —
+ * the leaf always reflects the current page. Other pages map their route
+ * `crumb`s directly.
  */
 function buildCrumbs(
   matches: Match[],
