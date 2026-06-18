@@ -1,31 +1,29 @@
-import { join } from 'node:path';
+import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER } from '@nestjs/core';
-import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ScheduleModule } from '@nestjs/schedule';
 import { McpModule, McpTransportType } from '@rekog/mcp-nest';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { join } from 'node:path';
+import { AlertModule } from './alert/alert.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { PrismaClientExceptionFilter } from './common/filters/prisma-client-exception.filter';
 import { validate } from './config/env.validation';
 import { createLoaders } from './dataloader/loaders';
-import { ExtendedPrismaClient, PRISMA_CLIENT } from './prisma/prisma-client';
-import { PrismaModule } from './prisma/prisma.module';
-import { PubSubModule } from './pubsub/pubsub.module';
-import { SensorModule } from './sensor/sensor.module';
-import { ReadingModule } from './reading/reading.module';
-import { AlertModule } from './alert/alert.module';
 import { EmulatorModule } from './emulator/emulator.module';
 import { GroupModule } from './group/group.module';
 import { AlertTools } from './mcp/tools/alert.tools';
 import { DataTools } from './mcp/tools/data.tools';
 import { EmulatorTools } from './mcp/tools/emulator.tools';
 import { GroupTools } from './mcp/tools/group.tools';
-import { SensorTools } from './mcp/tools/sensor.tools';
 import { SensorTypeTools } from './mcp/tools/sensor-type.tools';
+import { SensorTools } from './mcp/tools/sensor.tools';
+import { ExtendedPrismaClient, PRISMA_CLIENT } from './prisma/prisma-client';
+import { PrismaModule } from './prisma/prisma.module';
+import { PubSubModule } from './pubsub/pubsub.module';
+import { ReadingModule } from './reading/reading.module';
+import { SensorModule } from './sensor/sensor.module';
 import { TimescaleAdminModule } from './timescale-admin/timescale-admin.module';
 
 // The /mcp endpoint has no auth and exposes mutating tools, so expose it only in
@@ -82,9 +80,7 @@ const MCP_TOOLS = [
     GroupModule,
     TimescaleAdminModule,
   ],
-  controllers: [AppController],
   providers: [
-    AppService,
     // MCP @Tool providers — mcp-nest discovers them in the module that hosts
     // McpModule.forRoot (here). Each wraps an existing service (DI). Gated with
     // the transport so they aren't registered when MCP is disabled.

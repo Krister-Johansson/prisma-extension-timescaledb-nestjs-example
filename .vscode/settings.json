@@ -1,12 +1,15 @@
 {
     "cSpell.words": [
+        "columnstore",
         "hyperfunctions",
         "hypertable",
         "hypertables",
         "initdb",
-        "LOOKBACK",
+        "rekog",
         "rollup",
+        "segmentby",
         "sparkline",
+        "Streamable",
         "timescaledb"
     ]
 }
