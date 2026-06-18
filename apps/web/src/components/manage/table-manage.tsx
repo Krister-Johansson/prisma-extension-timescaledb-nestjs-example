@@ -39,15 +39,22 @@ const columns = [
     header: 'Alert rules',
     cell: (info) => {
       const sensor = info.row.original;
+      const count = sensor.ruleCount ?? (sensor.rule ? 1 : 0);
+      const label =
+        count === 0
+          ? 'No rules'
+          : count === 1
+            ? `1 rule · ${ruleSummary(sensor)}`
+            : `${count} rules`;
       return (
         <span
           className={
-            sensor.rule
+            count > 0
               ? 'font-mono text-[12px] text-muted-foreground'
               : 'font-mono text-[12px] text-muted-2'
           }
         >
-          {sensor.rule ? `1 rule · ${ruleSummary(sensor)}` : 'No rules'}
+          {label}
         </span>
       );
     },
