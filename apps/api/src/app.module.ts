@@ -18,6 +18,7 @@ import { SensorModule } from './sensor/sensor.module';
 import { ReadingModule } from './reading/reading.module';
 import { AlertModule } from './alert/alert.module';
 import { EmulatorModule } from './emulator/emulator.module';
+import { GroupModule } from './group/group.module';
 import { TimescaleAdminModule } from './timescale-admin/timescale-admin.module';
 
 @Module({
@@ -45,6 +46,7 @@ import { TimescaleAdminModule } from './timescale-admin/timescale-admin.module';
     ReadingModule,
     AlertModule,
     EmulatorModule,
+    GroupModule,
     TimescaleAdminModule,
   ],
   controllers: [AppController],

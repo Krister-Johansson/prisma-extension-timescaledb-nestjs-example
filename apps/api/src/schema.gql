@@ -109,14 +109,19 @@ input IngestReadingInput {
 }
 
 type Mutation {
+  assignSensorToGroup(groupId: ID, sensorId: ID!): Sensor!
   createAlertRule(input: CreateAlertRuleInput!): AlertRule!
   createEmulator(input: CreateEmulatorInput!): Emulator!
   createSensor(input: CreateSensorInput!): Sensor!
+  createSensorGroup(name: String!, parentId: ID): SensorGroup!
   deleteAlertRule(id: ID!): AlertRule!
   deleteEmulator(id: ID!): Emulator!
   deleteSensor(id: ID!): Sensor!
+  deleteSensorGroup(id: ID!): Boolean!
   ingestReading(input: IngestReadingInput!): SensorReading!
+  moveSensorGroup(id: ID!, parentId: ID): SensorGroup!
   refreshSensorReadingHourly(end: DateTime, start: DateTime): Boolean!
+  renameSensorGroup(id: ID!, name: String!): SensorGroup!
   setEmulatorRunning(id: ID!, running: Boolean!): Emulator!
   updateAlertRule(id: ID!, input: UpdateAlertRuleInput!): AlertRule!
   updateSensor(id: ID!, input: UpdateSensorInput!): Sensor!
@@ -128,6 +133,7 @@ type Query {
   emulators: [Emulator!]!
   hypertableStats(model: HypertableModel!): HypertableStats!
   sensor(id: ID!): Sensor!
+  sensorGroups: [SensorGroup!]!
   sensorReadingsBucketed(
     """time_bucket interval, e.g. "1 hour"."""
     bucket: String! = "1 hour"
@@ -149,6 +155,7 @@ type ReadingBucket {
 
 type Sensor {
   createdAt: DateTime!
+  groupId: ID
   id: ID!
   latestReading: SensorReading
   name: String!
@@ -156,6 +163,14 @@ type Sensor {
   rules: [AlertRule!]!
   type: SensorType!
   unit: String!
+}
+
+type SensorGroup {
+  createdAt: DateTime!
+  id: ID!
+  name: String!
+  parentId: ID
+  sensorCount: Int!
 }
 
 type SensorReading {

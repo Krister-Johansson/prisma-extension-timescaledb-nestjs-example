@@ -46,10 +46,29 @@ model Sensor {
   type      SensorType
   unit      String
   createdAt DateTime       @default(now())
+  groupId   String?
+  group     SensorGroup?   @relation(fields: [groupId], references: [id], onDelete: SetNull)
   readings  SensorReading[]
   rules     AlertRule[]
   events    AlertEvent[]
   emulators Emulator[]
+
+  @@index([groupId])
+}
+
+/// A node in the sensor grouping tree (e.g. House → Upper floor → Bedroom).
+/// Adjacency list: `parentId` is null for roots, with no depth limit. A sensor
+/// belongs to at most one group; "sensors under a group" includes descendants.
+model SensorGroup {
+  id        String        @id @default(uuid())
+  name      String
+  parentId  String?
+  parent    SensorGroup?  @relation("GroupTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children  SensorGroup[] @relation("GroupTree")
+  sensors   Sensor[]
+  createdAt DateTime      @default(now())
+
+  @@index([parentId])
 }
 
 /// A synthetic data source for a sensor: a background ticker ingests a reading

@@ -43,6 +43,10 @@ export class Sensor {
   @Field(() => GraphQLISODateTime)
   createdAt!: Date;
 
+  /** The group this sensor belongs to, if any (see the grouping tree). */
+  @Field(() => ID, { nullable: true })
+  groupId!: string | null;
+
   // `readings` is added to the schema by the resolver's @ResolveField (batched
   // via DataLoader) — intentionally not a property here so plain Prisma rows
   // satisfy this type.
