@@ -27,6 +27,14 @@ export class AlertResolver {
     return this.alertService.setRule(input);
   }
 
+  /** Returns the deleted rule so clients can evict it from their cache. */
+  @Mutation(() => AlertRule)
+  deleteAlertRule(
+    @Args('sensorId', { type: () => ID }) sensorId: string,
+  ): Promise<AlertRule> {
+    return this.alertService.removeRule(sensorId);
+  }
+
   @Query(() => AlertRule, { nullable: true })
   alertRule(
     @Args('sensorId', { type: () => ID }) sensorId: string,

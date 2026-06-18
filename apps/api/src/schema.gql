@@ -78,6 +78,7 @@ input IngestReadingInput {
 
 type Mutation {
   createSensor(input: CreateSensorInput!): Sensor!
+  deleteAlertRule(sensorId: ID!): AlertRule!
   deleteSensor(id: ID!): Sensor!
   ingestReading(input: IngestReadingInput!): SensorReading!
   refreshSensorReadingHourly(end: DateTime, start: DateTime): Boolean!

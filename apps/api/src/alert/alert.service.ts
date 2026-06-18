@@ -49,6 +49,11 @@ export class AlertService {
     return this.prisma.alertRule.findUnique({ where: { sensorId } });
   }
 
+  /** Delete a sensor's alert rule. Throws P2025 (→ 404) if there is none. */
+  removeRule(sensorId: string) {
+    return this.prisma.alertRule.delete({ where: { sensorId } });
+  }
+
   events(sensorId?: string, take = 50) {
     // Bound the scan so a single query can't pull unbounded history.
     const safeTake = Math.min(Math.max(take, 1), 200);
