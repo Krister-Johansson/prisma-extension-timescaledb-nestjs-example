@@ -107,6 +107,9 @@ export function DetailRangePicker({
           </div>
           <Calendar
             mode="range"
+            captionLayout="dropdown"
+            startMonth={new Date(2000, 0)}
+            endMonth={new Date(nowMs)}
             defaultMonth={new Date(window.startMs)}
             selected={calRange}
             onSelect={handleSelect}
