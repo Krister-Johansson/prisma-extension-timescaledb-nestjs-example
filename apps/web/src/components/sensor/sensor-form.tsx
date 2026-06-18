@@ -29,8 +29,15 @@ export const sensorFormSchema = z.object({
 
 export type SensorFormValues = z.infer<typeof sensorFormSchema>;
 
-function FieldError({ errors }: { errors: unknown[] }) {
-  const message = errors
+// Only surfaces errors once the field has been touched (or the form submitted),
+// so changing one field doesn't light up untouched fields.
+function FieldError({
+  meta,
+}: {
+  meta: { isTouched: boolean; errors: unknown[] };
+}) {
+  if (!meta.isTouched) return null;
+  const message = meta.errors
     .map((e) =>
       typeof e === 'string'
         ? e
@@ -91,7 +98,7 @@ export function SensorForm({
               placeholder="Boiler temperature"
               autoFocus
             />
-            <FieldError errors={field.state.meta.errors} />
+            <FieldError meta={field.state.meta} />
           </div>
         )}
       </form.Field>
@@ -141,7 +148,7 @@ export function SensorForm({
               onBlur={field.handleBlur}
               placeholder="°C"
             />
-            <FieldError errors={field.state.meta.errors} />
+            <FieldError meta={field.state.meta} />
           </div>
         )}
       </form.Field>

@@ -40,8 +40,15 @@ export const alertRuleSchema = z
 export type AlertRuleFormInput = z.input<typeof alertRuleSchema>;
 export type AlertRuleFormValues = z.output<typeof alertRuleSchema>;
 
-function FieldError({ errors }: { errors: unknown[] }) {
-  const message = errors
+// Only surfaces errors once the field has been touched (or the form submitted),
+// so changing one field doesn't light up untouched fields.
+function FieldError({
+  meta,
+}: {
+  meta: { isTouched: boolean; errors: unknown[] };
+}) {
+  if (!meta.isTouched) return null;
+  const message = meta.errors
     .map((e) =>
       typeof e === 'string'
         ? e
@@ -117,7 +124,7 @@ export function AlertRuleForm({
               onChange={(e) => field.handleChange(e.target.value)}
               onBlur={field.handleBlur}
             />
-            <FieldError errors={field.state.meta.errors} />
+            <FieldError meta={field.state.meta} />
           </div>
         )}
       </form.Field>
@@ -133,7 +140,7 @@ export function AlertRuleForm({
               onChange={(e) => field.handleChange(e.target.value)}
               onBlur={field.handleBlur}
             />
-            <FieldError errors={field.state.meta.errors} />
+            <FieldError meta={field.state.meta} />
           </div>
         )}
       </form.Field>
