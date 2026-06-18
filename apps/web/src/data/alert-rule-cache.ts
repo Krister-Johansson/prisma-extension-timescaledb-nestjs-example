@@ -20,3 +20,18 @@ export function writeAlertRuleToCache(
     data: { alertRule: rule },
   });
 }
+
+/** Null the `alertRule(sensorId)` field and evict the deleted rule entity. */
+export function removeAlertRuleFromCache(
+  cache: ApolloCache,
+  sensorId: string,
+  ruleId: string,
+): void {
+  cache.writeQuery({
+    query: SensorAlertRuleDocument,
+    variables: { sensorId },
+    data: { alertRule: null },
+  });
+  cache.evict({ id: cache.identify({ __typename: 'AlertRule', id: ruleId }) });
+  cache.gc();
+}

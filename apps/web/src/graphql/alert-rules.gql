@@ -1,5 +1,5 @@
 # One alert rule per sensor (AlertRule.sensorId is unique). `setAlertRule`
-# upserts it; there's no hard delete, so disabling is done via `enabled`.
+# upserts it; `deleteAlertRule` removes it.
 query SensorAlertRule($sensorId: ID!) {
   alertRule(sensorId: $sensorId) {
     __typename
@@ -25,5 +25,13 @@ mutation SetAlertRule($input: SetAlertRuleInput!) {
     severity
     enabled
     state
+  }
+}
+
+mutation DeleteAlertRule($sensorId: ID!) {
+  deleteAlertRule(sensorId: $sensorId) {
+    __typename
+    id
+    sensorId
   }
 }
