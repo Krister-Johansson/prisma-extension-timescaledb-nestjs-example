@@ -1,7 +1,13 @@
 import type { Sensor } from '@/data/types';
 import { AlertActiveCard } from './alert-active-card';
 
-export function AlertActiveGrid({ sensors }: { sensors: Sensor[] }) {
+export function AlertActiveGrid({
+  sensors,
+  raisedAtById,
+}: {
+  sensors: Sensor[];
+  raisedAtById: Map<string, string>;
+}) {
   if (sensors.length === 0) {
     return (
       <div className="rounded-[14px] border border-border bg-card px-5 py-12 text-center shadow-sm">
@@ -19,7 +25,11 @@ export function AlertActiveGrid({ sensors }: { sensors: Sensor[] }) {
   return (
     <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4">
       {sensors.map((sensor) => (
-        <AlertActiveCard key={sensor.id} sensor={sensor} />
+        <AlertActiveCard
+          key={sensor.id}
+          sensor={sensor}
+          raisedAt={raisedAtById.get(sensor.id)}
+        />
       ))}
     </div>
   );
