@@ -11,6 +11,19 @@ query SensorsList {
   }
 }
 
+# Identity only for now — time-series, aggregates and alerts are wired in a
+# later PR. Shares the normalized Sensor entity, so edits reflect here live.
+query SensorDetail($id: ID!) {
+  sensor(id: $id) {
+    __typename
+    id
+    name
+    type
+    unit
+    createdAt
+  }
+}
+
 # Returns `readings` so an optimistic create satisfies the SensorsList
 # selection (a new sensor has none yet → []). `__typename` is selected so the
 # optimisticResponse is fully typed and normalizes into the cache.
