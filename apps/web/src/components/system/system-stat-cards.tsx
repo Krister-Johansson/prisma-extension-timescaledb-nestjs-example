@@ -1,9 +1,14 @@
-import { SYSTEM_STATS } from '@/data/system';
+export interface SystemStat {
+  label: string;
+  value: string;
+  unit: string;
+  sub: string;
+}
 
-export function SystemStatCards() {
+export function SystemStatCards({ stats }: { stats: SystemStat[] }) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {SYSTEM_STATS.map((stat) => (
+      {stats.map((stat) => (
         <div
           key={stat.label}
           className="rounded-[14px] border border-border bg-card p-[18px] shadow-sm"
