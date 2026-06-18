@@ -3,6 +3,7 @@ import {
   Inject,
   Injectable,
   Logger,
+  NotFoundException,
 } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
 import { PRISMA_CLIENT } from '../prisma/prisma-client';
@@ -39,6 +40,33 @@ export class EmulatorService {
   /** Pause/resume. Throws P2025 (→ 404) if missing. */
   setRunning(id: string, running: boolean) {
     return this.prisma.emulator.update({ where: { id }, data: { running } });
+  }
+
+  /** Update the value band / cadence. The min < max invariant is checked in the
+   * UPDATE's WHERE against the live row, so concurrent partial updates can't race
+   * a stale read into an invalid band. */
+  async update(
+    id: string,
+    data: { min?: number; max?: number; intervalSeconds?: number },
+  ) {
+    const min = data.min ?? null;
+    const max = data.max ?? null;
+    const interval = data.intervalSeconds ?? null;
+    const affected = await this.prisma.$executeRaw`
+      UPDATE "Emulator"
+      SET "min" = COALESCE(${min}::float8, "min"),
+          "max" = COALESCE(${max}::float8, "max"),
+          "intervalSeconds" = COALESCE(${interval}::int, "intervalSeconds")
+      WHERE "id" = ${id}
+        AND COALESCE(${min}::float8, "min") < COALESCE(${max}::float8, "max")
+    `;
+    if (affected === 0) {
+      // Either the id doesn't exist, or the band would become invalid.
+      const exists = await this.prisma.emulator.findUnique({ where: { id } });
+      if (!exists) throw new NotFoundException(`Emulator ${id} not found`);
+      throw new BadRequestException('min must be less than max.');
+    }
+    return this.prisma.emulator.findUniqueOrThrow({ where: { id } });
   }
 
   /** Delete. Throws P2025 (→ 404) if missing. */

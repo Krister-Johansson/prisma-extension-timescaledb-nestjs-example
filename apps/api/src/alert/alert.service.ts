@@ -42,6 +42,11 @@ export class AlertService {
     });
   }
 
+  /** Every rule across all sensors (oldest first) — for tooling / overviews. */
+  allRules() {
+    return this.prisma.alertRule.findMany({ orderBy: { createdAt: 'asc' } });
+  }
+
   /** Delete a rule by id. Throws P2025 (→ 404) if missing. */
   removeRule(id: string) {
     return this.prisma.alertRule.delete({ where: { id } });
