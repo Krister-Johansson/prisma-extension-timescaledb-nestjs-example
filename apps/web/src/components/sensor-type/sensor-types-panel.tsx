@@ -121,7 +121,13 @@ export function SensorTypesPanel() {
           <DialogHeader>
             <DialogTitle>New measurement type</DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col gap-3">
+          <form
+            className="flex flex-col gap-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void submit();
+            }}
+          >
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="type-key">Key</Label>
               <Input
@@ -156,18 +162,21 @@ export function SensorTypesPanel() {
                 placeholder="ppm"
                 value={unit}
                 onChange={(e) => setUnit(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && submit()}
               />
             </div>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={submit} disabled={!canSubmit}>
-              Create type
-            </Button>
-          </DialogFooter>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={!canSubmit}>
+                Create type
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>
