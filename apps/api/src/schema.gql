@@ -78,9 +78,11 @@ input IngestReadingInput {
 
 type Mutation {
   createSensor(input: CreateSensorInput!): Sensor!
+  deleteSensor(id: ID!): Sensor!
   ingestReading(input: IngestReadingInput!): SensorReading!
   refreshSensorReadingHourly(end: DateTime, start: DateTime): Boolean!
   setAlertRule(input: SetAlertRuleInput!): AlertRule!
+  updateSensor(id: ID!, input: UpdateSensorInput!): Sensor!
 }
 
 type Query {
@@ -157,4 +159,11 @@ input SetAlertRuleInput {
 type Subscription {
   alertFired(sensorId: ID): AlertEvent!
   readingIngested(sensorId: ID): SensorReading!
+}
+
+input UpdateSensorInput {
+  name: String
+
+  """Unit of measure, e.g. °C, hPa, %."""
+  unit: String
 }

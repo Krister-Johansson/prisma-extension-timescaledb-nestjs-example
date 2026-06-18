@@ -12,6 +12,7 @@ import {
 import type { GraphQLContext } from '../dataloader/loaders';
 import { CreateSensorInput } from './dto/create-sensor.input';
 import { SensorWhereInput } from './dto/sensor-where.input';
+import { UpdateSensorInput } from './dto/update-sensor.input';
 import { Sensor, SensorReading } from './models/sensor.model';
 import { SensorService } from './sensor.service';
 
@@ -38,6 +39,20 @@ export class SensorResolver {
   @Mutation(() => Sensor)
   createSensor(@Args('input') input: CreateSensorInput): Promise<Sensor> {
     return this.sensorService.create(input);
+  }
+
+  @Mutation(() => Sensor)
+  updateSensor(
+    @Args('id', { type: () => ID }) id: string,
+    @Args('input') input: UpdateSensorInput,
+  ): Promise<Sensor> {
+    return this.sensorService.update(id, input);
+  }
+
+  /** Returns the deleted sensor so clients can evict it from their cache. */
+  @Mutation(() => Sensor)
+  deleteSensor(@Args('id', { type: () => ID }) id: string): Promise<Sensor> {
+    return this.sensorService.remove(id);
   }
 
   /** Batched via DataLoader — one query for all sensors in the response. */
