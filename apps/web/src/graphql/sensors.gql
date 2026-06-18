@@ -48,6 +48,7 @@ mutation CreateSensor($input: CreateSensorInput!) {
     name
     type
     unit
+    groupId
     readings {
       time
       value

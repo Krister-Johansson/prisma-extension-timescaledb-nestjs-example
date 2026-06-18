@@ -49,6 +49,7 @@ export function SensorCreateDialog() {
                   __typename: 'Sensor',
                   id: crypto.randomUUID(),
                   ...input,
+                  groupId: null,
                   readings: [],
                   rules: [],
                 },

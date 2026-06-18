@@ -46,10 +46,25 @@ export function GroupTree() {
   const { data, loading, error } = useQuery(SensorGroupsDocument, {
     context: { suppressErrorToast: true },
   });
-  const [createGroup] = useMutation(CreateSensorGroupDocument, refetch);
-  const [renameGroup] = useMutation(RenameSensorGroupDocument, refetch);
-  const [moveGroup] = useMutation(MoveSensorGroupDocument, refetch);
-  const [deleteGroup] = useMutation(DeleteSensorGroupDocument, refetch);
+  const [createGroup, createState] = useMutation(
+    CreateSensorGroupDocument,
+    refetch,
+  );
+  const [renameGroup, renameState] = useMutation(
+    RenameSensorGroupDocument,
+    refetch,
+  );
+  const [moveGroup, moveState] = useMutation(MoveSensorGroupDocument, refetch);
+  const [deleteGroup, deleteState] = useMutation(
+    DeleteSensorGroupDocument,
+    refetch,
+  );
+  // One in-flight guard so a double-click can't fire a mutation twice.
+  const busy =
+    createState.loading ||
+    renameState.loading ||
+    moveState.loading ||
+    deleteState.loading;
 
   // null node on a 'create' action = new root group.
   const [action, setAction] = useState<{
@@ -71,7 +86,7 @@ export function GroupTree() {
 
   const submitName = async () => {
     const name = nameValue.trim();
-    if (!name || !action) return;
+    if (!name || !action || busy) return;
     if (action.kind === 'rename' && action.node) {
       await renameGroup({ variables: { id: action.node.id, name } });
     } else {
@@ -82,7 +97,7 @@ export function GroupTree() {
     close();
   };
   const submitMove = async () => {
-    if (!action?.node) return;
+    if (!action?.node || busy) return;
     await moveGroup({
       variables: {
         id: action.node.id,
@@ -92,7 +107,7 @@ export function GroupTree() {
     close();
   };
   const submitDelete = async () => {
-    if (!action?.node) return;
+    if (!action?.node || busy) return;
     await deleteGroup({ variables: { id: action.node.id } });
     close();
   };
@@ -158,7 +173,7 @@ export function GroupTree() {
             <Button variant="ghost" onClick={close}>
               Cancel
             </Button>
-            <Button onClick={submitName} disabled={!nameValue.trim()}>
+            <Button onClick={submitName} disabled={busy || !nameValue.trim()}>
               {action?.kind === 'rename' ? 'Rename' : 'Create'}
             </Button>
           </DialogFooter>
@@ -188,7 +203,9 @@ export function GroupTree() {
             <Button variant="ghost" onClick={close}>
               Cancel
             </Button>
-            <Button onClick={submitMove}>Move</Button>
+            <Button onClick={submitMove} disabled={busy}>
+              Move
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -208,7 +225,9 @@ export function GroupTree() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={close}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={submitDelete}>Delete</AlertDialogAction>
+            <AlertDialogAction onClick={submitDelete} disabled={busy}>
+              Delete
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -21,7 +21,7 @@ export function ManageGroupCell({ sensor }: { sensor: Sensor }) {
   const { data } = useQuery(SensorGroupsDocument, {
     context: { suppressErrorToast: true },
   });
-  const [assign] = useMutation(AssignSensorToGroupDocument, {
+  const [assign, { loading }] = useMutation(AssignSensorToGroupDocument, {
     refetchQueries: ['SensorGroups'],
   });
 
@@ -37,6 +37,7 @@ export function ManageGroupCell({ sensor }: { sensor: Sensor }) {
     >
       <Select
         value={sensor.groupId ?? NONE}
+        disabled={loading}
         onValueChange={(v) =>
           assign({
             variables: {
