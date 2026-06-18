@@ -68,5 +68,7 @@ export function formatWindowLabel(w: TimeWindow, res: Resolution): string {
     ? { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }
     : { month: 'short', day: 'numeric' };
   const fmt = (ms: number) => new Date(ms).toLocaleString([], opts);
-  return `${fmt(w.startMs)} — ${fmt(w.endMs)}`;
+  // `endMs` is exclusive, so label the last included instant to avoid showing
+  // an extra day on coarse (day/week) resolutions.
+  return `${fmt(w.startMs)} — ${fmt(w.endMs - 1)}`;
 }

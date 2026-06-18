@@ -133,6 +133,7 @@ export function DetailChartControls({
         <span>Custom:</span>
         <Input
           type="date"
+          aria-label="Start date"
           value={startDate}
           max={endDate}
           onChange={(e) => setStartDate(e.target.value)}
@@ -141,6 +142,7 @@ export function DetailChartControls({
         <span>→</span>
         <Input
           type="date"
+          aria-label="End date"
           value={endDate}
           min={startDate}
           onChange={(e) => setEndDate(e.target.value)}
