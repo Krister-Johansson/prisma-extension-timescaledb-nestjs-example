@@ -55,7 +55,6 @@ function buildSeries(
   buckets: { sensorId: string; bucket: string; avg: number | null }[],
   sensors: Sensor[],
 ): { rows: Row[]; series: SeriesMeta[] } {
-  const byId = new Map(sensors.map((s) => [s.id, s]));
   const bySensor = new Map<string, { bucket: string; avg: number | null }[]>();
   for (const b of buckets) {
     const list = bySensor.get(b.sensorId);
@@ -63,12 +62,16 @@ function buildSeries(
     else bySensor.set(b.sensorId, [b]);
   }
 
-  const series: SeriesMeta[] = [...bySensor.keys()].map((id, i) => ({
-    id,
-    name: byId.get(id)?.name ?? 'Sensor',
-    unit: byId.get(id)?.unit ?? '',
-    color: SERIES_COLORS[i % SERIES_COLORS.length],
-  }));
+  // Order + colors follow the stable `sensors` list, not data-arrival order, so a
+  // sensor keeps its colour across live updates.
+  const series: SeriesMeta[] = sensors
+    .filter((s) => bySensor.has(s.id))
+    .map((s, i) => ({
+      id: s.id,
+      name: s.name,
+      unit: s.unit,
+      color: SERIES_COLORS[i % SERIES_COLORS.length],
+    }));
 
   const norm = new Map<string, Map<string, number>>();
   const real = new Map<string, Map<string, number>>();

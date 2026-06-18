@@ -1,5 +1,11 @@
 import { ArgsType, Field, GraphQLISODateTime, ID } from '@nestjs/graphql';
-import { IsDate, IsOptional, IsString, Matches } from 'class-validator';
+import {
+  ArrayMaxSize,
+  IsDate,
+  IsOptional,
+  IsString,
+  Matches,
+} from 'class-validator';
 import { INTERVAL_PATTERN } from '../../common/interval';
 
 @ArgsType()
@@ -30,6 +36,7 @@ export class ReadingBucketArgs {
 export class ReadingBucketMultiArgs {
   @Field(() => [ID])
   @IsString({ each: true })
+  @ArrayMaxSize(100, { message: 'at most 100 sensorIds per query' })
   sensorIds!: string[];
 
   @Field({
