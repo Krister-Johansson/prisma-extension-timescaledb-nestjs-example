@@ -186,3 +186,20 @@ mutation AssignSensorToGroup($sensorId: ID!, $groupId: ID) {
     groupId
   }
 }
+
+query GroupSeries(
+  $specs: [GroupSeriesSpecInput!]!
+  $bucket: String!
+  $start: DateTime!
+  $end: DateTime!
+) {
+  groupSeries(specs: $specs, bucket: $bucket, start: $start, end: $end) {
+    groupId
+    type
+    agg
+    points {
+      bucket
+      value
+    }
+  }
+}
