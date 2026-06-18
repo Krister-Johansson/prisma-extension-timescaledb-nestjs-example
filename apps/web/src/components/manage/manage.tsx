@@ -1,5 +1,6 @@
 import { useQuery } from '@apollo/client/react';
 import { QueryError } from '@/components/common/query-error';
+import { GroupTree } from '@/components/group/group-tree';
 import { SensorCreateDialog } from '@/components/sensor/sensor-create-dialog';
 import { TableSensorEmpty } from '@/components/sensor/table-sensor-empty';
 import { toUiSensors } from '@/data/sensor-adapter';
@@ -21,6 +22,8 @@ export function Manage() {
   const sensors = toUiSensors(data);
   return (
     <div className="flex flex-col gap-4">
+      <GroupTree />
+
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold">All sensors · {sensors.length}</h2>
         <SensorCreateDialog />

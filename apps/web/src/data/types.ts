@@ -20,6 +20,8 @@ export interface Sensor {
   latestAt?: string | null;
   status: SensorStatus;
   enabled: boolean;
+  /** Group this sensor is attached to, if any. */
+  groupId?: string | null;
   /** Representative rule (the first), used for a one-line summary. */
   rule?: AlertRule;
   /** How many alert rules the sensor has (a sensor can have several). */
