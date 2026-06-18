@@ -3,6 +3,7 @@ import { PRISMA_CLIENT } from '../prisma/prisma-client';
 import type { ExtendedPrismaClient } from '../prisma/prisma-client';
 import { CreateSensorInput } from './dto/create-sensor.input';
 import { SensorWhereInput } from './dto/sensor-where.input';
+import { UpdateSensorInput } from './dto/update-sensor.input';
 
 @Injectable()
 export class SensorService {
@@ -28,5 +29,14 @@ export class SensorService {
 
   create(input: CreateSensorInput) {
     return this.prisma.sensor.create({ data: input });
+  }
+
+  update(id: string, input: UpdateSensorInput) {
+    return this.prisma.sensor.update({ where: { id }, data: input });
+  }
+
+  /** Cascades to readings, the alert rule and events (see schema relations). */
+  remove(id: string) {
+    return this.prisma.sensor.delete({ where: { id } });
   }
 }
