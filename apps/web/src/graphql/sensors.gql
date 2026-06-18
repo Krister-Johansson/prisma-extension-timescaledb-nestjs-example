@@ -10,3 +10,39 @@ query SensorsList {
     }
   }
 }
+
+# Returns `readings` so an optimistic create satisfies the SensorsList
+# selection (a new sensor has none yet → []). `__typename` is selected so the
+# optimisticResponse is fully typed and normalizes into the cache.
+mutation CreateSensor($input: CreateSensorInput!) {
+  createSensor(input: $input) {
+    __typename
+    id
+    name
+    type
+    unit
+    readings {
+      time
+      value
+    }
+  }
+}
+
+# Only the editable scalars — the result merges into the normalized cache
+# entry, so existing `readings` are preserved untouched.
+mutation UpdateSensor($id: ID!, $input: UpdateSensorInput!) {
+  updateSensor(id: $id, input: $input) {
+    __typename
+    id
+    name
+    type
+    unit
+  }
+}
+
+mutation DeleteSensor($id: ID!) {
+  deleteSensor(id: $id) {
+    __typename
+    id
+  }
+}
