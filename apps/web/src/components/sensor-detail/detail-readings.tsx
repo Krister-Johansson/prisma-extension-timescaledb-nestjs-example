@@ -17,7 +17,7 @@ export function DetailReadings({
 
   return (
     <div className="flex flex-col gap-4">
-      <DetailReadingsChart data={data} unit={unit} />
+      <DetailReadingsChart data={data} sensorId={sensorId} unit={unit} />
       <DetailTabs data={data} sensorId={sensorId} unit={unit} />
     </div>
   );
