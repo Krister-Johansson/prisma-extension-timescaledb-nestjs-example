@@ -1,3 +1,4 @@
+import { RelativeTime } from '@/components/common/relative-time';
 import {
   Table,
   TableBody,
@@ -6,11 +7,26 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { eventLog } from '@/data/alerts';
 import { cn } from '@/lib/utils';
 
-export function TableEventLog() {
-  const rows = eventLog();
+export interface EventRow {
+  id: string;
+  sensor: string;
+  unit: string;
+  kind: 'RAISED' | 'CLEARED';
+  value: number;
+  createdAt: string;
+}
+
+export function TableEventLog({ rows }: { rows: EventRow[] }) {
+  if (rows.length === 0) {
+    return (
+      <div className="rounded-[14px] border border-dashed border-border bg-card px-5 py-12 text-center text-[12.5px] text-muted-foreground shadow-sm">
+        No alert events yet.
+      </div>
+    );
+  }
+
   return (
     <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-sm">
       <div className="max-h-[460px] overflow-auto">
@@ -48,7 +64,7 @@ export function TableEventLog() {
                   </span>
                 </TableCell>
                 <TableCell className="font-mono text-muted-foreground">
-                  {e.time}
+                  <RelativeTime iso={e.createdAt} />
                 </TableCell>
                 <TableCell className="text-right font-mono font-semibold">
                   {e.value} {e.unit}

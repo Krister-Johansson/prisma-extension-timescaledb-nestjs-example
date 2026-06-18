@@ -1,11 +1,17 @@
 import { AppLink } from '@/components/app-link';
+import { RelativeTime } from '@/components/common/relative-time';
 import { SensorSparkline } from '@/components/sensor/sensor-sparkline';
-import { raisedAgo } from '@/data/alerts';
 import { ruleSummary, typeChip } from '@/data/sensors';
 import type { Sensor } from '@/data/types';
 import { routes } from '@/lib/routes';
 
-export function AlertActiveCard({ sensor }: { sensor: Sensor }) {
+export function AlertActiveCard({
+  sensor,
+  raisedAt,
+}: {
+  sensor: Sensor;
+  raisedAt?: string;
+}) {
   return (
     <AppLink
       to={routes.sensors.detail(sensor.id)}
@@ -44,7 +50,15 @@ export function AlertActiveCard({ sensor }: { sensor: Sensor }) {
       <SensorSparkline series={sensor.series} status={sensor.status} />
 
       <div className="flex items-center justify-between border-t border-border pt-3 font-mono text-[11px] text-muted-2">
-        <span>{raisedAgo(sensor)}</span>
+        <span>
+          {raisedAt ? (
+            <>
+              raised <RelativeTime iso={raisedAt} />
+            </>
+          ) : (
+            'active'
+          )}
+        </span>
         <span className="text-primary">View sensor →</span>
       </div>
     </AppLink>

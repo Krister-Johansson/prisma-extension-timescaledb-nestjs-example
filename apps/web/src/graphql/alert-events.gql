@@ -7,3 +7,13 @@ query SensorAlertEvents($sensorId: ID!, $take: Int) {
     createdAt
   }
 }
+
+query AllAlertEvents($take: Int) {
+  alertEvents(take: $take) {
+    id
+    sensorId
+    kind
+    value
+    createdAt
+  }
+}
