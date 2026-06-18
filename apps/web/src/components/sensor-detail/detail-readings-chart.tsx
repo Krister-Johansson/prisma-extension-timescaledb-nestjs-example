@@ -107,7 +107,7 @@ export function DetailReadingsChart({
   const start = new Date(endMs - spanMs).toISOString();
   const end = new Date(endMs).toISOString();
 
-  const { data, loading } = useQuery(SensorReadingsBucketedDocument, {
+  const { data, loading, error } = useQuery(SensorReadingsBucketedDocument, {
     variables: { sensorId, bucket: BUCKET_INTERVAL[res], start, end },
     pollInterval: 15_000,
     skip: tooMany,
@@ -173,6 +173,10 @@ export function DetailReadingsChart({
         <div className="flex h-[240px] items-center justify-center text-center text-[12.5px] text-muted-foreground">
           That’s ~{points.toLocaleString()} buckets — too many to chart. Pick a
           coarser resolution or a shorter range.
+        </div>
+      ) : error ? (
+        <div className="flex h-[240px] items-center justify-center text-center text-[12.5px] text-alert">
+          Couldn’t load readings: {error.message}
         </div>
       ) : loading && !data ? (
         <Skeleton className="h-[240px] w-full rounded-md" />

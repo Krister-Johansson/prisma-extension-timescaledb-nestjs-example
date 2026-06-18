@@ -6,11 +6,12 @@ export type Resolution = (typeof RESOLUTIONS)[number];
 export const RANGES = ['1h', '24h', '7d', '30d', '90d'] as const;
 export type RangeKey = (typeof RANGES)[number];
 
-/** URL search schema for the sensor detail chart. Defaults give a live,
- * 24h-of-hourly view. */
+/** URL search schema for the sensor detail chart. `.catch` (not `.default`) so
+ * a missing *or* tampered param (`?res=foo`) falls back instead of breaking the
+ * route — defaults give a live, 24h-of-hourly view. */
 export const chartSearchSchema = z.object({
-  res: z.enum(RESOLUTIONS).default('hour'),
-  range: z.enum(RANGES).default('24h'),
+  res: z.enum(RESOLUTIONS).catch('hour'),
+  range: z.enum(RANGES).catch('24h'),
 });
 export type ChartSearch = z.infer<typeof chartSearchSchema>;
 
