@@ -150,6 +150,7 @@ type ReadingBucket {
 type Sensor {
   createdAt: DateTime!
   id: ID!
+  latestReading: SensorReading
   name: String!
   readings: [SensorReading!]!
   rules: [AlertRule!]!

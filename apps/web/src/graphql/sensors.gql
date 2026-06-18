@@ -30,6 +30,10 @@ query SensorDetail($id: ID!) {
     type
     unit
     createdAt
+    latestReading {
+      time
+      value
+    }
   }
 }
 

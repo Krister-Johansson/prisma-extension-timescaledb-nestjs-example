@@ -1,6 +1,7 @@
 import { Pencil } from 'lucide-react';
 import { useState } from 'react';
 import { AlertRuleSection } from '@/components/alert-rule/alert-rule-section';
+import { RelativeTime } from '@/components/common/relative-time';
 import { SensorEditDialog } from '@/components/sensor/sensor-edit-dialog';
 import { Button } from '@/components/ui/button';
 import type { SensorType } from '@/data/types';
@@ -18,6 +19,7 @@ type DetailSensor = {
   type: SensorType;
   unit: string;
   createdAt: string;
+  latestReading?: { time: string; value: number } | null;
 };
 
 /**
@@ -28,6 +30,8 @@ type DetailSensor = {
 export function SensorSummary({ sensor }: { sensor: DetailSensor }) {
   const [editOpen, setEditOpen] = useState(false);
 
+  const newest = sensor.latestReading;
+
   return (
     <div className="flex flex-col gap-4">
       <div className="rounded-[14px] border border-border bg-card p-5 shadow-sm">
@@ -35,6 +39,25 @@ export function SensorSummary({ sensor }: { sensor: DetailSensor }) {
           <div className="min-w-0">
             <h2 className="text-lg font-semibold">{sensor.name}</h2>
             <dl className="mt-3 flex flex-wrap gap-x-8 gap-y-3">
+              <div className="flex min-w-0 flex-col gap-0.5">
+                <dt className="font-mono text-[10.5px] uppercase tracking-wide text-muted-foreground">
+                  Last value
+                </dt>
+                <dd className="text-sm font-medium">
+                  {newest ? (
+                    <>
+                      <span className="font-mono font-semibold">
+                        {Math.round(newest.value * 10) / 10} {sensor.unit}
+                      </span>
+                      <span className="ml-1.5 font-mono text-[11px] text-muted-2">
+                        <RelativeTime iso={newest.time} />
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-muted-2">No readings yet</span>
+                  )}
+                </dd>
+              </div>
               <Field label="Type" value={TYPE_LABELS[sensor.type]} />
               <Field label="Unit" value={sensor.unit} />
               <Field

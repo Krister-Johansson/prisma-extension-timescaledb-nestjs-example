@@ -41,6 +41,9 @@ export function useSearchState<TId extends RouteId>(routeId: TId) {
           ...(typeof patch === 'function' ? patch(prev) : patch),
         })) as never,
         replace: options?.replace ?? true,
+        // These are in-place control updates (filters, tabs, chart window) —
+        // keep the current scroll position instead of jumping to the top.
+        resetScroll: false,
       });
     },
     [navigate],
