@@ -33,7 +33,8 @@ export function DetailRangePicker({
   onSelectRange,
   onApplyDates,
 }: {
-  sensorId: string;
+  /** Sensor to mark "days with data" for; omit (e.g. cross-sensor charts) to skip. */
+  sensorId?: string;
   range: RangeKey;
   live: boolean;
   window: TimeWindow;
@@ -50,12 +51,12 @@ export function DetailRangePicker({
   // and re-fetched from the network so newly-ingested days show up.
   const { data } = useQuery(SensorReadingsBucketedDocument, {
     variables: {
-      sensorId,
+      sensorId: sensorId ?? '',
       bucket: '1 day',
       start: new Date(nowMs - YEAR_MS).toISOString(),
       end: new Date(nowMs).toISOString(),
     },
-    skip: !open,
+    skip: !open || !sensorId,
     fetchPolicy: 'cache-and-network',
     context: { suppressErrorToast: true },
   });

@@ -27,6 +27,30 @@ export class ReadingBucketArgs {
 }
 
 @ArgsType()
+export class ReadingBucketMultiArgs {
+  @Field(() => [ID])
+  @IsString({ each: true })
+  sensorIds!: string[];
+
+  @Field({
+    defaultValue: '1 hour',
+    description: 'time_bucket interval, e.g. "1 hour".',
+  })
+  @Matches(INTERVAL_PATTERN, {
+    message: 'bucket must be an interval like "1 hour" or "30 minutes"',
+  })
+  bucket!: string;
+
+  @Field(() => GraphQLISODateTime)
+  @IsDate()
+  start!: Date;
+
+  @Field(() => GraphQLISODateTime)
+  @IsDate()
+  end!: Date;
+}
+
+@ArgsType()
 export class HourlyArgs {
   @Field(() => ID, { nullable: true })
   @IsOptional()
