@@ -11,8 +11,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import type { Sensor } from '@/data/types';
-import { useGoTo } from '@/lib/navigation';
-import { routes } from '@/lib/routes';
 
 /**
  * Per-row action menu. Wrapped so clicks/keys inside the menu and the (portaled)
@@ -20,10 +18,10 @@ import { routes } from '@/lib/routes';
  * navigate-to-detail handler. Without this, confirming a delete would navigate
  * to the just-removed sensor and 404. `display: contents` keeps the layout flat.
  * The edit/delete dialogs are controlled siblings (each owns its mutation); the
- * menu items just open them.
+ * menu items just open them. Opening the sensor itself is the row click — no
+ * separate menu item for it.
  */
 export function ManageRowActions({ sensor }: { sensor: Sensor }) {
-  const goTo = useGoTo();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
@@ -52,11 +50,6 @@ export function ManageRowActions({ sensor }: { sensor: Sensor }) {
         >
           <DropdownMenuItem onSelect={() => setEditOpen(true)}>
             Edit sensor
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onSelect={() => goTo(routes.sensors.detail(sensor.id))}
-          >
-            Manage alerts
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
