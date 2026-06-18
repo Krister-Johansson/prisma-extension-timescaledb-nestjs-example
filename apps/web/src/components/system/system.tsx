@@ -50,7 +50,8 @@ export function System() {
 
   const before = s.beforeCompressionBytes;
   const after = s.afterCompressionBytes;
-  const compressed = before != null && after != null && after > 0;
+  const compressed =
+    before != null && after != null && before > 0 && after > 0;
   const ratio = compressed ? before / after : null;
   const savedPct = compressed ? Math.max(0, 1 - after / before) : 0;
   const chunkPct = s.totalChunks ? s.compressedChunks / s.totalChunks : 0;
@@ -65,7 +66,7 @@ export function System() {
           </div>
           <SystemGauge
             percent={savedPct}
-            value={ratio ? `${ratio.toFixed(1)}×` : '—'}
+            value={ratio !== null ? `${ratio.toFixed(1)}×` : '—'}
             caption="saved"
             color="var(--primary)"
           />

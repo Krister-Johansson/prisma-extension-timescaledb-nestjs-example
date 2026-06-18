@@ -5,9 +5,10 @@ export interface StorageRow {
   bytes: number;
 }
 
-/** Bars of the hypertable's storage by component (table data / indexes / TOAST). */
+/** Bars of the hypertable's storage by component (table data / indexes / TOAST),
+ * each sized as its share of the total. */
 export function SystemStorage({ rows }: { rows: StorageRow[] }) {
-  const max = Math.max(...rows.map((r) => r.bytes), 0);
+  const total = rows.reduce((sum, r) => sum + Math.max(0, r.bytes), 0);
 
   return (
     <div className="rounded-[14px] border border-border bg-card p-5 shadow-sm">
@@ -15,7 +16,7 @@ export function SystemStorage({ rows }: { rows: StorageRow[] }) {
       <div className="flex flex-col gap-4">
         {rows.map((row) => {
           const { value, unit } = formatBytes(row.bytes);
-          const pct = max > 0 ? Math.round((row.bytes / max) * 100) : 0;
+          const pct = total > 0 ? Math.round((row.bytes / total) * 100) : 0;
           return (
             <div key={row.label}>
               <div className="mb-1.5 flex items-center justify-between">
