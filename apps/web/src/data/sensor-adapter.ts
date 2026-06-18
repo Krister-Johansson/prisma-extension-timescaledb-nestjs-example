@@ -48,6 +48,7 @@ export function toUiSensor(sensor: GqlSensor): Sensor {
     unit: sensor.unit,
     latest: round(latest),
     latestAt: newest?.time ?? null,
+    groupId: sensor.groupId ?? null,
     status: deriveStatus(sensor.rules),
     enabled: true,
     rule: first

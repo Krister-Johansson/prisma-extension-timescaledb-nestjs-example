@@ -18,6 +18,7 @@ import { ruleSummary } from '@/data/sensors';
 import type { Sensor } from '@/data/types';
 import { useRowLinkProps } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
+import { ManageGroupCell } from './manage-group-cell';
 import { ManageRowActions } from './manage-row-actions';
 
 const column = createColumnHelper<Sensor>();
@@ -83,6 +84,11 @@ const columns = [
   column.accessor('status', {
     header: 'Status',
     cell: (info) => <SensorStatusBadge status={info.getValue()} />,
+  }),
+  column.display({
+    id: 'group',
+    header: 'Group',
+    cell: (info) => <ManageGroupCell sensor={info.row.original} />,
   }),
   column.display({
     id: 'actions',

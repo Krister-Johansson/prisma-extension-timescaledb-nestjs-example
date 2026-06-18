@@ -4,6 +4,7 @@ query SensorsList {
     name
     type
     unit
+    groupId
     readings {
       time
       value
@@ -47,6 +48,7 @@ mutation CreateSensor($input: CreateSensorInput!) {
     name
     type
     unit
+    groupId
     readings {
       time
       value
@@ -135,5 +137,52 @@ query SensorReadingsBucketedMulti(
     min
     max
     count
+  }
+}
+
+query SensorGroups {
+  sensorGroups {
+    id
+    name
+    parentId
+    sensorCount
+  }
+}
+
+mutation CreateSensorGroup($name: String!, $parentId: ID) {
+  createSensorGroup(name: $name, parentId: $parentId) {
+    id
+    name
+    parentId
+    sensorCount
+  }
+}
+
+mutation RenameSensorGroup($id: ID!, $name: String!) {
+  renameSensorGroup(id: $id, name: $name) {
+    id
+    name
+    parentId
+    sensorCount
+  }
+}
+
+mutation MoveSensorGroup($id: ID!, $parentId: ID) {
+  moveSensorGroup(id: $id, parentId: $parentId) {
+    id
+    name
+    parentId
+    sensorCount
+  }
+}
+
+mutation DeleteSensorGroup($id: ID!) {
+  deleteSensorGroup(id: $id)
+}
+
+mutation AssignSensorToGroup($sensorId: ID!, $groupId: ID) {
+  assignSensorToGroup(sensorId: $sensorId, groupId: $groupId) {
+    id
+    groupId
   }
 }
