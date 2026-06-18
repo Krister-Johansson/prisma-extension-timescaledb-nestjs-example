@@ -42,7 +42,7 @@ export function SensorCreateDialog() {
           submitLabel="Create sensor"
           pending={loading}
           onSubmit={(input) => {
-            void createSensor({
+            createSensor({
               variables: { input },
               optimisticResponse: {
                 createSensor: {
@@ -59,8 +59,10 @@ export function SensorCreateDialog() {
                 setOpen(false);
                 toast.success(`Sensor “${input.name}” created`);
               },
-              onError: (error) => toast.error(error.message),
-            });
+              // Errors are surfaced globally by the Apollo ErrorLink (toast +
+              // log); swallow the rejection here so it isn't unhandled. The
+              // dialog stays open (onCompleted didn't run) so the user can retry.
+            }).catch(() => {});
           }}
         />
       </DialogContent>

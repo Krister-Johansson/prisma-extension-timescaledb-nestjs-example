@@ -66,6 +66,8 @@ export function AppBreadcrumb() {
     variables: { id: sensorId ?? '' },
     skip: !sensorId,
     fetchPolicy: 'cache-first',
+    // Background lookup for the label — never toast on failure.
+    context: { suppressErrorToast: true },
   });
 
   const crumbs = buildCrumbs(matches, sensorId, data?.sensor?.name);

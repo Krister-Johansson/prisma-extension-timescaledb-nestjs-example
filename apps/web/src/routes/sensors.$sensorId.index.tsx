@@ -18,8 +18,10 @@ export const Route = createFileRoute('/sensors/$sensorId/')({
 
 function SensorDetailRoute() {
   const { sensorId } = Route.useParams();
+  // This route renders its own not-found / QueryError states, so skip the toast.
   const { data, loading, error } = useQuery(SensorDetailDocument, {
     variables: { id: sensorId },
+    context: { suppressErrorToast: true },
   });
 
   if (loading && !data) return <SensorDetailSkeleton />;

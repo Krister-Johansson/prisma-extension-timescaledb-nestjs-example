@@ -8,7 +8,10 @@ import { TableManage } from './table-manage';
 import { TableManageSkeleton } from './table-manage-skeleton';
 
 export function Manage() {
-  const { data, loading, error } = useQuery(SensorsListDocument);
+  // This screen renders its own QueryError panel, so skip the global toast.
+  const { data, loading, error } = useQuery(SensorsListDocument, {
+    context: { suppressErrorToast: true },
+  });
 
   if (loading && !data) return <TableManageSkeleton />;
   if (error) return <QueryError message={error.message} />;
