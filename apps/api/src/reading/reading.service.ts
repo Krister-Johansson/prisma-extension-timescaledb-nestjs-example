@@ -155,6 +155,62 @@ export class ReadingService {
     );
   }
 
+  /** Single aggregate (avg/min/max/count) across a group's subtree (optionally
+   * one type) over a window — for "what was the average temp last night". */
+  async aggregateForGroup(
+    groupId: string,
+    type: string | undefined,
+    start: Date,
+    end: Date,
+  ): Promise<{
+    avg: number | null;
+    min: number | null;
+    max: number | null;
+    count: number;
+  }> {
+    const typeFilter = type
+      ? Prisma.sql`AND s."typeKey" = ${type}`
+      : Prisma.empty;
+    const rows = await this.prisma.$queryRaw<
+      {
+        avg: number | null;
+        min: number | null;
+        max: number | null;
+        count: bigint;
+      }[]
+    >`
+      WITH RECURSIVE sub AS (
+        SELECT id FROM "SensorGroup" WHERE id = ${groupId}
+        UNION
+        SELECT g.id FROM "SensorGroup" g JOIN sub ON g."parentId" = sub.id
+      )
+      SELECT avg(r.value)::float8 AS avg, min(r.value)::float8 AS min,
+             max(r.value)::float8 AS max, count(*)::bigint AS count
+      FROM "SensorReading" r
+      JOIN "Sensor" s ON s.id = r."sensorId"
+      WHERE s."groupId" IN (SELECT id FROM sub)
+        ${typeFilter}
+        AND r."time" >= ${start} AND r."time" < ${end}
+    `;
+    const r = rows[0];
+    return { avg: r.avg, min: r.min, max: r.max, count: Number(r.count) };
+  }
+
+  /** Newest reading per sensor (or none) — for "what's the temperature now". */
+  async latestForSensors(
+    sensorIds: string[],
+  ): Promise<{ sensorId: string; time: Date; value: number }[]> {
+    if (sensorIds.length === 0) return [];
+    return this.prisma.$queryRaw`
+      SELECT "sensorId", time, value FROM (
+        SELECT "sensorId", time, value,
+               ROW_NUMBER() OVER (PARTITION BY "sensorId" ORDER BY time DESC) AS rn
+        FROM "SensorReading"
+        WHERE "sensorId" IN (${Prisma.join(sensorIds)})
+      ) ranked WHERE rn = 1
+    `;
+  }
+
   /** Read pre-aggregated rows from the continuous aggregate (export layer). */
   async hourly(args: HourlyArgs): Promise<SensorReadingHourly[]> {
     const rows = await this.prisma.sensorReadingHourly.findMany({

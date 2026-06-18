@@ -1,3 +1,7 @@
+// Load .env into process.env BEFORE AppModule is imported — some module-load-time
+// flags (e.g. whether to register the AI agent) read process.env directly, which
+// runs before Nest's ConfigModule initializes.
+import 'dotenv/config';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';

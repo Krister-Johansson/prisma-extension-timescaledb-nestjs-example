@@ -1,5 +1,14 @@
 import { plainToInstance } from 'class-transformer';
-import { IsEnum, IsInt, IsUrl, Max, Min, validateSync } from 'class-validator';
+import {
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUrl,
+  Max,
+  Min,
+  validateSync,
+} from 'class-validator';
 
 export enum NodeEnv {
   Development = 'development',
@@ -36,6 +45,16 @@ export class EnvironmentVariables {
     require_tld: false,
   })
   SHADOW_DATABASE_URL!: string;
+
+  // OpenRouter key for the AI chat agent. Optional — the agent endpoint is gated
+  // and simply stays off when this is absent (see AgentModule).
+  @IsOptional()
+  @IsString()
+  OPENROUTER_API_KEY?: string;
+
+  // Model the chat agent uses (any OpenRouter id). Defaults to the latest Opus.
+  @IsString()
+  OPENROUTER_MODEL: string = 'anthropic/claude-opus-4.8';
 }
 
 /**
