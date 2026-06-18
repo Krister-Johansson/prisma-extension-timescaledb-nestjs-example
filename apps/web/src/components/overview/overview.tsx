@@ -7,7 +7,10 @@ import { OverviewSensors } from './overview-sensors';
 import { OverviewSkeleton } from './overview-skeleton';
 
 export function Overview() {
-  const { data, loading, error } = useQuery(SensorsListDocument);
+  // This screen renders its own QueryError panel, so skip the global toast.
+  const { data, loading, error } = useQuery(SensorsListDocument, {
+    context: { suppressErrorToast: true },
+  });
 
   if (loading && !data) return <OverviewSkeleton />;
   if (error) return <QueryError message={error.message} />;

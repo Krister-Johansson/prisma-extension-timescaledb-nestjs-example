@@ -49,7 +49,7 @@ export function SensorEditDialog({
           pending={loading}
           typeLocked
           onSubmit={({ name, unit }) => {
-            void updateSensor({
+            updateSensor({
               variables: { id: sensor.id, input: { name, unit } },
               optimisticResponse: {
                 updateSensor: {
@@ -64,8 +64,9 @@ export function SensorEditDialog({
                 onOpenChange(false);
                 toast.success(`Sensor “${name}” updated`);
               },
-              onError: (error) => toast.error(error.message),
-            });
+              // Errors are surfaced globally by the Apollo ErrorLink; swallow
+              // the rejection so it isn't unhandled (dialog stays open to retry).
+            }).catch(() => {});
           }}
         />
       </DialogContent>

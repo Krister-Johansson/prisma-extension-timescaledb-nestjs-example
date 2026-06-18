@@ -45,7 +45,7 @@ export function SensorDeleteDialog({
             disabled={loading}
             onClick={(e) => {
               e.preventDefault();
-              void deleteSensor({
+              deleteSensor({
                 variables: { id: sensor.id },
                 optimisticResponse: {
                   deleteSensor: { __typename: 'Sensor', id: sensor.id },
@@ -55,8 +55,9 @@ export function SensorDeleteDialog({
                   onOpenChange(false);
                   toast.success(`Sensor “${sensor.name}” deleted`);
                 },
-                onError: (error) => toast.error(error.message),
-              });
+                // Errors are surfaced globally by the Apollo ErrorLink; swallow
+                // the rejection so it isn't unhandled (dialog stays open).
+              }).catch(() => {});
             }}
             className="bg-alert text-white hover:bg-alert/90"
           >
