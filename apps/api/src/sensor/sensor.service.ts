@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { PRISMA_CLIENT } from '../prisma/prisma-client';
 import type { ExtendedPrismaClient } from '../prisma/prisma-client';
 import { CreateSensorInput } from './dto/create-sensor.input';
@@ -32,6 +32,9 @@ export class SensorService {
   }
 
   update(id: string, input: UpdateSensorInput) {
+    if (Object.keys(input).length === 0) {
+      throw new BadRequestException('Provide at least one field to update.');
+    }
     return this.prisma.sensor.update({ where: { id }, data: input });
   }
 
