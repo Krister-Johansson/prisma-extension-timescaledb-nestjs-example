@@ -28,7 +28,11 @@ export function Aggregates() {
     pollInterval: 10_000,
     context: { suppressErrorToast: true },
   });
-  const { data: hourlyData, refetch } = useQuery(SensorReadingsHourlyDocument, {
+  const {
+    data: hourlyData,
+    error: hourlyError,
+    refetch,
+  } = useQuery(SensorReadingsHourlyDocument, {
     variables: range,
     context: { suppressErrorToast: true },
   });
@@ -84,8 +88,14 @@ export function Aggregates() {
         </Button>
       </div>
 
-      <AggregateCompareChart result={buildCompare(hourly, sensorById)} />
-      <TableBuckets rows={buildBucketRows(hourly, sensorById)} />
+      {hourlyError ? (
+        <QueryError message={hourlyError.message} />
+      ) : (
+        <>
+          <AggregateCompareChart result={buildCompare(hourly, sensorById)} />
+          <TableBuckets rows={buildBucketRows(hourly, sensorById)} />
+        </>
+      )}
     </div>
   );
 }
