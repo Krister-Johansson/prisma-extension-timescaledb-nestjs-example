@@ -223,3 +223,11 @@ query SensorTypes {
     unit
   }
 }
+
+mutation CreateSensorType($input: CreateSensorTypeInput!) {
+  createSensorType(input: $input) {
+    key
+    label
+    unit
+  }
+}
