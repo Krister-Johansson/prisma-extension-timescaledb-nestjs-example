@@ -51,7 +51,10 @@ export class SensorTools {
       'Create a sensor. typeKey must be an existing measurement type (see list_sensor_types).',
     parameters: z.object({
       name: z.string().min(1),
-      typeKey: z.string().regex(/^[A-Z0-9_]+$/),
+      typeKey: z
+        .string()
+        .regex(/^[A-Z0-9_]+$/)
+        .max(40),
     }),
   })
   async create({ name, typeKey }: { name: string; typeKey: string }) {

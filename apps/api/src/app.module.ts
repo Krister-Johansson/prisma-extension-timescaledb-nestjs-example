@@ -28,6 +28,21 @@ import { SensorTools } from './mcp/tools/sensor.tools';
 import { SensorTypeTools } from './mcp/tools/sensor-type.tools';
 import { TimescaleAdminModule } from './timescale-admin/timescale-admin.module';
 
+// The /mcp endpoint has no auth and exposes mutating tools, so expose it only in
+// development or when explicitly enabled (MCP_ENABLED=true) — never in prod by
+// default. Gate both the transport and the @Tool providers.
+const MCP_ENABLED =
+  process.env.MCP_ENABLED === 'true' || process.env.NODE_ENV !== 'production';
+
+const MCP_TOOLS = [
+  SensorTools,
+  SensorTypeTools,
+  GroupTools,
+  AlertTools,
+  EmulatorTools,
+  DataTools,
+];
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -39,11 +54,15 @@ import { TimescaleAdminModule } from './timescale-admin/timescale-admin.module';
     ScheduleModule.forRoot(),
     // Streamable HTTP only (at /mcp) — this is a long-running HTTP server, so we
     // don't want mcp-nest's default STDIO transport reading stdin.
-    McpModule.forRoot({
-      name: 'sentinel-mcp',
-      version: '0.1.0',
-      transport: McpTransportType.STREAMABLE_HTTP,
-    }),
+    ...(MCP_ENABLED
+      ? [
+          McpModule.forRoot({
+            name: 'sentinel-mcp',
+            version: '0.1.0',
+            transport: McpTransportType.STREAMABLE_HTTP,
+          }),
+        ]
+      : []),
     GraphQLModule.forRootAsync<ApolloDriverConfig>({
       driver: ApolloDriver,
       inject: [PRISMA_CLIENT],
@@ -67,13 +86,9 @@ import { TimescaleAdminModule } from './timescale-admin/timescale-admin.module';
   providers: [
     AppService,
     // MCP @Tool providers — mcp-nest discovers them in the module that hosts
-    // McpModule.forRoot (here). Each wraps an existing service (DI).
-    SensorTools,
-    SensorTypeTools,
-    GroupTools,
-    AlertTools,
-    EmulatorTools,
-    DataTools,
+    // McpModule.forRoot (here). Each wraps an existing service (DI). Gated with
+    // the transport so they aren't registered when MCP is disabled.
+    ...(MCP_ENABLED ? MCP_TOOLS : []),
     // Catch-all registered first so the narrower Prisma filter takes precedence.
     {
       provide: APP_FILTER,

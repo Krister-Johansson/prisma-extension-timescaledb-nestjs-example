@@ -1,4 +1,5 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import { Prisma } from '../generated/prisma/client.js';
 import { PRISMA_CLIENT } from '../prisma/prisma-client';
 import type { ExtendedPrismaClient } from '../prisma/prisma-client';
 import { CreateSensorTypeInput } from './dto/create-sensor-type.input';
@@ -48,17 +49,27 @@ export class SensorService {
     return this.prisma.sensorType.update({ where: { key }, data });
   }
 
-  /** Delete a type. Blocked while any sensor still uses it (the FK is RESTRICT),
-   * with a clear message instead of a raw FK error. */
+  /** Delete a type. The FK (RESTRICT) enforces "not in use" atomically — we let
+   * the delete fail and translate the FK violation into a clear message, so
+   * there's no check-then-delete race. */
   async deleteType(key: string): Promise<boolean> {
-    const inUse = await this.prisma.sensor.count({ where: { typeKey: key } });
-    if (inUse > 0) {
-      throw new BadRequestException(
-        `Type ${key} is used by ${inUse} sensor(s) — reassign them first.`,
-      );
+    try {
+      await this.prisma.sensorType.delete({ where: { key } });
+      return true;
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2003'
+      ) {
+        const inUse = await this.prisma.sensor.count({
+          where: { typeKey: key },
+        });
+        throw new BadRequestException(
+          `Type ${key} is used by ${inUse} sensor(s) — reassign them first.`,
+        );
+      }
+      throw err;
     }
-    await this.prisma.sensorType.delete({ where: { key } });
-    return true;
   }
 
   update(id: string, input: UpdateSensorInput) {

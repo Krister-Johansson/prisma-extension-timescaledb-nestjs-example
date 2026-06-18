@@ -3,6 +3,7 @@ import { Tool } from '@rekog/mcp-nest';
 import { z } from 'zod';
 import { AlertService } from '../../alert/alert.service';
 import { INTERVAL_PATTERN } from '../../common/interval';
+import { SeriesAgg } from '../../reading/models/group-series.model';
 import { ReadingService } from '../../reading/reading.service';
 import { HypertableModel } from '../../timescale-admin/models/hypertable-stats.model';
 import { TimescaleAdminService } from '../../timescale-admin/timescale-admin.service';
@@ -126,7 +127,13 @@ export class DataTools {
   }) {
     return jsonResult(
       await this.readings.groupSeries({
-        specs,
+        // Zod gives string-literal aggs; the service DTO uses the SeriesAgg enum
+        // (same values), so map them across.
+        specs: specs.map((s) => ({
+          groupId: s.groupId,
+          type: s.type,
+          agg: s.agg as SeriesAgg,
+        })),
         bucket,
         start: new Date(start),
         end: new Date(end),
