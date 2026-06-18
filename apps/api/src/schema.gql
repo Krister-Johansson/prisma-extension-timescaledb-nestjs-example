@@ -49,6 +49,14 @@ input CreateAlertRuleInput {
   threshold: Float!
 }
 
+input CreateEmulatorInput {
+  """Seconds between ingested readings (1–3600)."""
+  intervalSeconds: Int!
+  max: Float!
+  min: Float!
+  sensorId: ID!
+}
+
 input CreateSensorInput {
   name: String!
   type: SensorType!
@@ -61,6 +69,20 @@ input CreateSensorInput {
 A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
 """
 scalar DateTime
+
+type Emulator {
+  createdAt: DateTime!
+  id: ID!
+
+  """Seconds between ingested readings."""
+  intervalSeconds: Int!
+  lastTickAt: DateTime
+  lastValue: Float
+  max: Float!
+  min: Float!
+  running: Boolean!
+  sensorId: ID!
+}
 
 enum HypertableModel {
   SensorReading
@@ -88,11 +110,14 @@ input IngestReadingInput {
 
 type Mutation {
   createAlertRule(input: CreateAlertRuleInput!): AlertRule!
+  createEmulator(input: CreateEmulatorInput!): Emulator!
   createSensor(input: CreateSensorInput!): Sensor!
   deleteAlertRule(id: ID!): AlertRule!
+  deleteEmulator(id: ID!): Emulator!
   deleteSensor(id: ID!): Sensor!
   ingestReading(input: IngestReadingInput!): SensorReading!
   refreshSensorReadingHourly(end: DateTime, start: DateTime): Boolean!
+  setEmulatorRunning(id: ID!, running: Boolean!): Emulator!
   updateAlertRule(id: ID!, input: UpdateAlertRuleInput!): AlertRule!
   updateSensor(id: ID!, input: UpdateSensorInput!): Sensor!
 }
@@ -100,6 +125,7 @@ type Mutation {
 type Query {
   alertEvents(sensorId: ID, take: Int): [AlertEvent!]!
   alertRules(sensorId: ID!): [AlertRule!]!
+  emulators: [Emulator!]!
   hypertableStats(model: HypertableModel!): HypertableStats!
   sensor(id: ID!): Sensor!
   sensorReadingsBucketed(
