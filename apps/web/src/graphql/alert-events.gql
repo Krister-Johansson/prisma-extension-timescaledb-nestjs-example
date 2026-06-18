@@ -17,3 +17,14 @@ query AllAlertEvents($take: Int) {
     createdAt
   }
 }
+
+subscription AlertFired($sensorId: ID) {
+  alertFired(sensorId: $sensorId) {
+    id
+    sensorId
+    kind
+    value
+    message
+    createdAt
+  }
+}

@@ -19,6 +19,8 @@ export default defineConfig({
       '/graphql': {
         target: process.env.VITE_API_PROXY ?? 'http://localhost:3000',
         changeOrigin: true,
+        // Proxy the WebSocket upgrade too, for graphql-ws subscriptions.
+        ws: true,
       },
     },
   },
