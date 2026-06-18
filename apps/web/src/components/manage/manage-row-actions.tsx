@@ -54,7 +54,7 @@ export function ManageRowActions({ sensor }: { sensor: Sensor }) {
             Edit sensor
           </DropdownMenuItem>
           <DropdownMenuItem
-            onSelect={() => goTo(routes.sensors.config(sensor.id))}
+            onSelect={() => goTo(routes.sensors.detail(sensor.id))}
           >
             Manage alerts
           </DropdownMenuItem>
