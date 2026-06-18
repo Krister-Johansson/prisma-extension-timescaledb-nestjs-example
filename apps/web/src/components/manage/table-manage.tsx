@@ -4,6 +4,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from '@tanstack/react-table';
+import { RelativeTime } from '@/components/common/relative-time';
 import { SensorStatusBadge } from '@/components/sensor/sensor-status-badge';
 import {
   Table,
@@ -33,6 +34,26 @@ const columns = [
         {info.getValue()}
       </span>
     ),
+  }),
+  column.display({
+    id: 'lastValue',
+    header: 'Last value',
+    cell: (info) => {
+      const sensor = info.row.original;
+      if (!sensor.latestAt) {
+        return <span className="font-mono text-[12px] text-muted-2">No data</span>;
+      }
+      return (
+        <div className="leading-tight">
+          <div className="font-mono text-[12.5px] font-semibold">
+            {sensor.latest} {sensor.unit}
+          </div>
+          <div className="font-mono text-[10.5px] text-muted-2">
+            <RelativeTime iso={sensor.latestAt} />
+          </div>
+        </div>
+      );
+    },
   }),
   column.display({
     id: 'rules',

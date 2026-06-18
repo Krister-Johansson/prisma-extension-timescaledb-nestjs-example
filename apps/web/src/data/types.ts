@@ -16,6 +16,8 @@ export interface Sensor {
   type: SensorType;
   unit: string;
   latest: number;
+  /** ISO timestamp of the latest reading, or null if none. */
+  latestAt?: string | null;
   status: SensorStatus;
   enabled: boolean;
   /** Representative rule (the first), used for a one-line summary. */
