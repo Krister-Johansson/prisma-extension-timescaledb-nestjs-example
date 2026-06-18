@@ -94,6 +94,7 @@ query SensorReadingsBucketed(
     avg
     min
     max
+    count
   }
 }
 

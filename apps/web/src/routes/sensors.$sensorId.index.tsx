@@ -3,6 +3,7 @@ import { useQuery } from '@apollo/client/react';
 import { createFileRoute } from '@tanstack/react-router';
 import { QueryError } from '@/components/common/query-error';
 import { SensorNotFound } from '@/components/sensor/sensor-not-found';
+import { chartSearchSchema } from '@/components/sensor-detail/chart-params';
 import { SensorDetailSkeleton } from '@/components/sensor-detail/sensor-detail-skeleton';
 import { SensorSummary } from '@/components/sensor-detail/sensor-summary';
 import { SensorDetailDocument } from '@/graphql/sensors.generated';
@@ -13,6 +14,7 @@ export const Route = createFileRoute('/sensors/$sensorId/')({
     subtitle: 'Time-series, hourly aggregates & alerts',
     crumb: 'Sensor detail',
   },
+  validateSearch: chartSearchSchema,
   component: SensorDetailRoute,
 });
 
