@@ -15,7 +15,7 @@ const number = z
   .string()
   .trim()
   .min(1, 'Required')
-  .refine((v) => !Number.isNaN(Number(v)), 'Enter a number')
+  .refine((v) => Number.isFinite(Number(v)), 'Enter a number')
   .transform(Number);
 
 export const alertRuleSchema = z
