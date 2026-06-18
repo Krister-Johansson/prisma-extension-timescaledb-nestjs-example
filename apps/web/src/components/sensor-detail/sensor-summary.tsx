@@ -4,6 +4,7 @@ import { AlertRuleSection } from '@/components/alert-rule/alert-rule-section';
 import { SensorEditDialog } from '@/components/sensor/sensor-edit-dialog';
 import { Button } from '@/components/ui/button';
 import type { SensorType } from '@/data/types';
+import { DetailAlertHistory } from './detail-alert-history';
 import { DetailReadingsChart } from './detail-readings-chart';
 
 const TYPE_LABELS: Record<SensorType, string> = {
@@ -60,9 +61,10 @@ export function SensorSummary({ sensor }: { sensor: DetailSensor }) {
 
       <AlertRuleSection sensor={sensor} />
 
+      <DetailAlertHistory sensorId={sensor.id} unit={sensor.unit} />
+
       <p className="text-xs leading-relaxed text-muted-2">
-        Hourly aggregates and alert history for this sensor are coming in a later
-        update.
+        Hourly aggregates for this sensor are coming in a later update.
       </p>
 
       <SensorEditDialog

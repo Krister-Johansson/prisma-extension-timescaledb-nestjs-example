@@ -1,0 +1,9 @@
+query SensorAlertEvents($sensorId: ID!, $take: Int) {
+  alertEvents(sensorId: $sensorId, take: $take) {
+    id
+    kind
+    value
+    message
+    createdAt
+  }
+}
