@@ -45,7 +45,7 @@ export function SensorCreateDialog() {
         {/* Remount per open so the form resets to its defaults. */}
         <SensorForm
           key={open ? 'open' : 'closed'}
-          defaultValues={{ name: '', typeKey: types[0]?.key ?? 'TEMPERATURE' }}
+          defaultValues={{ name: '', typeKey: types[0]?.key ?? '' }}
           submitLabel="Create sensor"
           pending={loading}
           onSubmit={(input) => {

@@ -27,7 +27,9 @@ export class GroupSeriesSpecInput {
   /** Limit to one measurement type (key), or omit for all sensors in the group. */
   @Field(() => String, { nullable: true })
   @IsOptional()
-  @IsString()
+  @Matches(/^[A-Z0-9_]+$/, {
+    message: 'type must be a measurement type key (uppercase, digits, _)',
+  })
   type?: string;
 
   @Field(() => SeriesAgg, { defaultValue: SeriesAgg.AVG })

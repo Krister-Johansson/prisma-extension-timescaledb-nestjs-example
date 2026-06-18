@@ -33,6 +33,21 @@ INSERT INTO "SensorType" ("key", "label", "unit") VALUES
 
 -- 5. Sensor: rename type -> typeKey, drop unit (now on the type), index + FK.
 ALTER TABLE "Sensor" RENAME COLUMN "type" TO "typeKey";
+
+-- Safety: abort (rolling back the whole migration) if any existing sensor has a
+-- type that wasn't seeded, or a unit that disagrees with its type's unit — so we
+-- never silently discard a per-sensor unit that the type table can't reproduce.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM "Sensor" s
+    LEFT JOIN "SensorType" t ON t."key" = s."typeKey"
+    WHERE t."key" IS NULL OR t."unit" <> s."unit"
+  ) THEN
+    RAISE EXCEPTION 'Sensor.unit/typeKey disagrees with seeded SensorType; reconcile before dropping Sensor.unit';
+  END IF;
+END $$;
+
 ALTER TABLE "Sensor" DROP COLUMN "unit";
 CREATE INDEX "Sensor_typeKey_idx" ON "Sensor"("typeKey");
 ALTER TABLE "Sensor" ADD CONSTRAINT "Sensor_typeKey_fkey"

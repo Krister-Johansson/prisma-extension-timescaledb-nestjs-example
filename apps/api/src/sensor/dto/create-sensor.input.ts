@@ -1,5 +1,5 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsString, Matches, MaxLength } from 'class-validator';
 
 @InputType()
 export class CreateSensorInput {
@@ -9,7 +9,9 @@ export class CreateSensorInput {
   name!: string;
 
   @Field({ description: 'Measurement type key (see sensorTypes).' })
-  @IsString()
-  @IsNotEmpty()
+  @Matches(/^[A-Z0-9_]+$/, {
+    message: 'typeKey must be uppercase letters, digits or underscore',
+  })
+  @MaxLength(40)
   typeKey!: string;
 }
