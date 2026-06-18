@@ -11,7 +11,8 @@ import {
 import { PubSub } from 'graphql-subscriptions';
 import { PUB_SUB, TOPICS } from '../pubsub/pubsub.module';
 import { AlertService } from './alert.service';
-import { SetAlertRuleInput } from './dto/set-alert-rule.input';
+import { CreateAlertRuleInput } from './dto/create-alert-rule.input';
+import { UpdateAlertRuleInput } from './dto/update-alert-rule.input';
 import { AlertEvent } from './models/alert-event.model';
 import { AlertRule } from './models/alert-rule.model';
 
@@ -23,23 +24,33 @@ export class AlertResolver {
   ) {}
 
   @Mutation(() => AlertRule)
-  setAlertRule(@Args('input') input: SetAlertRuleInput): Promise<AlertRule> {
-    return this.alertService.setRule(input);
+  createAlertRule(
+    @Args('input') input: CreateAlertRuleInput,
+  ): Promise<AlertRule> {
+    return this.alertService.createRule(input);
+  }
+
+  @Mutation(() => AlertRule)
+  updateAlertRule(
+    @Args('id', { type: () => ID }) id: string,
+    @Args('input') input: UpdateAlertRuleInput,
+  ): Promise<AlertRule> {
+    return this.alertService.updateRule(id, input);
   }
 
   /** Returns the deleted rule so clients can evict it from their cache. */
   @Mutation(() => AlertRule)
   deleteAlertRule(
-    @Args('sensorId', { type: () => ID }) sensorId: string,
+    @Args('id', { type: () => ID }) id: string,
   ): Promise<AlertRule> {
-    return this.alertService.removeRule(sensorId);
+    return this.alertService.removeRule(id);
   }
 
-  @Query(() => AlertRule, { nullable: true })
-  alertRule(
+  @Query(() => [AlertRule], { name: 'alertRules' })
+  alertRules(
     @Args('sensorId', { type: () => ID }) sensorId: string,
-  ): Promise<AlertRule | null> {
-    return this.alertService.ruleFor(sensorId);
+  ): Promise<AlertRule[]> {
+    return this.alertService.rulesFor(sensorId);
   }
 
   @Query(() => [AlertEvent])

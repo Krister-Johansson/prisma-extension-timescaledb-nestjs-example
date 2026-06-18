@@ -10,7 +10,7 @@ import {
 import { AlertDirection } from '../../generated/prisma/enums.js';
 
 @InputType()
-export class SetAlertRuleInput {
+export class CreateAlertRuleInput {
   @Field(() => ID)
   @IsString()
   @IsNotEmpty()

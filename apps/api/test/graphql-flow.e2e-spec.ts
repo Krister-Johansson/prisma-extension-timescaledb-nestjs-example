@@ -63,10 +63,10 @@ describe('GraphQL flow (e2e)', () => {
     sensorId = created.createSensor.id;
     expect(sensorId).toBeTruthy();
 
-    const rule = await gql<{ setAlertRule: { state: string } }>(
-      `mutation { setAlertRule(input: { sensorId: "${sensorId}", direction: ABOVE, threshold: 35, clearThreshold: 33 }) { state } }`,
+    const rule = await gql<{ createAlertRule: { state: string } }>(
+      `mutation { createAlertRule(input: { sensorId: "${sensorId}", direction: ABOVE, threshold: 35, clearThreshold: 33 }) { state } }`,
     );
-    expect(rule.setAlertRule.state).toBe('OK');
+    expect(rule.createAlertRule.state).toBe('OK');
   });
 
   it('fires exactly one RAISED + one CLEARED across a flapping series', async () => {

@@ -1,36 +1,46 @@
 import type { ApolloCache } from '@apollo/client';
 import {
-  type SetAlertRuleMutation,
-  SensorAlertRuleDocument,
+  type CreateAlertRuleMutation,
+  SensorAlertRulesDocument,
 } from '@/graphql/alert-rules.generated';
 
+type Rule = CreateAlertRuleMutation['createAlertRule'];
+
 /**
- * Point the `alertRule(sensorId)` query field at the upserted rule. Updating an
- * existing rule normalizes by id automatically, but a first-time create needs
- * the field (previously `null`) linked to the new entity — so write it
- * explicitly. Runs for both the optimistic and the real result.
+ * Append a newly-created rule to the cached `alertRules(sensorId)` list. Apollo
+ * can't infer that a new rule belongs to the list, so write it explicitly (runs
+ * for both the optimistic and the real result). Edits normalize by id, so they
+ * need no cache fix-up.
  */
-export function writeAlertRuleToCache(
-  cache: ApolloCache,
-  rule: SetAlertRuleMutation['setAlertRule'],
-): void {
-  cache.writeQuery({
-    query: SensorAlertRuleDocument,
+export function addAlertRuleToCache(cache: ApolloCache, rule: Rule): void {
+  const existing = cache.readQuery({
+    query: SensorAlertRulesDocument,
     variables: { sensorId: rule.sensorId },
-    data: { alertRule: rule },
+  });
+  const list = existing?.alertRules ?? [];
+  if (list.some((r) => r.id === rule.id)) return;
+  cache.writeQuery({
+    query: SensorAlertRulesDocument,
+    variables: { sensorId: rule.sensorId },
+    data: { alertRules: [...list, rule] },
   });
 }
 
-/** Null the `alertRule(sensorId)` field and evict the deleted rule entity. */
+/** Remove a rule from the cached list and evict its normalized entity. */
 export function removeAlertRuleFromCache(
   cache: ApolloCache,
   sensorId: string,
   ruleId: string,
 ): void {
-  cache.writeQuery({
-    query: SensorAlertRuleDocument,
+  const existing = cache.readQuery({
+    query: SensorAlertRulesDocument,
     variables: { sensorId },
-    data: { alertRule: null },
+  });
+  const list = (existing?.alertRules ?? []).filter((r) => r.id !== ruleId);
+  cache.writeQuery({
+    query: SensorAlertRulesDocument,
+    variables: { sensorId },
+    data: { alertRules: list },
   });
   cache.evict({ id: cache.identify({ __typename: 'AlertRule', id: ruleId }) });
   cache.gc();

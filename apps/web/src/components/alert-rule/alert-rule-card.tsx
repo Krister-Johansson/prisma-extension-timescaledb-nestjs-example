@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import type { SensorAlertRuleQuery } from '@/graphql/alert-rules.generated';
+import type { SensorAlertRulesQuery } from '@/graphql/alert-rules.generated';
 import { cn } from '@/lib/utils';
 import { AlertRuleDeleteDialog } from './alert-rule-delete-dialog';
 import { AlertRuleDialog } from './alert-rule-dialog';
 import { AlertRuleToggle } from './alert-rule-toggle';
 
-type LiveRule = NonNullable<SensorAlertRuleQuery['alertRule']>;
+type LiveRule = SensorAlertRulesQuery['alertRules'][number];
 
 /** Live alert-rule card: summary + edit / enable-disable / delete. */
 export function AlertRuleCard({ rule, unit }: { rule: LiveRule; unit: string }) {
