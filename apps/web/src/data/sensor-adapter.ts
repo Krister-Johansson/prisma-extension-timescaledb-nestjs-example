@@ -37,7 +37,8 @@ export function toUiSensor(sensor: GqlSensor): Sensor {
     a.time.localeCompare(b.time),
   );
   const values = ordered.map((r) => r.value);
-  const latest = values.length ? values[values.length - 1] : 0;
+  const newest = ordered.at(-1);
+  const latest = newest ? newest.value : 0;
   const first = sensor.rules[0];
 
   return {
@@ -46,6 +47,7 @@ export function toUiSensor(sensor: GqlSensor): Sensor {
     type: sensor.type,
     unit: sensor.unit,
     latest: round(latest),
+    latestAt: newest?.time ?? null,
     status: deriveStatus(sensor.rules),
     enabled: true,
     rule: first

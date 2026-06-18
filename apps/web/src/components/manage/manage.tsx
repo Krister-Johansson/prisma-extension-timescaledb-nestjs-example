@@ -8,8 +8,10 @@ import { TableManage } from './table-manage';
 import { TableManageSkeleton } from './table-manage-skeleton';
 
 export function Manage() {
-  // This screen renders its own QueryError panel, so skip the global toast.
+  // Poll so the "last value" + "… ago" stay fresh as emulators ingest. This
+  // screen renders its own QueryError panel, so skip the global toast.
   const { data, loading, error } = useQuery(SensorsListDocument, {
+    pollInterval: 5000,
     context: { suppressErrorToast: true },
   });
 
