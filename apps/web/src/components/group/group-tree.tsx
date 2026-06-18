@@ -219,8 +219,8 @@ export function GroupTree() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete “{action?.node?.name}”?</AlertDialogTitle>
             <AlertDialogDescription>
-              Its subgroups and sensors move up to its parent — nothing is
-              deleted but this group.
+              Its subgroups move up to its parent and its sensors become
+              ungrouped — nothing is deleted but this group.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

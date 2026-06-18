@@ -35,17 +35,16 @@ Ungrouped sensors are allowed (`groupId = null`).
 
 "All sensors under group X" = sensors whose `groupId ∈ {X} ∪ descendants(X)`.
 
-**🟡 DECISION:** one group per sensor, not many-to-many. A sensor is physically in
-one location; the tree gives the hierarchy. If you later want a sensor in several
-logical groups, this becomes a join table — but that complicates "avg across a
-group" (double-counting), so one-group is the right default.
+**✅ confirmed:** one group per sensor (a group holds many sensors; a sensor
+belongs to one). Filtering/aggregating a group includes its **whole subtree**
+(e.g. picking Bedroom includes its sub-rooms' sensors) — see `groupSeries` and
+the group filter.
 
 ## 3. Delete + move semantics
 
-- **Delete a group**: reparent its direct children to the deleted node's parent
-  and move its sensors to that parent (or `null` if deleting a root). Done in one
-  transaction. No data/subtree is lost. **🟡 DECISION** — alternative is cascade
-  (delete the whole subtree + unassign sensors) or block-if-non-empty.
+- **Delete a group** (✅ confirmed): subgroups promote to the deleted node's
+  parent; the group's own **sensors become ungrouped** (`groupId = null`, never
+  moved into a different group). One transaction; no data/subtree lost.
 - **Move a group**: reject moving a node under itself or one of its descendants
   (cycle guard) via the descendant CTE.
 
