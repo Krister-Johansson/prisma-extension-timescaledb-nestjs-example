@@ -58,7 +58,7 @@ describe('GraphQL flow (e2e)', () => {
 
   it('creates a sensor and a per-sensor alert rule', async () => {
     const created = await gql<{ createSensor: { id: string } }>(
-      `mutation { createSensor(input: { name: "E2E Boiler", type: TEMPERATURE, unit: "°C" }) { id } }`,
+      `mutation { createSensor(input: { name: "E2E Boiler", typeKey: "TEMPERATURE" }) { id } }`,
     );
     sensorId = created.createSensor.id;
     expect(sensorId).toBeTruthy();

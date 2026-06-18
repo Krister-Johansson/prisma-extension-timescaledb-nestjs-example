@@ -11,9 +11,11 @@ import {
 } from '@nestjs/graphql';
 import { AlertRule } from '../alert/models/alert-rule.model';
 import type { GraphQLContext } from '../dataloader/loaders';
+import { CreateSensorTypeInput } from './dto/create-sensor-type.input';
 import { CreateSensorInput } from './dto/create-sensor.input';
 import { SensorWhereInput } from './dto/sensor-where.input';
 import { UpdateSensorInput } from './dto/update-sensor.input';
+import { SensorType } from './models/sensor-type.model';
 import { Sensor, SensorReading } from './models/sensor.model';
 import { SensorService } from './sensor.service';
 
@@ -82,5 +84,31 @@ export class SensorResolver {
     @Context() ctx: GraphQLContext,
   ): Promise<AlertRule[]> {
     return ctx.loaders.rulesBySensor.load(sensor.id);
+  }
+
+  /** The sensor's measurement type (label + unit), batched via DataLoader. */
+  @ResolveField(() => SensorType)
+  type(
+    @Parent() sensor: Sensor,
+    @Context() ctx: GraphQLContext,
+  ): Promise<SensorType> {
+    return ctx.loaders.sensorTypeByKey.load(sensor.typeKey);
+  }
+}
+
+@Resolver(() => SensorType)
+export class SensorTypeResolver {
+  constructor(private readonly sensorService: SensorService) {}
+
+  @Query(() => [SensorType], { name: 'sensorTypes' })
+  sensorTypes(): Promise<SensorType[]> {
+    return this.sensorService.findTypes();
+  }
+
+  @Mutation(() => SensorType)
+  createSensorType(
+    @Args('input') input: CreateSensorTypeInput,
+  ): Promise<SensorType> {
+    return this.sensorService.createType(input);
   }
 }

@@ -4,10 +4,12 @@ import {
   type ExtendedPrismaClient,
 } from '../src/prisma/prisma-client';
 
+// typeKey references the SensorType rows seeded by the dynamic-sensor-types
+// migration (Temperature / Pressure / Humidity + the AirGradient set).
 const SENSORS = [
-  { id: 'temp-1', name: 'Boiler temperature', type: 'TEMPERATURE', unit: '°C' },
-  { id: 'pres-1', name: 'Line pressure', type: 'PRESSURE', unit: 'hPa' },
-  { id: 'hum-1', name: 'Room humidity', type: 'HUMIDITY', unit: '%' },
+  { id: 'temp-1', name: 'Boiler temperature', typeKey: 'TEMPERATURE' },
+  { id: 'pres-1', name: 'Line pressure', typeKey: 'PRESSURE' },
+  { id: 'hum-1', name: 'Room humidity', typeKey: 'HUMIDITY' },
 ] as const;
 
 // Per-sensor alert rules with a hysteresis reset band.

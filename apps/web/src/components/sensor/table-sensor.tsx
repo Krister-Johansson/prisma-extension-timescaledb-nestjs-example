@@ -37,7 +37,7 @@ const columns = [
     header: 'Type',
     cell: (info) => (
       <span className="font-mono text-[11px] text-muted-foreground">
-        {info.getValue()}
+        {info.row.original.typeLabel}
       </span>
     ),
   }),

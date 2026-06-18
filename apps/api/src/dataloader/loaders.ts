@@ -2,6 +2,7 @@ import DataLoader from 'dataloader';
 import { Prisma } from '../generated/prisma/client.js';
 import type { AlertRule } from '../alert/models/alert-rule.model';
 import type { ExtendedPrismaClient } from '../prisma/prisma-client';
+import type { SensorType } from '../sensor/models/sensor-type.model';
 import type { SensorReading } from '../sensor/models/sensor.model';
 
 export interface Loaders {
@@ -15,6 +16,9 @@ export interface Loaders {
   /** Alert rules batched by sensorId — avoids the N+1 when resolving
    * `Sensor.rules` across a list of sensors. */
   rulesBySensor: DataLoader<string, AlertRule[]>;
+  /** Measurement type batched by key — resolves `Sensor.type` in one query
+   * across a list of sensors. */
+  sensorTypeByKey: DataLoader<string, SensorType>;
 }
 
 export interface GraphQLContext {
@@ -93,6 +97,19 @@ export function createLoaders(prisma: ExtendedPrismaClient): Loaders {
         bySensor.get(row.sensorId)?.push(row);
       }
       return sensorIds.map((id) => bySensor.get(id) ?? []);
+    }),
+
+    sensorTypeByKey: new DataLoader<string, SensorType>(async (keys) => {
+      const rows = await prisma.sensorType.findMany({
+        where: { key: { in: [...keys] } },
+      });
+      const byKey = new Map(rows.map((r) => [r.key, r]));
+      // A sensor's typeKey is a FK, so a row should always exist; fall back to a
+      // minimal placeholder rather than throwing if a type was just removed.
+      return keys.map(
+        (k) =>
+          byKey.get(k) ?? { key: k, label: k, unit: '', createdAt: new Date() },
+      );
     }),
   };
 }

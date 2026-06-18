@@ -16,7 +16,6 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { INTERVAL_PATTERN } from '../../common/interval';
-import { SensorType } from '../../generated/prisma/enums.js';
 import { SeriesAgg } from '../models/group-series.model';
 
 @InputType()
@@ -25,11 +24,13 @@ export class GroupSeriesSpecInput {
   @IsString()
   groupId!: string;
 
-  /** Limit to one sensor type, or omit for all sensors in the group. */
-  @Field(() => SensorType, { nullable: true })
+  /** Limit to one measurement type (key), or omit for all sensors in the group. */
+  @Field(() => String, { nullable: true })
   @IsOptional()
-  @IsEnum(SensorType)
-  type?: SensorType;
+  @Matches(/^[A-Z0-9_]+$/, {
+    message: 'type must be a measurement type key (uppercase, digits, _)',
+  })
+  type?: string;
 
   @Field(() => SeriesAgg, { defaultValue: SeriesAgg.AVG })
   @IsEnum(SeriesAgg)

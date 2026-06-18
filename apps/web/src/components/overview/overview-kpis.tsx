@@ -65,7 +65,7 @@ export function OverviewKpis({ sensors }: { sensors: Sensor[] }) {
           {byType.map((t) => (
             <div key={t.type} className="flex items-center justify-between">
               <span className="text-[12.5px] text-muted-foreground">
-                {t.type}
+                {t.label}
               </span>
               <span className="font-mono text-sm font-semibold">
                 {t.avg}{' '}

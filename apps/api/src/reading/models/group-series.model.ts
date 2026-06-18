@@ -6,7 +6,6 @@ import {
   ObjectType,
   registerEnumType,
 } from '@nestjs/graphql';
-import { SensorType } from '../../generated/prisma/enums.js';
 
 /** Which aggregate to compute across the matching sensors per bucket. */
 export enum SeriesAgg {
@@ -32,8 +31,9 @@ export class GroupSeries {
   @Field(() => ID)
   groupId!: string;
 
-  @Field(() => SensorType, { nullable: true })
-  type!: SensorType | null;
+  /** Measurement type key the series was filtered to, or null for all types. */
+  @Field(() => String, { nullable: true })
+  type!: string | null;
 
   @Field(() => SeriesAgg)
   agg!: SeriesAgg;

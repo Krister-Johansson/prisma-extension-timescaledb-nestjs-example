@@ -15,12 +15,6 @@ datasource db {
   provider = "postgresql"
 }
 
-enum SensorType {
-  TEMPERATURE
-  PRESSURE
-  HUMIDITY
-}
-
 /// Direction a threshold is breached. ABOVE = value climbs over `threshold`
 /// (e.g. temp > 35°C); BELOW = value drops under it (e.g. low pressure).
 enum AlertDirection {
@@ -43,8 +37,8 @@ enum AlertEventKind {
 model Sensor {
   id        String         @id @default(uuid())
   name      String
-  type      SensorType
-  unit      String
+  typeKey   String
+  type      SensorType     @relation(fields: [typeKey], references: [key])
   createdAt DateTime       @default(now())
   groupId   String?
   group     SensorGroup?   @relation(fields: [groupId], references: [id], onDelete: SetNull)
@@ -54,6 +48,18 @@ model Sensor {
   emulators Emulator[]
 
   @@index([groupId])
+  @@index([typeKey])
+}
+
+/// A measurement type (e.g. Temperature · °C, CO₂ · ppm). User-manageable so new
+/// hardware can be modelled without a migration; the unit lives on the type.
+/// `key` is a stable slug used as the foreign key.
+model SensorType {
+  key       String   @id
+  label     String
+  unit      String
+  createdAt DateTime @default(now())
+  sensors   Sensor[]
 }
 
 /// A node in the sensor grouping tree (e.g. House → Upper floor → Bedroom).

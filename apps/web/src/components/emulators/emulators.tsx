@@ -21,7 +21,7 @@ export function Emulators() {
   const sensors = (sensorData?.sensors ?? []).map((s) => ({
     id: s.id,
     name: s.name,
-    unit: s.unit,
+    unit: s.type.unit,
   }));
   const sensorById = new Map(sensors.map((s) => [s.id, s]));
 

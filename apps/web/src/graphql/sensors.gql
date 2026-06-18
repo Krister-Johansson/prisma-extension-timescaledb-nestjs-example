@@ -2,8 +2,11 @@ query SensorsList {
   sensors {
     id
     name
-    type
-    unit
+    type {
+      key
+      label
+      unit
+    }
     groupId
     readings {
       time
@@ -28,8 +31,11 @@ query SensorDetail($id: ID!) {
     __typename
     id
     name
-    type
-    unit
+    type {
+      key
+      label
+      unit
+    }
     createdAt
     latestReading {
       time
@@ -46,8 +52,11 @@ mutation CreateSensor($input: CreateSensorInput!) {
     __typename
     id
     name
-    type
-    unit
+    type {
+      key
+      label
+      unit
+    }
     groupId
     readings {
       time
@@ -72,8 +81,11 @@ mutation UpdateSensor($id: ID!, $input: UpdateSensorInput!) {
     __typename
     id
     name
-    type
-    unit
+    type {
+      key
+      label
+      unit
+    }
   }
 }
 
@@ -201,5 +213,13 @@ query GroupSeries(
       bucket
       value
     }
+  }
+}
+
+query SensorTypes {
+  sensorTypes {
+    key
+    label
+    unit
   }
 }

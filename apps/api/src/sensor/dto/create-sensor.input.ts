@@ -1,6 +1,5 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsEnum, IsNotEmpty, IsString } from 'class-validator';
-import { SensorType } from '../../generated/prisma/enums.js';
+import { IsNotEmpty, IsString, Matches, MaxLength } from 'class-validator';
 
 @InputType()
 export class CreateSensorInput {
@@ -9,12 +8,10 @@ export class CreateSensorInput {
   @IsNotEmpty()
   name!: string;
 
-  @Field(() => SensorType)
-  @IsEnum(SensorType)
-  type!: SensorType;
-
-  @Field({ description: 'Unit of measure, e.g. °C, hPa, %.' })
-  @IsString()
-  @IsNotEmpty()
-  unit!: string;
+  @Field({ description: 'Measurement type key (see sensorTypes).' })
+  @Matches(/^[A-Z0-9_]+$/, {
+    message: 'typeKey must be uppercase letters, digits or underscore',
+  })
+  @MaxLength(40)
+  typeKey!: string;
 }

@@ -25,7 +25,7 @@ export function AlertActiveCard({
           <div className="min-w-0 leading-tight">
             <div className="truncate text-sm font-semibold">{sensor.name}</div>
             <div className="mt-0.5 font-mono text-[10.5px] tracking-wide text-muted-foreground">
-              {sensor.type}
+              {sensor.typeLabel}
             </div>
           </div>
         </div>

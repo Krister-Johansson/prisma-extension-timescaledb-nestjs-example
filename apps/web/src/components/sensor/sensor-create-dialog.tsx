@@ -1,4 +1,4 @@
-import { useMutation } from '@apollo/client/react';
+import { useMutation, useQuery } from '@apollo/client/react';
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -12,13 +12,20 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { addSensorToCache } from '@/data/sensor-cache';
-import { CreateSensorDocument } from '@/graphql/sensors.generated';
+import {
+  CreateSensorDocument,
+  SensorTypesDocument,
+} from '@/graphql/sensors.generated';
 import { SensorForm } from './sensor-form';
 
 /** "Add sensor" button + dialog. Owns the optimistic create mutation. */
 export function SensorCreateDialog() {
   const [open, setOpen] = useState(false);
   const [createSensor, { loading }] = useMutation(CreateSensorDocument);
+  const { data: typesData } = useQuery(SensorTypesDocument, {
+    context: { suppressErrorToast: true },
+  });
+  const types = typesData?.sensorTypes ?? [];
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -38,17 +45,23 @@ export function SensorCreateDialog() {
         {/* Remount per open so the form resets to its defaults. */}
         <SensorForm
           key={open ? 'open' : 'closed'}
-          defaultValues={{ name: '', type: 'TEMPERATURE', unit: '°C' }}
+          defaultValues={{ name: '', typeKey: types[0]?.key ?? '' }}
           submitLabel="Create sensor"
           pending={loading}
           onSubmit={(input) => {
+            const type = types.find((t) => t.key === input.typeKey);
             createSensor({
               variables: { input },
               optimisticResponse: {
                 createSensor: {
                   __typename: 'Sensor',
                   id: crypto.randomUUID(),
-                  ...input,
+                  name: input.name,
+                  type: {
+                    key: input.typeKey,
+                    label: type?.label ?? input.typeKey,
+                    unit: type?.unit ?? '',
+                  },
                   groupId: null,
                   readings: [],
                   rules: [],
