@@ -96,3 +96,18 @@ query SensorReadingsBucketed(
     max
   }
 }
+
+query SensorReadingsHourly($start: DateTime, $end: DateTime) {
+  sensorReadingsHourly(start: $start, end: $end) {
+    sensorId
+    bucket
+    avgValue
+    minValue
+    maxValue
+    samples
+  }
+}
+
+mutation RefreshSensorReadingHourly {
+  refreshSensorReadingHourly
+}

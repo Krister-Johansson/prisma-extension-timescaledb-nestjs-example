@@ -1,7 +1,6 @@
-import { averagesByType } from '@/data/sensors';
+import type { TypeAverage } from '@/data/sensors';
 
-export function AggregateTypeCards() {
-  const types = averagesByType();
+export function AggregateTypeCards({ types }: { types: TypeAverage[] }) {
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
       {types.map((t) => (
