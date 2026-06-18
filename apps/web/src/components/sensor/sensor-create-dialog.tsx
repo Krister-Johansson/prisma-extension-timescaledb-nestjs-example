@@ -50,6 +50,7 @@ export function SensorCreateDialog() {
                   id: crypto.randomUUID(),
                   ...input,
                   readings: [],
+                  rules: [],
                 },
               },
               update: (cache, { data }) => {

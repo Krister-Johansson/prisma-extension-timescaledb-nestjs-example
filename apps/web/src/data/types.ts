@@ -18,7 +18,10 @@ export interface Sensor {
   latest: number;
   status: SensorStatus;
   enabled: boolean;
+  /** Representative rule (the first), used for a one-line summary. */
   rule?: AlertRule;
+  /** How many alert rules the sensor has (a sensor can have several). */
+  ruleCount?: number;
   /** Last 24h of readings (oldest → newest) for sparklines/charts. */
   series: number[];
 }

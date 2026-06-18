@@ -9,6 +9,7 @@ import {
   ResolveField,
   Resolver,
 } from '@nestjs/graphql';
+import { AlertRule } from '../alert/models/alert-rule.model';
 import type { GraphQLContext } from '../dataloader/loaders';
 import { CreateSensorInput } from './dto/create-sensor.input';
 import { SensorWhereInput } from './dto/sensor-where.input';
@@ -62,5 +63,14 @@ export class SensorResolver {
     @Context() ctx: GraphQLContext,
   ): Promise<SensorReading[]> {
     return ctx.loaders.readingsBySensor.load(sensor.id);
+  }
+
+  /** A sensor's alert rules, batched via DataLoader (one query per response). */
+  @ResolveField(() => [AlertRule])
+  rules(
+    @Parent() sensor: Sensor,
+    @Context() ctx: GraphQLContext,
+  ): Promise<AlertRule[]> {
+    return ctx.loaders.rulesBySensor.load(sensor.id);
   }
 }

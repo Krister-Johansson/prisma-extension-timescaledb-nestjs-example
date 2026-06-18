@@ -8,6 +8,15 @@ query SensorsList {
       time
       value
     }
+    rules {
+      id
+      direction
+      threshold
+      clearThreshold
+      severity
+      enabled
+      state
+    }
   }
 }
 
@@ -37,6 +46,15 @@ mutation CreateSensor($input: CreateSensorInput!) {
     readings {
       time
       value
+    }
+    rules {
+      id
+      direction
+      threshold
+      clearThreshold
+      severity
+      enabled
+      state
     }
   }
 }

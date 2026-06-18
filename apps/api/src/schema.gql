@@ -126,6 +126,7 @@ type Sensor {
   id: ID!
   name: String!
   readings: [SensorReading!]!
+  rules: [AlertRule!]!
   type: SensorType!
   unit: String!
 }

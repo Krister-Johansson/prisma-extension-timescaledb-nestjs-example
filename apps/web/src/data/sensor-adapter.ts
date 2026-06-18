@@ -1,9 +1,18 @@
 import type { SensorsListQuery } from '@/graphql/sensors.generated';
-import type { Sensor } from './types';
+import type { Sensor, SensorStatus } from './types';
 
 type GqlSensor = SensorsListQuery['sensors'][number];
+type GqlRule = GqlSensor['rules'][number];
 
 const round = (n: number) => Math.round(n * 10) / 10;
+
+/** Derive the badge status from a sensor's rules. */
+function deriveStatus(rules: GqlRule[]): SensorStatus {
+  if (rules.length === 0) return 'NO_RULES';
+  if (rules.some((r) => r.enabled && r.state === 'ALERTING')) return 'ALERTING';
+  if (rules.every((r) => !r.enabled)) return 'PAUSED';
+  return 'OK';
+}
 
 /**
  * Evenly sample a series down to at most `n` points for the sparkline, always
@@ -19,10 +28,9 @@ function downsample(values: number[], n: number): number[] {
 }
 
 /**
- * Map an API `Sensor` to the UI shape. `latest` and the sparkline `series` are
- * derived from `readings`. Alert `status`/`rule` aren't part of this query yet,
- * so status is reported as NO_RULES (consistent with the empty rule) until the
- * alert-rule fields are wired in a later PR.
+ * Map an API `Sensor` to the UI shape. `latest`/`series` derive from `readings`;
+ * `status`, the representative `rule`, and `ruleCount` derive from the sensor's
+ * alert `rules` (a sensor can have several).
  */
 export function toUiSensor(sensor: GqlSensor): Sensor {
   const ordered = [...sensor.readings].sort((a, b) =>
@@ -30,6 +38,7 @@ export function toUiSensor(sensor: GqlSensor): Sensor {
   );
   const values = ordered.map((r) => r.value);
   const latest = values.length ? values[values.length - 1] : 0;
+  const first = sensor.rules[0];
 
   return {
     id: sensor.id,
@@ -37,9 +46,16 @@ export function toUiSensor(sensor: GqlSensor): Sensor {
     type: sensor.type,
     unit: sensor.unit,
     latest: round(latest),
-    status: 'NO_RULES',
+    status: deriveStatus(sensor.rules),
     enabled: true,
-    rule: undefined,
+    rule: first
+      ? {
+          direction: first.direction,
+          threshold: first.threshold,
+          clearThreshold: first.clearThreshold,
+        }
+      : undefined,
+    ruleCount: sensor.rules.length,
     series: downsample(values, 48),
   };
 }
