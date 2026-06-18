@@ -2,14 +2,16 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import type { SensorAlertRuleQuery } from '@/graphql/alert-rules.generated';
 import { cn } from '@/lib/utils';
+import { AlertRuleDeleteDialog } from './alert-rule-delete-dialog';
 import { AlertRuleDialog } from './alert-rule-dialog';
 import { AlertRuleToggle } from './alert-rule-toggle';
 
 type LiveRule = NonNullable<SensorAlertRuleQuery['alertRule']>;
 
-/** Live alert-rule card: summary + edit dialog + enable/disable toggle. */
+/** Live alert-rule card: summary + edit / enable-disable / delete. */
 export function ConfigRuleCard({ rule, unit }: { rule: LiveRule; unit: string }) {
   const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   return (
     <div className="rounded-[12px] border border-border bg-card p-4 shadow-sm">
@@ -37,6 +39,14 @@ export function ConfigRuleCard({ rule, unit }: { rule: LiveRule; unit: string })
           Edit rule
         </Button>
         <AlertRuleToggle rule={rule} />
+        <Button
+          variant="outline"
+          size="sm"
+          className="ml-auto border-[color-mix(in_srgb,var(--alert)_35%,var(--border))] text-alert hover:text-alert"
+          onClick={() => setDeleteOpen(true)}
+        >
+          Delete
+        </Button>
       </div>
 
       <AlertRuleDialog
@@ -45,6 +55,12 @@ export function ConfigRuleCard({ rule, unit }: { rule: LiveRule; unit: string })
         rule={rule}
         open={editOpen}
         onOpenChange={setEditOpen}
+      />
+      <AlertRuleDeleteDialog
+        sensorId={rule.sensorId}
+        ruleId={rule.id}
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
       />
     </div>
   );
