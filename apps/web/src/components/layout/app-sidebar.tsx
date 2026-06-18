@@ -2,6 +2,7 @@ import {
   BarChart3,
   Bell,
   LayoutDashboard,
+  Radio,
   Server,
   SlidersHorizontal,
   type LucideIcon,
@@ -22,6 +23,7 @@ const NAV: NavItem[] = [
   { label: 'Aggregates', to: routes.aggregates(), icon: BarChart3 },
   { label: 'System', to: routes.system(), icon: Server },
   { label: 'Manage', to: routes.manage(), icon: SlidersHorizontal },
+  { label: 'Emulators', to: routes.emulators(), icon: Radio },
 ];
 
 export function AppSidebar() {

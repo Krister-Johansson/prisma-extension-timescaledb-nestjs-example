@@ -1,0 +1,40 @@
+query Emulators {
+  emulators {
+    __typename
+    id
+    sensorId
+    min
+    max
+    intervalSeconds
+    running
+    lastValue
+  }
+}
+
+mutation CreateEmulator($input: CreateEmulatorInput!) {
+  createEmulator(input: $input) {
+    __typename
+    id
+    sensorId
+    min
+    max
+    intervalSeconds
+    running
+    lastValue
+  }
+}
+
+mutation SetEmulatorRunning($id: ID!, $running: Boolean!) {
+  setEmulatorRunning(id: $id, running: $running) {
+    __typename
+    id
+    running
+  }
+}
+
+mutation DeleteEmulator($id: ID!) {
+  deleteEmulator(id: $id) {
+    __typename
+    id
+  }
+}
