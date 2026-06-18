@@ -3,6 +3,12 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* radix-nova components use these data-* shorthand variants (e.g. Tabs);
+ * define them against the Radix state/orientation attributes. */
+@custom-variant data-active (&[data-state='active']);
+@custom-variant data-horizontal (&[data-orientation='horizontal']);
+@custom-variant data-vertical (&[data-orientation='vertical']);
+
 /*
  * Palette ported from the SENTINEL design (apps/web/.design). Primary is safety
  * orange. Light + dark; status colors (ok/alert/warn) live alongside the shadcn
