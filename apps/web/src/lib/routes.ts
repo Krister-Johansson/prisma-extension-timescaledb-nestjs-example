@@ -45,6 +45,7 @@ export const routes = {
   aggregates: () => path('aggregates'),
   system: () => path('system'),
   manage: () => path('manage'),
+  emulators: () => path('emulators'),
   sensors: {
     detail: (sensorId: string) =>
       path('sensors', requireId(sensorId, 'routes.sensors.detail')),
