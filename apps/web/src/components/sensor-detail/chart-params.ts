@@ -12,6 +12,11 @@ export type RangeKey = (typeof RANGES)[number];
 export const chartSearchSchema = z.object({
   res: z.enum(RESOLUTIONS).catch('hour'),
   range: z.enum(RANGES).catch('24h'),
+  // A valid from+to pair switches the chart to a fixed (non-live) window.
+  // Kept as plain strings; validity is checked where the window resolves, so a
+  // bad value just falls back to the live range rather than breaking the route.
+  from: z.string().optional().catch(undefined),
+  to: z.string().optional().catch(undefined),
 });
 export type ChartSearch = z.infer<typeof chartSearchSchema>;
 
