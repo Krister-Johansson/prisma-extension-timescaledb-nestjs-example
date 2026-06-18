@@ -4,6 +4,7 @@ import '../styles.css';
 import '../lib/page-meta';
 import { AppShell } from '@/components/layout/app-shell';
 import { ThemeProvider } from '@/components/theme/theme';
+import { Toaster } from '@/components/ui/sonner';
 import { apolloClient } from '@/lib/apollo';
 
 export const Route = createRootRoute({
@@ -18,6 +19,7 @@ function RootComponent() {
         <AppShell>
           <Outlet />
         </AppShell>
+        <Toaster />
       </ThemeProvider>
     </ApolloProvider>
   );

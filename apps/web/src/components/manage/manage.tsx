@@ -1,27 +1,37 @@
-import { Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { SENSORS } from '@/data/sensors';
+import { useQuery } from '@apollo/client/react';
+import { QueryError } from '@/components/common/query-error';
+import { SensorCreateDialog } from '@/components/sensor/sensor-create-dialog';
+import { TableSensorEmpty } from '@/components/sensor/table-sensor-empty';
+import { toUiSensors } from '@/data/sensor-adapter';
+import { SensorsListDocument } from '@/graphql/sensors.generated';
 import { TableManage } from './table-manage';
+import { TableManageSkeleton } from './table-manage-skeleton';
 
 export function Manage() {
-  const sensors = SENSORS;
+  const { data, loading, error } = useQuery(SensorsListDocument);
+
+  if (loading && !data) return <TableManageSkeleton />;
+  if (error) return <QueryError message={error.message} />;
+
+  const sensors = toUiSensors(data);
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold">All sensors · {sensors.length}</h2>
-        {/* Add-sensor flow is wired in the data phase. */}
-        <Button size="sm" className="gap-1.5">
-          <Plus className="size-4" />
-          Add sensor
-        </Button>
+        <SensorCreateDialog />
       </div>
 
-      <TableManage sensors={sensors} />
+      {sensors.length === 0 ? (
+        <div className="overflow-hidden rounded-[14px] border border-border bg-card shadow-sm">
+          <TableSensorEmpty />
+        </div>
+      ) : (
+        <TableManage sensors={sensors} />
+      )}
 
       <p className="text-xs leading-relaxed text-muted-2">
-        Demo data: new sensors are generated with a synthetic 24h reading
-        history. Rule changes re-evaluate alert state instantly. The last sensor
-        can&apos;t be deleted.
+        Create, edit and delete sensors here. Changes apply optimistically — the
+        table updates instantly and rolls back if the request fails.
       </p>
     </div>
   );
