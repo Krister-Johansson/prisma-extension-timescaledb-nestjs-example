@@ -11,12 +11,14 @@ import { PubSub } from 'graphql-subscriptions';
 import { PUB_SUB, TOPICS } from '../pubsub/pubsub.module';
 import { SensorReading } from '../sensor/models/sensor.model';
 import { IngestReadingInput } from './dto/ingest-reading.input';
+import { GroupSeriesArgs } from './dto/group-series.args';
 import {
   HourlyArgs,
   ReadingBucketArgs,
   ReadingBucketMultiArgs,
   RefreshHourlyArgs,
 } from './dto/reading-query.args';
+import { GroupSeries } from './models/group-series.model';
 import { ReadingBucket } from './models/reading-bucket.model';
 import { SensorBucket } from './models/sensor-bucket.model';
 import { SensorReadingHourly } from './models/sensor-reading-hourly.model';
@@ -47,6 +49,13 @@ export class ReadingResolver {
   @Query(() => [SensorBucket], { name: 'sensorReadingsBucketedMulti' })
   bucketedMulti(@Args() args: ReadingBucketMultiArgs): Promise<SensorBucket[]> {
     return this.readingService.bucketedMulti(args);
+  }
+
+  /** Overlay aggregate series, one per (group, type, agg) spec — e.g. avg temp
+   * upper floor + lower floor + house humidity on one chart. */
+  @Query(() => [GroupSeries], { name: 'groupSeries' })
+  groupSeries(@Args() args: GroupSeriesArgs): Promise<GroupSeries[]> {
+    return this.readingService.groupSeries(args);
   }
 
   /** Pre-aggregated rows from the continuous aggregate. */

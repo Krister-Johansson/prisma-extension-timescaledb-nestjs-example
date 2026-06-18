@@ -7,6 +7,7 @@ import { SensorBucket } from './models/sensor-bucket.model';
 import { PRISMA_CLIENT } from '../prisma/prisma-client';
 import type { ExtendedPrismaClient } from '../prisma/prisma-client';
 import { PUB_SUB, TOPICS } from '../pubsub/pubsub.module';
+import { GroupSeriesArgs } from './dto/group-series.args';
 import { IngestReadingInput } from './dto/ingest-reading.input';
 import {
   HourlyArgs,
@@ -14,8 +15,19 @@ import {
   ReadingBucketMultiArgs,
   RefreshHourlyArgs,
 } from './dto/reading-query.args';
+import {
+  GroupSeries,
+  GroupSeriesPoint,
+  SeriesAgg,
+} from './models/group-series.model';
 import { ReadingBucket } from './models/reading-bucket.model';
 import { SensorReadingHourly } from './models/sensor-reading-hourly.model';
+
+const AGG_FN: Record<SeriesAgg, string> = {
+  [SeriesAgg.AVG]: 'avg',
+  [SeriesAgg.MIN]: 'min',
+  [SeriesAgg.MAX]: 'max',
+};
 
 @Injectable()
 export class ReadingService {
@@ -101,6 +113,46 @@ export class ReadingService {
       GROUP BY bucket, "sensorId"
       ORDER BY bucket ASC
     `;
+  }
+
+  /** Overlay series: for each spec, the chosen aggregate across all sensors in a
+   * group's subtree (optionally one type), bucketed over time. */
+  async groupSeries(args: GroupSeriesArgs): Promise<GroupSeries[]> {
+    const { specs, bucket, start, end } = args;
+    assertInterval(bucket);
+
+    return Promise.all(
+      specs.map(async (spec) => {
+        const fn = AGG_FN[spec.agg]; // whitelisted -> safe with Prisma.raw
+        const typeFilter = spec.type
+          ? Prisma.sql`AND s.type = ${spec.type}::"SensorType"`
+          : Prisma.empty;
+
+        const points = await this.prisma.$queryRaw<GroupSeriesPoint[]>`
+          WITH RECURSIVE sub AS (
+            SELECT id FROM "SensorGroup" WHERE id = ${spec.groupId}
+            UNION
+            SELECT g.id FROM "SensorGroup" g JOIN sub ON g."parentId" = sub.id
+          )
+          SELECT time_bucket(${bucket}::interval, r."time") AS bucket,
+                 ${Prisma.raw(fn)}(r.value)::float8 AS value
+          FROM "SensorReading" r
+          JOIN "Sensor" s ON s.id = r."sensorId"
+          WHERE s."groupId" IN (SELECT id FROM sub)
+            ${typeFilter}
+            AND r."time" >= ${start} AND r."time" < ${end}
+          GROUP BY bucket
+          ORDER BY bucket ASC
+        `;
+
+        return {
+          groupId: spec.groupId,
+          type: spec.type ?? null,
+          agg: spec.agg,
+          points,
+        };
+      }),
+    );
   }
 
   /** Read pre-aggregated rows from the continuous aggregate (export layer). */
