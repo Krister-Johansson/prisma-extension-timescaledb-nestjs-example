@@ -4,5 +4,6 @@ import { TimescaleAdminResolver } from './timescale-admin.resolver';
 
 @Module({
   providers: [TimescaleAdminService, TimescaleAdminResolver],
+  exports: [TimescaleAdminService],
 })
 export class TimescaleAdminModule {}

@@ -21,6 +21,7 @@ import { AlertModule } from './alert/alert.module';
 import { EmulatorModule } from './emulator/emulator.module';
 import { GroupModule } from './group/group.module';
 import { AlertTools } from './mcp/tools/alert.tools';
+import { DataTools } from './mcp/tools/data.tools';
 import { EmulatorTools } from './mcp/tools/emulator.tools';
 import { GroupTools } from './mcp/tools/group.tools';
 import { SensorTools } from './mcp/tools/sensor.tools';
@@ -72,6 +73,7 @@ import { TimescaleAdminModule } from './timescale-admin/timescale-admin.module';
     GroupTools,
     AlertTools,
     EmulatorTools,
+    DataTools,
     // Catch-all registered first so the narrower Prisma filter takes precedence.
     {
       provide: APP_FILTER,

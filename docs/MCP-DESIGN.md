@@ -55,12 +55,13 @@ request) — the MCP never writes time-series data.
 - `hypertable_stats` — chunks / compression / size (the System page)
 
 ## Delivery (small CodeRabbit-reviewed PRs)
-1. **Module + transport + plan** + sensors & types CRUD tools (this PR).
-2. Groups + alert rules + emulators CRUD tools.
-3. Read-only data / analytics tools.
+Shipped together (#63): module + Streamable-HTTP transport, all CRUD tools
+(sensors, types, groups, rules, emulators) and the read-only data/analytics
+tools — **30 tools**, verified end-to-end with a real MCP client.
 
 ## Notes
-- Each domain module **exports its service** so the MCP tool providers can inject
-  it; the MCP module imports those modules + `McpModule.forRoot`.
+- `McpModule.forRoot` lives in `AppModule`; mcp-nest discovers `@Tool` providers
+  in that host module, so the tool classes are registered in `AppModule.providers`
+  and each domain module **exports its service** for DI.
 - Tool inputs are Zod schemas (mcp-nest validates them); mutations reuse the same
   service-layer validation as GraphQL.
