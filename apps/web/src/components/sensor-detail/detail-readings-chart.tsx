@@ -66,9 +66,11 @@ function ReadingsTooltip({
  */
 export function DetailReadingsChart({
   data,
+  sensorId,
   unit,
 }: {
   data: ReadingsBuckets;
+  sensorId: string;
   unit: string;
 }) {
   const { res, range, live, window, tooMany, pointCount, buckets, loading, error, setSearch } =
@@ -116,6 +118,7 @@ export function DetailReadingsChart({
       </div>
 
       <DetailChartControls
+        sensorId={sensorId}
         res={res}
         range={range}
         live={live}

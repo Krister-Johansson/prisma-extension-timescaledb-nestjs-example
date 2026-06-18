@@ -8,17 +8,16 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  RANGE_LABEL,
-  RANGES,
   type RangeKey,
   type Resolution,
   RESOLUTION_LABEL,
   RESOLUTIONS,
 } from './chart-params';
 import { formatWindowLabel, type TimeWindow } from './chart-window';
-import { DetailDateRange } from './detail-date-range';
+import { DetailRangePicker } from './detail-range-picker';
 
 interface Props {
+  sensorId: string;
   res: Resolution;
   range: RangeKey;
   live: boolean;
@@ -33,6 +32,7 @@ interface Props {
 }
 
 export function DetailChartControls({
+  sensorId,
   res,
   range,
   live,
@@ -60,22 +60,14 @@ export function DetailChartControls({
             ))}
           </SelectContent>
         </Select>
-        <Select
-          value={range}
-          onValueChange={(v) => onRangeChange(v as RangeKey)}
-        >
-          <SelectTrigger size="sm" className="w-[140px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {RANGES.map((r) => (
-              <SelectItem key={r} value={r}>
-                {RANGE_LABEL[r]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <DetailDateRange window={window} live={live} onApply={onApplyDates} />
+        <DetailRangePicker
+          sensorId={sensorId}
+          range={range}
+          live={live}
+          window={window}
+          onSelectRange={onRangeChange}
+          onApplyDates={onApplyDates}
+        />
         <Button
           variant="ghost"
           size="sm"
