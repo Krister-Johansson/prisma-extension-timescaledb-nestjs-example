@@ -24,15 +24,34 @@ import {
   type TimeWindow,
 } from '@/components/sensor-detail/chart-window';
 import { DetailChartControls } from '@/components/sensor-detail/detail-chart-controls';
+import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SERIES_COLORS } from '@/data/aggregates';
 import {
   DEFAULT_RANGE,
   DEFAULT_RES,
 } from '@/components/sensor-detail/chart-params';
+import {
+  buildGroupTree,
+  flattenTree,
+  subtreeGroupIds,
+} from '@/data/group-tree';
 import type { Sensor } from '@/data/types';
-import { SensorReadingsBucketedMultiDocument } from '@/graphql/sensors.generated';
+import {
+  SensorGroupsDocument,
+  SensorReadingsBucketedMultiDocument,
+} from '@/graphql/sensors.generated';
 import { useSearchState } from '@/lib/use-search-state';
+import { type Scale } from './aggregate-chart-params';
+
+const ALL = '__all__';
 
 const round1 = (n: number | null | undefined) =>
   n == null ? '—' : Math.round(n * 10) / 10;
@@ -49,11 +68,13 @@ type Row = {
   real: Record<string, number>;
 } & Record<string, number | string | Record<string, number>>;
 
-/** Normalize each sensor's avg to its own 0–1 range and align rows by bucket;
- * keep the real avg per sensor for the tooltip. */
+/** Build aligned rows per bucket. In `normalized` mode each sensor's avg is
+ * scaled to its own 0–1 range; in `real` mode the plotted value is the avg
+ * itself. The real avg is always kept per sensor for the tooltip. */
 function buildSeries(
   buckets: { sensorId: string; bucket: string; avg: number | null }[],
   sensors: Sensor[],
+  scale: Scale,
 ): { rows: Row[]; series: SeriesMeta[] } {
   const bySensor = new Map<string, { bucket: string; avg: number | null }[]>();
   for (const b of buckets) {
@@ -73,22 +94,27 @@ function buildSeries(
       color: SERIES_COLORS[i % SERIES_COLORS.length],
     }));
 
-  const norm = new Map<string, Map<string, number>>();
+  const plotted = new Map<string, Map<string, number>>();
   const real = new Map<string, Map<string, number>>();
   for (const [id, bs] of bySensor) {
     const avgs = bs.flatMap((b) => (b.avg == null ? [] : [b.avg]));
     const min = Math.min(...avgs);
     const max = Math.max(...avgs);
     const span = max - min || 1;
-    const nm = new Map<string, number>();
+    const pm = new Map<string, number>();
     const rm = new Map<string, number>();
     for (const b of bs) {
       if (b.avg != null) {
-        nm.set(b.bucket, Math.round(((b.avg - min) / span) * 100) / 100);
+        pm.set(
+          b.bucket,
+          scale === 'real'
+            ? b.avg
+            : Math.round(((b.avg - min) / span) * 100) / 100,
+        );
         rm.set(b.bucket, b.avg);
       }
     }
-    norm.set(id, nm);
+    plotted.set(id, pm);
     real.set(id, rm);
   }
 
@@ -96,9 +122,9 @@ function buildSeries(
   const rows: Row[] = allBuckets.map((bucket) => {
     const row: Row = { bucket, real: {} };
     for (const s of series) {
-      const n = norm.get(s.id)?.get(bucket);
-      if (n !== undefined) {
-        row[s.id] = n;
+      const p = plotted.get(s.id)?.get(bucket);
+      if (p !== undefined) {
+        row[s.id] = p;
         row.real[s.id] = real.get(s.id)?.get(bucket) ?? 0;
       }
     }
@@ -151,7 +177,8 @@ function CompareTooltip({
 }
 
 export function AggregateChart({ sensors }: { sensors: Sensor[] }) {
-  const [{ res, range, from, to }, setSearch] = useSearchState('/aggregates');
+  const [{ res, range, from, to, group, type, scale }, setSearch] =
+    useSearchState('/aggregates');
 
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -159,10 +186,29 @@ export function AggregateChart({ sensors }: { sensors: Sensor[] }) {
     return () => clearInterval(id);
   }, []);
 
+  const { data: groupsData } = useQuery(SensorGroupsDocument, {
+    context: { suppressErrorToast: true },
+  });
+  const groups = groupsData?.sensorGroups ?? [];
+  const orderedGroups = flattenTree(buildGroupTree(groups));
+
+  // Type options from the sensors present (dynamic types), keyed by typeKey.
+  const typeOptions = [
+    ...new Map(sensors.map((s) => [s.type, s.typeLabel])).entries(),
+  ].sort((a, b) => a[1].localeCompare(b[1]));
+
+  // Filter to the selected group's subtree and/or measurement type.
+  const groupIds = group ? subtreeGroupIds(groups, group) : null;
+  const filtered = sensors.filter(
+    (s) =>
+      (!groupIds || (s.groupId != null && groupIds.has(s.groupId))) &&
+      (!type || s.type === type),
+  );
+
   const { window, live } = resolveWindow({ res, range, from, to, now });
   const pointCount = estimatePoints(res, window.endMs - window.startMs);
   const tooMany = pointCount > MAX_POINTS;
-  const sensorIds = sensors.map((s) => s.id);
+  const sensorIds = filtered.map((s) => s.id);
 
   const { data, loading, error } = useQuery(
     SensorReadingsBucketedMultiDocument,
@@ -181,7 +227,8 @@ export function AggregateChart({ sensors }: { sensors: Sensor[] }) {
 
   const { rows, series } = buildSeries(
     data?.sensorReadingsBucketedMulti ?? [],
-    sensors,
+    filtered,
+    scale,
   );
 
   const setWindow = (w: TimeWindow) =>
@@ -205,16 +252,82 @@ export function AggregateChart({ sensors }: { sensors: Sensor[] }) {
       range: DEFAULT_RANGE,
       from: undefined,
       to: undefined,
+      group: undefined,
+      type: undefined,
+      scale: 'normalized',
     });
-  const isDefault = live && res === DEFAULT_RES && range === DEFAULT_RANGE;
+  const isDefault =
+    live &&
+    res === DEFAULT_RES &&
+    range === DEFAULT_RANGE &&
+    !group &&
+    !type &&
+    scale === 'normalized';
 
   return (
     <div className="rounded-[14px] border border-border bg-card p-5 shadow-sm">
       <div className="mb-3">
         <h3 className="text-sm font-semibold">Cross-sensor comparison</h3>
         <div className="mt-0.5 text-xs text-muted-foreground">
-          {RESOLUTION_LABEL[res].toLowerCase()} averages · each series
-          normalized to its own range
+          {RESOLUTION_LABEL[res].toLowerCase()} averages ·{' '}
+          {scale === 'real'
+            ? 'real values (filter to one type for a shared axis)'
+            : 'each series normalized to its own range'}
+        </div>
+      </div>
+
+      {/* Group + type filter and the y-axis scale toggle. */}
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <Select
+          value={group ?? ALL}
+          onValueChange={(v) =>
+            setSearch({ group: v === ALL ? undefined : v })
+          }
+        >
+          <SelectTrigger size="sm" className="w-[170px]">
+            <SelectValue placeholder="All groups" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>All groups</SelectItem>
+            {orderedGroups.map((g) => (
+              <SelectItem key={g.id} value={g.id}>
+                {'  '.repeat(g.depth)}
+                {g.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={type ?? ALL}
+          onValueChange={(v) => setSearch({ type: v === ALL ? undefined : v })}
+        >
+          <SelectTrigger size="sm" className="w-[150px]">
+            <SelectValue placeholder="All types" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>All types</SelectItem>
+            {typeOptions.map(([key, label]) => (
+              <SelectItem key={key} value={key}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <div className="ml-auto inline-flex overflow-hidden rounded-md border border-border">
+          {(['normalized', 'real'] as const).map((s) => (
+            <Button
+              key={s}
+              type="button"
+              variant={scale === s ? 'secondary' : 'ghost'}
+              size="sm"
+              className="h-7 rounded-none px-2.5 text-[12px]"
+              onClick={() => setSearch({ scale: s })}
+            >
+              {s === 'normalized' ? 'Normalized' : 'Real'}
+            </Button>
+          ))}
         </div>
       </div>
 
@@ -261,6 +374,10 @@ export function AggregateChart({ sensors }: { sensors: Sensor[] }) {
           <div className="flex h-[260px] items-center justify-center text-center text-[12.5px] text-alert">
             Couldn’t load readings: {error.message}
           </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex h-[260px] items-center justify-center text-center text-[12.5px] text-muted-foreground">
+            No sensors match this filter.
+          </div>
         ) : loading && rows.length === 0 ? (
           <Skeleton className="h-[260px] w-full rounded-md" />
         ) : rows.length === 0 ? (
@@ -284,8 +401,8 @@ export function AggregateChart({ sensors }: { sensors: Sensor[] }) {
                   tick={{ fontSize: 10.5, fill: 'var(--muted-2)' }}
                 />
                 <YAxis
-                  width={36}
-                  domain={[0, 1]}
+                  width={scale === 'real' ? 48 : 36}
+                  domain={scale === 'real' ? ['auto', 'auto'] : [0, 1]}
                   tickLine={false}
                   axisLine={false}
                   tick={{ fontSize: 10.5, fill: 'var(--muted-2)' }}

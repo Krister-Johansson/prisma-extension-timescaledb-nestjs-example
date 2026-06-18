@@ -36,3 +36,43 @@ export function subtreeIds(node: GroupNode, acc = new Set<string>()): Set<string
   for (const c of node.children) subtreeIds(c, acc);
   return acc;
 }
+
+/** Depth-first flatten of the tree (parents before children) — for an indented
+ * dropdown that preserves hierarchy. */
+export function flattenTree(
+  nodes: GroupNode[],
+  acc: GroupNode[] = [],
+): GroupNode[] {
+  for (const n of nodes) {
+    acc.push(n);
+    flattenTree(n.children, acc);
+  }
+  return acc;
+}
+
+/** `rootId` plus all of its descendant group ids, from the flat list — for
+ * "sensors under this group" filtering. */
+export function subtreeGroupIds(
+  groups: FlatGroup[],
+  rootId: string,
+): Set<string> {
+  const childrenByParent = new Map<string, string[]>();
+  for (const g of groups) {
+    if (!g.parentId) continue;
+    const siblings = childrenByParent.get(g.parentId);
+    if (siblings) siblings.push(g.id);
+    else childrenByParent.set(g.parentId, [g.id]);
+  }
+  const ids = new Set<string>([rootId]);
+  const stack = [rootId];
+  while (stack.length) {
+    const id = stack.pop() as string;
+    for (const child of childrenByParent.get(id) ?? []) {
+      if (!ids.has(child)) {
+        ids.add(child);
+        stack.push(child);
+      }
+    }
+  }
+  return ids;
+}
