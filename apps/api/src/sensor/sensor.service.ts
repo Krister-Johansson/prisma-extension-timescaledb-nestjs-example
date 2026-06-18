@@ -41,6 +41,26 @@ export class SensorService {
     return this.prisma.sensorType.create({ data: input });
   }
 
+  updateType(key: string, data: { label?: string; unit?: string }) {
+    if (data.label === undefined && data.unit === undefined) {
+      throw new BadRequestException('Provide a label and/or unit to update.');
+    }
+    return this.prisma.sensorType.update({ where: { key }, data });
+  }
+
+  /** Delete a type. Blocked while any sensor still uses it (the FK is RESTRICT),
+   * with a clear message instead of a raw FK error. */
+  async deleteType(key: string): Promise<boolean> {
+    const inUse = await this.prisma.sensor.count({ where: { typeKey: key } });
+    if (inUse > 0) {
+      throw new BadRequestException(
+        `Type ${key} is used by ${inUse} sensor(s) — reassign them first.`,
+      );
+    }
+    await this.prisma.sensorType.delete({ where: { key } });
+    return true;
+  }
+
   update(id: string, input: UpdateSensorInput) {
     if (Object.keys(input).length === 0) {
       throw new BadRequestException('Provide at least one field to update.');
