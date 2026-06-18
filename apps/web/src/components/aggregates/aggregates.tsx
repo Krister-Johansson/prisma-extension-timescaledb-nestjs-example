@@ -12,6 +12,7 @@ import {
   SensorsListDocument,
 } from '@/graphql/sensors.generated';
 import { AggregateChart } from './aggregate-chart';
+import { AggregateOverlay } from './aggregate-overlay';
 import { AggregateTypeCards } from './aggregate-type-cards';
 import { TableBuckets } from './table-buckets';
 
@@ -75,6 +76,8 @@ export function Aggregates() {
       <AggregateTypeCards types={averagesByType(sensors)} />
 
       <AggregateChart sensors={sensors} />
+
+      <AggregateOverlay />
 
       <div className="flex items-center justify-between pt-2">
         <span className="text-xs text-muted-2">
