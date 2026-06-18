@@ -20,6 +20,9 @@ import { ReadingModule } from './reading/reading.module';
 import { AlertModule } from './alert/alert.module';
 import { EmulatorModule } from './emulator/emulator.module';
 import { GroupModule } from './group/group.module';
+import { AlertTools } from './mcp/tools/alert.tools';
+import { EmulatorTools } from './mcp/tools/emulator.tools';
+import { GroupTools } from './mcp/tools/group.tools';
 import { SensorTools } from './mcp/tools/sensor.tools';
 import { SensorTypeTools } from './mcp/tools/sensor-type.tools';
 import { TimescaleAdminModule } from './timescale-admin/timescale-admin.module';
@@ -66,6 +69,9 @@ import { TimescaleAdminModule } from './timescale-admin/timescale-admin.module';
     // McpModule.forRoot (here). Each wraps an existing service (DI).
     SensorTools,
     SensorTypeTools,
+    GroupTools,
+    AlertTools,
+    EmulatorTools,
     // Catch-all registered first so the narrower Prisma filter takes precedence.
     {
       provide: APP_FILTER,

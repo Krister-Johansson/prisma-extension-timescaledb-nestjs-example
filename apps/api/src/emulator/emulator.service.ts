@@ -41,6 +41,21 @@ export class EmulatorService {
     return this.prisma.emulator.update({ where: { id }, data: { running } });
   }
 
+  /** Update the value band / cadence. Throws P2025 (→ 404) if missing. */
+  async update(
+    id: string,
+    data: { min?: number; max?: number; intervalSeconds?: number },
+  ) {
+    const next = {
+      ...(await this.prisma.emulator.findUniqueOrThrow({ where: { id } })),
+      ...data,
+    };
+    if (next.min >= next.max) {
+      throw new BadRequestException('min must be less than max.');
+    }
+    return this.prisma.emulator.update({ where: { id }, data });
+  }
+
   /** Delete. Throws P2025 (→ 404) if missing. */
   remove(id: string) {
     return this.prisma.emulator.delete({ where: { id } });
