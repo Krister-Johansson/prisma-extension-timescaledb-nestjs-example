@@ -14,9 +14,11 @@ import { IngestReadingInput } from './dto/ingest-reading.input';
 import {
   HourlyArgs,
   ReadingBucketArgs,
+  ReadingBucketMultiArgs,
   RefreshHourlyArgs,
 } from './dto/reading-query.args';
 import { ReadingBucket } from './models/reading-bucket.model';
+import { SensorBucket } from './models/sensor-bucket.model';
 import { SensorReadingHourly } from './models/sensor-reading-hourly.model';
 import { ReadingService } from './reading.service';
 
@@ -38,6 +40,13 @@ export class ReadingResolver {
   @Query(() => [ReadingBucket], { name: 'sensorReadingsBucketed' })
   bucketed(@Args() args: ReadingBucketArgs): Promise<ReadingBucket[]> {
     return this.readingService.bucketed(args);
+  }
+
+  /** Same rollup for several sensors at once (grouped by sensor) — for the
+   * cross-sensor compare chart. */
+  @Query(() => [SensorBucket], { name: 'sensorReadingsBucketedMulti' })
+  bucketedMulti(@Args() args: ReadingBucketMultiArgs): Promise<SensorBucket[]> {
+    return this.readingService.bucketedMulti(args);
   }
 
   /** Pre-aggregated rows from the continuous aggregate. */

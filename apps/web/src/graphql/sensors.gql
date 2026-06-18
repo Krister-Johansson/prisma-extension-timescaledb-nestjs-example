@@ -116,3 +116,24 @@ query SensorReadingsHourly($start: DateTime, $end: DateTime) {
 mutation RefreshSensorReadingHourly {
   refreshSensorReadingHourly
 }
+
+query SensorReadingsBucketedMulti(
+  $sensorIds: [ID!]!
+  $bucket: String!
+  $start: DateTime!
+  $end: DateTime!
+) {
+  sensorReadingsBucketedMulti(
+    sensorIds: $sensorIds
+    bucket: $bucket
+    start: $start
+    end: $end
+  ) {
+    sensorId
+    bucket
+    avg
+    min
+    max
+    count
+  }
+}

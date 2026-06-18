@@ -1,5 +1,11 @@
 import { ArgsType, Field, GraphQLISODateTime, ID } from '@nestjs/graphql';
-import { IsDate, IsOptional, IsString, Matches } from 'class-validator';
+import {
+  ArrayMaxSize,
+  IsDate,
+  IsOptional,
+  IsString,
+  Matches,
+} from 'class-validator';
 import { INTERVAL_PATTERN } from '../../common/interval';
 
 @ArgsType()
@@ -7,6 +13,31 @@ export class ReadingBucketArgs {
   @Field(() => ID)
   @IsString()
   sensorId!: string;
+
+  @Field({
+    defaultValue: '1 hour',
+    description: 'time_bucket interval, e.g. "1 hour".',
+  })
+  @Matches(INTERVAL_PATTERN, {
+    message: 'bucket must be an interval like "1 hour" or "30 minutes"',
+  })
+  bucket!: string;
+
+  @Field(() => GraphQLISODateTime)
+  @IsDate()
+  start!: Date;
+
+  @Field(() => GraphQLISODateTime)
+  @IsDate()
+  end!: Date;
+}
+
+@ArgsType()
+export class ReadingBucketMultiArgs {
+  @Field(() => [ID])
+  @IsString({ each: true })
+  @ArrayMaxSize(100, { message: 'at most 100 sensorIds per query' })
+  sensorIds!: string[];
 
   @Field({
     defaultValue: '1 hour',

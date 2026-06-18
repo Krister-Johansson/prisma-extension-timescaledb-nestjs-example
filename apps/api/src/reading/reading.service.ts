@@ -2,6 +2,8 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { PubSub } from 'graphql-subscriptions';
 import { assertInterval } from 'prisma-extension-timescaledb';
 import { AlertService } from '../alert/alert.service';
+import { Prisma } from '../generated/prisma/client.js';
+import { SensorBucket } from './models/sensor-bucket.model';
 import { PRISMA_CLIENT } from '../prisma/prisma-client';
 import type { ExtendedPrismaClient } from '../prisma/prisma-client';
 import { PUB_SUB, TOPICS } from '../pubsub/pubsub.module';
@@ -9,6 +11,7 @@ import { IngestReadingInput } from './dto/ingest-reading.input';
 import {
   HourlyArgs,
   ReadingBucketArgs,
+  ReadingBucketMultiArgs,
   RefreshHourlyArgs,
 } from './dto/reading-query.args';
 import { ReadingBucket } from './models/reading-bucket.model';
@@ -76,6 +79,28 @@ export class ReadingService {
         count: { count: 'value', as: 'number' },
       },
     });
+  }
+
+  /** Ad-hoc time_bucket rollup for several sensors at once (one query, grouped
+   * by sensor) — for comparing sensors on a single chart. */
+  async bucketedMulti(args: ReadingBucketMultiArgs): Promise<SensorBucket[]> {
+    const { bucket, sensorIds, start, end } = args;
+    if (sensorIds.length === 0) return [];
+    assertInterval(bucket); // format already validated by the DTO
+
+    return this.prisma.$queryRaw<SensorBucket[]>`
+      SELECT time_bucket(${bucket}::interval, "time") AS bucket,
+             "sensorId",
+             avg(value)::float8 AS avg,
+             min(value)::float8 AS min,
+             max(value)::float8 AS max,
+             count(*)::int AS count
+      FROM "SensorReading"
+      WHERE "sensorId" IN (${Prisma.join(sensorIds)})
+        AND "time" >= ${start} AND "time" < ${end}
+      GROUP BY bucket, "sensorId"
+      ORDER BY bucket ASC
+    `;
   }
 
   /** Read pre-aggregated rows from the continuous aggregate (export layer). */

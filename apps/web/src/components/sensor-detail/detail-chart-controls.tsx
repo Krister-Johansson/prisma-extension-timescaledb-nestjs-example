@@ -17,7 +17,7 @@ import { formatWindowLabel, type TimeWindow } from './chart-window';
 import { DetailRangePicker } from './detail-range-picker';
 
 interface Props {
-  sensorId: string;
+  sensorId?: string;
   res: Resolution;
   range: RangeKey;
   live: boolean;

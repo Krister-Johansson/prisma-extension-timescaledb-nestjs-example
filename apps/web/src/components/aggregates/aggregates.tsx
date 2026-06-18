@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { QueryError } from '@/components/common/query-error';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { buildBucketRows, buildCompare } from '@/data/aggregates';
+import { buildBucketRows } from '@/data/aggregates';
 import { toUiSensors } from '@/data/sensor-adapter';
 import { averagesByType } from '@/data/sensors';
 import {
@@ -11,7 +11,7 @@ import {
   SensorReadingsHourlyDocument,
   SensorsListDocument,
 } from '@/graphql/sensors.generated';
-import { AggregateCompareChart } from './aggregate-compare-chart';
+import { AggregateChart } from './aggregate-chart';
 import { AggregateTypeCards } from './aggregate-type-cards';
 import { TableBuckets } from './table-buckets';
 
@@ -74,7 +74,9 @@ export function Aggregates() {
     <div className="flex flex-col gap-4">
       <AggregateTypeCards types={averagesByType(sensors)} />
 
-      <div className="flex items-center justify-between">
+      <AggregateChart sensors={sensors} />
+
+      <div className="flex items-center justify-between pt-2">
         <span className="text-xs text-muted-2">
           Hourly rollups from the TimescaleDB continuous aggregate.
         </span>
@@ -91,10 +93,7 @@ export function Aggregates() {
       {hourlyError ? (
         <QueryError message={hourlyError.message} />
       ) : (
-        <>
-          <AggregateCompareChart result={buildCompare(hourly, sensorById)} />
-          <TableBuckets rows={buildBucketRows(hourly, sensorById)} />
-        </>
+        <TableBuckets rows={buildBucketRows(hourly, sensorById)} />
       )}
     </div>
   );
