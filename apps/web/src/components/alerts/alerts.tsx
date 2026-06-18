@@ -12,7 +12,11 @@ export function Alerts() {
     pollInterval: 5000,
     context: { suppressErrorToast: true },
   });
-  const { data: eventsData } = useQuery(AllAlertEventsDocument, {
+  const {
+    data: eventsData,
+    loading: eventsLoading,
+    error: eventsError,
+  } = useQuery(AllAlertEventsDocument, {
     variables: { take: 50 },
     pollInterval: 5000,
     context: { suppressErrorToast: true },
@@ -60,7 +64,13 @@ export function Alerts() {
       </section>
       <section>
         <h2 className="mb-3.5 text-sm font-semibold">Event log · recent</h2>
-        <TableEventLog rows={rows} />
+        {eventsLoading && !eventsData ? (
+          <Skeleton className="h-[280px] rounded-[14px]" />
+        ) : eventsError ? (
+          <QueryError message={eventsError.message} />
+        ) : (
+          <TableEventLog rows={rows} />
+        )}
       </section>
     </div>
   );
