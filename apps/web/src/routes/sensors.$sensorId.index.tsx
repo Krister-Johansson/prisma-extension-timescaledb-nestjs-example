@@ -21,8 +21,10 @@ export const Route = createFileRoute('/sensors/$sensorId/')({
 function SensorDetailRoute() {
   const { sensorId } = Route.useParams();
   // This route renders its own not-found / QueryError states, so skip the toast.
+  // Poll so the header's "last value · … ago" stays fresh while emulators run.
   const { data, loading, error } = useQuery(SensorDetailDocument, {
     variables: { id: sensorId },
+    pollInterval: 5000,
     context: { suppressErrorToast: true },
   });
 

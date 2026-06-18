@@ -9,12 +9,16 @@ export type RangeKey = (typeof RANGES)[number];
 export const TABS = ['data', 'alert'] as const;
 export type TabKey = (typeof TABS)[number];
 
+/** The default live view (also what the Reset control restores). */
+export const DEFAULT_RES: Resolution = 'hour';
+export const DEFAULT_RANGE: RangeKey = '24h';
+
 /** URL search schema for the sensor detail chart. `.catch` (not `.default`) so
  * a missing *or* tampered param (`?res=foo`) falls back instead of breaking the
  * route — defaults give a live, 24h-of-hourly view. */
 export const chartSearchSchema = z.object({
-  res: z.enum(RESOLUTIONS).catch('hour'),
-  range: z.enum(RANGES).catch('24h'),
+  res: z.enum(RESOLUTIONS).catch(DEFAULT_RES),
+  range: z.enum(RANGES).catch(DEFAULT_RANGE),
   // A valid from+to pair switches the chart to a fixed (non-live) window.
   // Kept as plain strings; validity is checked where the window resolves, so a
   // bad value just falls back to the live range rather than breaking the route.

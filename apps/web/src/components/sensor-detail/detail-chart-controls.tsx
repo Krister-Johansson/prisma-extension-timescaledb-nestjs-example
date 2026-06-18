@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -28,6 +28,8 @@ interface Props {
   onShift: (dir: -1 | 1) => void;
   onLive: () => void;
   onApplyDates: (start: string, end: string) => void;
+  onReset: () => void;
+  canReset: boolean;
 }
 
 export function DetailChartControls({
@@ -40,6 +42,8 @@ export function DetailChartControls({
   onShift,
   onLive,
   onApplyDates,
+  onReset,
+  canReset,
 }: Props) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2">
@@ -72,6 +76,16 @@ export function DetailChartControls({
           </SelectContent>
         </Select>
         <DetailDateRange window={window} live={live} onApply={onApplyDates} />
+        <Button
+          variant="ghost"
+          size="sm"
+          className="gap-1.5 text-muted-foreground"
+          disabled={!canReset}
+          onClick={onReset}
+        >
+          <RotateCcw className="size-3.5" />
+          Reset
+        </Button>
       </div>
 
       <div className="flex items-center gap-1.5">

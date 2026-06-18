@@ -8,7 +8,12 @@ import {
   YAxis,
 } from 'recharts';
 import { Skeleton } from '@/components/ui/skeleton';
-import { formatBucketLabel, RESOLUTION_LABEL } from './chart-params';
+import {
+  DEFAULT_RANGE,
+  DEFAULT_RES,
+  formatBucketLabel,
+  RESOLUTION_LABEL,
+} from './chart-params';
 import { datesToWindow, shiftWindow, type TimeWindow } from './chart-window';
 import { DetailChartControls } from './detail-chart-controls';
 import type { ReadingsBuckets } from './use-readings-buckets';
@@ -92,6 +97,14 @@ export function DetailReadingsChart({
     const w = datesToWindow(startDate, endDate);
     if (w) setWindow(w);
   };
+  const handleReset = () =>
+    setSearch({
+      res: DEFAULT_RES,
+      range: DEFAULT_RANGE,
+      from: undefined,
+      to: undefined,
+    });
+  const isDefault = live && res === DEFAULT_RES && range === DEFAULT_RANGE;
 
   return (
     <div className="rounded-[14px] border border-border bg-card p-5 shadow-sm">
@@ -112,6 +125,8 @@ export function DetailReadingsChart({
         onShift={handleShift}
         onLive={goLive}
         onApplyDates={handleApplyDates}
+        onReset={handleReset}
+        canReset={!isDefault}
       />
 
       <div className="mt-3">
