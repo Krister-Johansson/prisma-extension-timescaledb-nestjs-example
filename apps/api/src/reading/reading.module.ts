@@ -6,5 +6,6 @@ import { ReadingService } from './reading.service';
 @Module({
   imports: [AlertModule],
   providers: [ReadingResolver, ReadingService],
+  exports: [ReadingService],
 })
 export class ReadingModule {}

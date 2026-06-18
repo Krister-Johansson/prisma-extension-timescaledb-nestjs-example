@@ -49,6 +49,25 @@ model Sensor {
   readings  SensorReading[]
   rules     AlertRule[]
   events    AlertEvent[]
+  emulators Emulator[]
+}
+
+/// A synthetic data source for a sensor: a background ticker ingests a reading
+/// every `intervalSeconds` while `running`, with values evolving as a bounded
+/// mean-reverting random walk between `min` and `max` (natural, no jumps).
+model Emulator {
+  id              String    @id @default(uuid())
+  sensorId        String
+  sensor          Sensor    @relation(fields: [sensorId], references: [id], onDelete: Cascade)
+  min             Float
+  max             Float
+  intervalSeconds Int
+  running         Boolean   @default(true)
+  lastValue       Float?
+  lastTickAt      DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@index([sensorId])
 }
 
 /// Raw time-series readings. This is the TimescaleDB hypertable — the raw
