@@ -17,14 +17,11 @@ type Crumb = { label: string; to?: RoutePath };
 type Match = ReturnType<typeof useMatches>[number];
 
 /**
- * Builds the breadcrumb trail. Sensor pages live under "Manage" conceptually
- * (not in the route tree), so their trail is composed explicitly:
- *   Dashboard / Manage / Sensor / <name>           (detail)
- *   Dashboard / Manage / Sensor / <name> / Settings (config)
- * The name comes from the live SensorDetail cache; until it resolves the detail
- * trail ends at `… / Sensor` and the config trail at `… / Sensor / Settings` —
- * the leaf always reflects the current page. Other pages map their route
- * `crumb`s directly.
+ * Builds the breadcrumb trail. The sensor page lives under "Manage" conceptually
+ * (not in the route tree), so its trail is composed explicitly:
+ *   Dashboard / Manage / Sensor / <name>   (detail)
+ * The name comes from the live SensorDetail cache; until it resolves the trail
+ * ends at `… / Sensor`. Other pages map their route `crumb`s directly.
  */
 function buildCrumbs(
   matches: Match[],
@@ -32,20 +29,12 @@ function buildCrumbs(
   sensorName: string | undefined,
 ): Crumb[] {
   if (sensorId) {
-    const onConfig = matches.some((m) => m.routeId.endsWith('/config'));
     const trail: Crumb[] = [
       { label: 'Dashboard', to: routes.overview() },
       { label: 'Manage', to: routes.manage() },
       { label: 'Sensor' },
     ];
-    if (onConfig) {
-      if (sensorName) {
-        trail.push({ label: sensorName, to: routes.sensors.detail(sensorId) });
-      }
-      trail.push({ label: 'Settings' });
-    } else if (sensorName) {
-      trail.push({ label: sensorName });
-    }
+    if (sensorName) trail.push({ label: sensorName });
     return trail;
   }
 

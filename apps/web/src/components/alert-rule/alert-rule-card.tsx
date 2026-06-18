@@ -9,7 +9,7 @@ import { AlertRuleToggle } from './alert-rule-toggle';
 type LiveRule = NonNullable<SensorAlertRuleQuery['alertRule']>;
 
 /** Live alert-rule card: summary + edit / enable-disable / delete. */
-export function ConfigRuleCard({ rule, unit }: { rule: LiveRule; unit: string }) {
+export function AlertRuleCard({ rule, unit }: { rule: LiveRule; unit: string }) {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 

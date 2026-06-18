@@ -38,7 +38,6 @@ function requireId(value: string, fn: string): string {
  *   routes.system()                -> "/system"
  *   routes.manage()                -> "/manage"
  *   routes.sensors.detail("t1")   -> "/sensors/t1"
- *   routes.sensors.config("t1")   -> "/sensors/t1/config"
  */
 export const routes = {
   overview: () => path(),
@@ -49,7 +48,5 @@ export const routes = {
   sensors: {
     detail: (sensorId: string) =>
       path('sensors', requireId(sensorId, 'routes.sensors.detail')),
-    config: (sensorId: string) =>
-      path('sensors', requireId(sensorId, 'routes.sensors.config'), 'config'),
   },
 } as const;
