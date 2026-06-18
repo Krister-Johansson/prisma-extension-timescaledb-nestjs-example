@@ -65,6 +65,16 @@ export class SensorResolver {
     return ctx.loaders.readingsBySensor.load(sensor.id);
   }
 
+  /** The single most recent reading (or null) — a cheap "last value" field that
+   * avoids selecting the whole `readings` window. */
+  @ResolveField(() => SensorReading, { nullable: true })
+  latestReading(
+    @Parent() sensor: Sensor,
+    @Context() ctx: GraphQLContext,
+  ): Promise<SensorReading | null> {
+    return ctx.loaders.latestReadingBySensor.load(sensor.id);
+  }
+
   /** A sensor's alert rules, batched via DataLoader (one query per response). */
   @ResolveField(() => [AlertRule])
   rules(

@@ -9,6 +9,9 @@ export interface Loaders {
    * sensorId — avoids the N+1 when resolving `Sensor.readings` across a list of
    * sensors, and bounds the payload regardless of ingest rate. */
   readingsBySensor: DataLoader<string, SensorReading[]>;
+  /** The single newest reading per sensor (or null) — a narrow contract for
+   * "last value" headers, batched so a list still costs one query. */
+  latestReadingBySensor: DataLoader<string, SensorReading | null>;
   /** Alert rules batched by sensorId — avoids the N+1 when resolving
    * `Sensor.rules` across a list of sensors. */
   rulesBySensor: DataLoader<string, AlertRule[]>;
@@ -50,6 +53,30 @@ export function createLoaders(prisma: ExtendedPrismaClient): Loaders {
           bySensor.get(row.sensorId)?.push(row);
         }
         return sensorIds.map((id) => bySensor.get(id) ?? []);
+      },
+    ),
+
+    latestReadingBySensor: new DataLoader<string, SensorReading | null>(
+      async (sensorIds) => {
+        // Just the newest row per sensor (rn = 1) — one row each, not the
+        // whole recent window, for "last value" use cases.
+        const rows = await prisma.$queryRaw<SensorReading[]>`
+          SELECT time, "sensorId", value
+          FROM (
+            SELECT time, "sensorId", value,
+                   ROW_NUMBER() OVER (
+                     PARTITION BY "sensorId" ORDER BY time DESC
+                   ) AS rn
+            FROM "SensorReading"
+            WHERE "sensorId" IN (${Prisma.join([...sensorIds])})
+          ) ranked
+          WHERE rn = 1
+        `;
+
+        const bySensor = new Map<string, SensorReading>(
+          rows.map((row) => [row.sensorId, row]),
+        );
+        return sensorIds.map((id) => bySensor.get(id) ?? null);
       },
     ),
 

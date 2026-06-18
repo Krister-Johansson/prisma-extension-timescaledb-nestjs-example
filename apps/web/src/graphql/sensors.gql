@@ -30,7 +30,7 @@ query SensorDetail($id: ID!) {
     type
     unit
     createdAt
-    readings {
+    latestReading {
       time
       value
     }

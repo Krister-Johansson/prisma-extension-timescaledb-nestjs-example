@@ -19,7 +19,7 @@ type DetailSensor = {
   type: SensorType;
   unit: string;
   createdAt: string;
-  readings: { time: string; value: number }[];
+  latestReading?: { time: string; value: number } | null;
 };
 
 /**
@@ -30,9 +30,7 @@ type DetailSensor = {
 export function SensorSummary({ sensor }: { sensor: DetailSensor }) {
   const [editOpen, setEditOpen] = useState(false);
 
-  const newest = [...sensor.readings].sort((a, b) =>
-    a.time.localeCompare(b.time),
-  ).at(-1);
+  const newest = sensor.latestReading;
 
   return (
     <div className="flex flex-col gap-4">
