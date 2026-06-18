@@ -95,9 +95,9 @@ export class GroupService {
     });
   }
 
-  /** Delete a group, reparenting its children and sensors to its parent (or to
-   * root / ungrouped if it was a root). Serialized with moves via the same lock
-   * so a concurrent move can't strand a subtree. */
+  /** Delete a group: its subgroups promote to this group's parent, and its own
+   * sensors become ungrouped (never moved into a different group). Serialized
+   * with moves via the same lock so a concurrent move can't strand a subtree. */
   async remove(id: string): Promise<boolean> {
     return this.prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(${TREE_LOCK_KEY})`;
@@ -111,7 +111,7 @@ export class GroupService {
       });
       await tx.sensor.updateMany({
         where: { groupId: id },
-        data: { groupId: group.parentId },
+        data: { groupId: null },
       });
       await tx.sensorGroup.delete({ where: { id } });
       return true;
