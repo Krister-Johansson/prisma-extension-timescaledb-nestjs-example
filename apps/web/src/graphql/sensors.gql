@@ -77,3 +77,22 @@ mutation DeleteSensor($id: ID!) {
     id
   }
 }
+
+query SensorReadingsBucketed(
+  $sensorId: ID!
+  $bucket: String!
+  $start: DateTime!
+  $end: DateTime!
+) {
+  sensorReadingsBucketed(
+    sensorId: $sensorId
+    bucket: $bucket
+    start: $start
+    end: $end
+  ) {
+    bucket
+    avg
+    min
+    max
+  }
+}
