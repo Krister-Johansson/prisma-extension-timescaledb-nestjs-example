@@ -43,19 +43,11 @@ import {
 import {
   GroupSeriesDocument,
   SensorGroupsDocument,
+  SensorTypesDocument,
 } from '@/graphql/sensors.generated';
 import { useSearchState } from '@/lib/use-search-state';
-import {
-  type OverlaySeries,
-  SENSOR_TYPES,
-  SERIES_AGGS,
-} from './aggregate-chart-params';
+import { type OverlaySeries, SERIES_AGGS } from './aggregate-chart-params';
 
-const UNIT: Record<string, string> = {
-  TEMPERATURE: '°C',
-  PRESSURE: 'hPa',
-  HUMIDITY: '%',
-};
 const ALL = '__all__';
 const round1 = (n: number | null | undefined) =>
   n == null ? '—' : Math.round(n * 10) / 10;
@@ -122,6 +114,12 @@ export function AggregateOverlay() {
   const groups = groupsData?.sensorGroups ?? [];
   const groupById = new Map(groups.map((g) => [g.id, g]));
 
+  const { data: typesData } = useQuery(SensorTypesDocument, {
+    context: { suppressErrorToast: true },
+  });
+  const types = typesData?.sensorTypes ?? [];
+  const typeByKey = new Map(types.map((t) => [t.key, t]));
+
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 15_000);
@@ -153,12 +151,15 @@ export function AggregateOverlay() {
 
   // Build normalized rows (mixed units) + keep real values for the tooltip.
   const result = data?.groupSeries ?? [];
-  const meta: SeriesMeta[] = series.map((s, i) => ({
-    key: `s${i}`,
-    label: `${groupById.get(s.g)?.name ?? 'Group'} · ${s.t ?? 'All'} · ${s.agg.toLowerCase()}`,
-    unit: s.t ? UNIT[s.t] : '',
-    color: SERIES_COLORS[i % SERIES_COLORS.length],
-  }));
+  const meta: SeriesMeta[] = series.map((s, i) => {
+    const typeLabel = s.t ? (typeByKey.get(s.t)?.label ?? s.t) : 'All';
+    return {
+      key: `s${i}`,
+      label: `${groupById.get(s.g)?.name ?? 'Group'} · ${typeLabel} · ${s.agg.toLowerCase()}`,
+      unit: s.t ? (typeByKey.get(s.t)?.unit ?? '') : '',
+      color: SERIES_COLORS[i % SERIES_COLORS.length],
+    };
+  });
   const norm = result.map((r) => {
     const vals = r.points.flatMap((p) => (p.value == null ? [] : [p.value]));
     const min = Math.min(...vals);
@@ -280,9 +281,9 @@ export function AggregateOverlay() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={ALL}>All types</SelectItem>
-                {SENSOR_TYPES.map((t) => (
-                  <SelectItem key={t} value={t}>
-                    {t.charAt(0) + t.slice(1).toLowerCase()}
+                {types.map((t) => (
+                  <SelectItem key={t.key} value={t.key}>
+                    {t.label}
                   </SelectItem>
                 ))}
               </SelectContent>

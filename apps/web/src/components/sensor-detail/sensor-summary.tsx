@@ -4,20 +4,12 @@ import { AlertRuleSection } from '@/components/alert-rule/alert-rule-section';
 import { RelativeTime } from '@/components/common/relative-time';
 import { SensorEditDialog } from '@/components/sensor/sensor-edit-dialog';
 import { Button } from '@/components/ui/button';
-import type { SensorType } from '@/data/types';
 import { DetailReadings } from './detail-readings';
-
-const TYPE_LABELS: Record<SensorType, string> = {
-  TEMPERATURE: 'Temperature',
-  PRESSURE: 'Pressure',
-  HUMIDITY: 'Humidity',
-};
 
 type DetailSensor = {
   id: string;
   name: string;
-  type: SensorType;
-  unit: string;
+  type: { key: string; label: string; unit: string };
   createdAt: string;
   latestReading?: { time: string; value: number } | null;
 };
@@ -47,7 +39,7 @@ export function SensorSummary({ sensor }: { sensor: DetailSensor }) {
                   {newest ? (
                     <>
                       <span className="font-mono font-semibold">
-                        {Math.round(newest.value * 10) / 10} {sensor.unit}
+                        {Math.round(newest.value * 10) / 10} {sensor.type.unit}
                       </span>
                       <span className="ml-1.5 font-mono text-[11px] text-muted-2">
                         <RelativeTime iso={newest.time} />
@@ -58,8 +50,8 @@ export function SensorSummary({ sensor }: { sensor: DetailSensor }) {
                   )}
                 </dd>
               </div>
-              <Field label="Type" value={TYPE_LABELS[sensor.type]} />
-              <Field label="Unit" value={sensor.unit} />
+              <Field label="Type" value={sensor.type.label} />
+              <Field label="Unit" value={sensor.type.unit} />
               <Field
                 label="Created"
                 value={new Date(sensor.createdAt).toLocaleString()}
@@ -79,16 +71,22 @@ export function SensorSummary({ sensor }: { sensor: DetailSensor }) {
         </div>
       </div>
 
-      <DetailReadings sensorId={sensor.id} unit={sensor.unit} />
+      <DetailReadings sensorId={sensor.id} unit={sensor.type.unit} />
 
-      <AlertRuleSection sensor={sensor} />
+      <AlertRuleSection sensor={{ ...sensor, unit: sensor.type.unit }} />
 
       <p className="text-xs leading-relaxed text-muted-2">
         Hourly aggregates for this sensor are coming in a later update.
       </p>
 
       <SensorEditDialog
-        sensor={sensor}
+        sensor={{
+          id: sensor.id,
+          name: sensor.name,
+          type: sensor.type.key,
+          typeLabel: sensor.type.label,
+          unit: sensor.type.unit,
+        }}
         open={editOpen}
         onOpenChange={setEditOpen}
       />

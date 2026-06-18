@@ -3,8 +3,8 @@ import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 /**
  * Editable fields of an existing sensor. `type` is intentionally immutable —
- * readings are already typed against it — so only the descriptive `name`/`unit`
- * can change. Both are optional; omitted fields are left untouched.
+ * readings are already typed against it, and the unit now lives on the type — so
+ * only the descriptive `name` can change. Optional; omitted = untouched.
  */
 @InputType()
 export class UpdateSensorInput {
@@ -13,10 +13,4 @@ export class UpdateSensorInput {
   @IsString()
   @IsNotEmpty()
   name?: string;
-
-  @Field({ nullable: true, description: 'Unit of measure, e.g. °C, hPa, %.' })
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  unit?: string;
 }

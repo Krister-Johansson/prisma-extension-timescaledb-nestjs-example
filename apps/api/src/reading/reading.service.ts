@@ -125,7 +125,7 @@ export class ReadingService {
       specs.map(async (spec) => {
         const fn = AGG_FN[spec.agg]; // whitelisted -> safe with Prisma.raw
         const typeFilter = spec.type
-          ? Prisma.sql`AND s.type = ${spec.type}::"SensorType"`
+          ? Prisma.sql`AND s."typeKey" = ${spec.type}`
           : Prisma.empty;
 
         const points = await this.prisma.$queryRaw<GroupSeriesPoint[]>`

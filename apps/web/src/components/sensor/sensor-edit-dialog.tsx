@@ -14,7 +14,9 @@ import { SensorForm } from './sensor-form';
 type EditableSensor = {
   id: string;
   name: string;
+  /** Type key. */
   type: SensorType;
+  typeLabel: string;
   unit: string;
 };
 
@@ -39,25 +41,28 @@ export function SensorEditDialog({
         <DialogHeader>
           <DialogTitle>Edit sensor</DialogTitle>
           <DialogDescription>
-            Update the name or unit of “{sensor.name}”.
+            Update the name of “{sensor.name}”.
           </DialogDescription>
         </DialogHeader>
         <SensorForm
           key={open ? sensor.id : 'closed'}
-          defaultValues={{ name: sensor.name, type: sensor.type, unit: sensor.unit }}
+          defaultValues={{ name: sensor.name, typeKey: sensor.type }}
           submitLabel="Save changes"
           pending={loading}
           typeLocked
-          onSubmit={({ name, unit }) => {
+          onSubmit={({ name }) => {
             updateSensor({
-              variables: { id: sensor.id, input: { name, unit } },
+              variables: { id: sensor.id, input: { name } },
               optimisticResponse: {
                 updateSensor: {
                   __typename: 'Sensor',
                   id: sensor.id,
                   name,
-                  type: sensor.type,
-                  unit,
+                  type: {
+                    key: sensor.type,
+                    label: sensor.typeLabel,
+                    unit: sensor.unit,
+                  },
                 },
               },
               onCompleted: () => {

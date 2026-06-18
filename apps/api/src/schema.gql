@@ -59,9 +59,19 @@ input CreateEmulatorInput {
 
 input CreateSensorInput {
   name: String!
-  type: SensorType!
 
-  """Unit of measure, e.g. °C, hPa, %."""
+  """Measurement type key (see sensorTypes)."""
+  typeKey: String!
+}
+
+input CreateSensorTypeInput {
+  """Stable slug, e.g. CO2 or PM2_5 (A–Z, 0–9, _)."""
+  key: String!
+
+  """Human label, e.g. CO₂."""
+  label: String!
+
+  """Unit of measure, e.g. ppm, µg/m³."""
   unit: String!
 }
 
@@ -88,7 +98,7 @@ type GroupSeries {
   agg: SeriesAgg!
   groupId: ID!
   points: [GroupSeriesPoint!]!
-  type: SensorType
+  type: String
 }
 
 type GroupSeriesPoint {
@@ -99,7 +109,7 @@ type GroupSeriesPoint {
 input GroupSeriesSpecInput {
   agg: SeriesAgg! = AVG
   groupId: ID!
-  type: SensorType
+  type: String
 }
 
 enum HypertableModel {
@@ -132,6 +142,7 @@ type Mutation {
   createEmulator(input: CreateEmulatorInput!): Emulator!
   createSensor(input: CreateSensorInput!): Sensor!
   createSensorGroup(name: String!, parentId: ID): SensorGroup!
+  createSensorType(input: CreateSensorTypeInput!): SensorType!
   deleteAlertRule(id: ID!): AlertRule!
   deleteEmulator(id: ID!): Emulator!
   deleteSensor(id: ID!): Sensor!
@@ -168,6 +179,7 @@ type Query {
     start: DateTime!
   ): [SensorBucket!]!
   sensorReadingsHourly(end: DateTime, sensorId: ID, start: DateTime): [SensorReadingHourly!]!
+  sensorTypes: [SensorType!]!
   sensors(where: SensorWhereInput): [Sensor!]!
 }
 
@@ -188,7 +200,7 @@ type Sensor {
   readings: [SensorReading!]!
   rules: [AlertRule!]!
   type: SensorType!
-  unit: String!
+  typeKey: String!
 }
 
 type SensorBucket {
@@ -223,17 +235,19 @@ type SensorReadingHourly {
   sensorId: ID!
 }
 
-"""Kind of physical quantity a sensor measures."""
-enum SensorType {
-  HUMIDITY
-  PRESSURE
-  TEMPERATURE
+type SensorType {
+  createdAt: DateTime!
+  key: String!
+  label: String!
+  unit: String!
 }
 
 input SensorWhereInput {
   """Case-insensitive substring match on name."""
   nameContains: String
-  type: SensorType
+
+  """Measurement type key."""
+  typeKey: String
 }
 
 enum SeriesAgg {
@@ -258,7 +272,4 @@ input UpdateAlertRuleInput {
 
 input UpdateSensorInput {
   name: String
-
-  """Unit of measure, e.g. °C, hPa, %."""
-  unit: String
 }

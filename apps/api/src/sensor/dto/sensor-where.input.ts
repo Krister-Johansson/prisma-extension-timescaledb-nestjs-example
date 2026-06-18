@@ -1,14 +1,13 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsEnum, IsOptional, IsString } from 'class-validator';
-import { SensorType } from '../../generated/prisma/enums.js';
+import { IsOptional, IsString } from 'class-validator';
 
 /** Focused filter surface for listing sensors. */
 @InputType()
 export class SensorWhereInput {
-  @Field(() => SensorType, { nullable: true })
+  @Field({ nullable: true, description: 'Measurement type key.' })
   @IsOptional()
-  @IsEnum(SensorType)
-  type?: SensorType;
+  @IsString()
+  typeKey?: string;
 
   @Field({
     nullable: true,

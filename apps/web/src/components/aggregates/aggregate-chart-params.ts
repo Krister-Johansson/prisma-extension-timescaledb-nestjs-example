@@ -6,14 +6,13 @@ import {
   RESOLUTIONS,
 } from '@/components/sensor-detail/chart-params';
 
-export const SENSOR_TYPES = ['TEMPERATURE', 'PRESSURE', 'HUMIDITY'] as const;
 export const SERIES_AGGS = ['AVG', 'MIN', 'MAX'] as const;
 
-/** One overlay series spec (compact for the URL): group id `g`, optional sensor
- * type `t` (omit = all types), aggregate `agg`. */
+/** One overlay series spec (compact for the URL): group id `g`, optional
+ * measurement type key `t` (omit = all types), aggregate `agg`. */
 export const overlaySeriesSchema = z.object({
   g: z.string(),
-  t: z.enum(SENSOR_TYPES).optional(),
+  t: z.string().optional(),
   agg: z.enum(SERIES_AGGS).catch('AVG'),
 });
 export type OverlaySeries = z.infer<typeof overlaySeriesSchema>;

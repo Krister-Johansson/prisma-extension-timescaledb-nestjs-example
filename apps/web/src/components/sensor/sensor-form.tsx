@@ -1,3 +1,4 @@
+import { useQuery } from '@apollo/client/react';
 import { useForm } from '@tanstack/react-form';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -10,21 +11,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { UNIT } from '@/data/sensors';
-import type { SensorType } from '@/data/types';
-
-const SENSOR_TYPES = ['TEMPERATURE', 'PRESSURE', 'HUMIDITY'] as const;
-
-const TYPE_LABELS: Record<SensorType, string> = {
-  TEMPERATURE: 'Temperature',
-  PRESSURE: 'Pressure',
-  HUMIDITY: 'Humidity',
-};
+import { SensorTypesDocument } from '@/graphql/sensors.generated';
 
 export const sensorFormSchema = z.object({
   name: z.string().trim().min(1, 'Name is required'),
-  type: z.enum(SENSOR_TYPES),
-  unit: z.string().trim().min(1, 'Unit is required'),
+  typeKey: z.string().min(1, 'Type is required'),
 });
 
 export type SensorFormValues = z.infer<typeof sensorFormSchema>;
@@ -53,9 +44,9 @@ function FieldError({
 
 /**
  * Sensor create/edit form (TanStack Form + Zod). The owning dialog passes
- * `onSubmit` and the mutation `pending` flag, and decides what to do with the
- * values — the form holds no mutation logic. `type` is locked on edit (the API
- * keeps it immutable) and, on create, selecting a type prefills its usual unit.
+ * `onSubmit` and the mutation `pending` flag. The type list is fetched from the
+ * API (dynamic types); the unit comes from the chosen type, so there's no unit
+ * field. `type` is locked on edit (the API keeps it immutable).
  */
 export function SensorForm({
   defaultValues,
@@ -70,6 +61,11 @@ export function SensorForm({
   typeLocked?: boolean;
   onSubmit: (values: SensorFormValues) => void;
 }) {
+  const { data } = useQuery(SensorTypesDocument, {
+    context: { suppressErrorToast: true },
+  });
+  const types = data?.sensorTypes ?? [];
+
   const form = useForm({
     defaultValues,
     validators: { onChange: sensorFormSchema },
@@ -103,54 +99,42 @@ export function SensorForm({
         )}
       </form.Field>
 
-      <form.Field name="type">
-        {(field) => (
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor={field.name}>Type</Label>
-            <Select
-              value={field.state.value}
-              onValueChange={(value) => {
-                const type = value as SensorType;
-                field.handleChange(type);
-                form.setFieldValue('unit', UNIT[type]);
-              }}
-              disabled={typeLocked}
-            >
-              <SelectTrigger id={field.name} className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {SENSOR_TYPES.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {TYPE_LABELS[type]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {typeLocked && (
-              <p className="text-[12px] text-muted-foreground">
-                Type can&apos;t change after a sensor is created.
-              </p>
-            )}
-          </div>
-        )}
-      </form.Field>
-
-      <form.Field name="unit">
-        {(field) => (
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor={field.name}>Unit</Label>
-            <Input
-              id={field.name}
-              name={field.name}
-              value={field.state.value}
-              onChange={(e) => field.handleChange(e.target.value)}
-              onBlur={field.handleBlur}
-              placeholder="°C"
-            />
-            <FieldError meta={field.state.meta} />
-          </div>
-        )}
+      <form.Field name="typeKey">
+        {(field) => {
+          const selected = types.find((t) => t.key === field.state.value);
+          return (
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor={field.name}>Type</Label>
+              <Select
+                value={field.state.value}
+                onValueChange={(value) => field.handleChange(value)}
+                disabled={typeLocked}
+              >
+                <SelectTrigger id={field.name} className="w-full">
+                  <SelectValue placeholder="Select a type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {types.map((t) => (
+                    <SelectItem key={t.key} value={t.key}>
+                      {t.label} · {t.unit}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {typeLocked ? (
+                <p className="text-[12px] text-muted-foreground">
+                  Type can&apos;t change after a sensor is created.
+                </p>
+              ) : (
+                selected && (
+                  <p className="text-[12px] text-muted-foreground">
+                    Readings will be in {selected.unit}.
+                  </p>
+                )
+              )}
+            </div>
+          );
+        }}
       </form.Field>
 
       <form.Subscribe selector={(state) => state.canSubmit}>

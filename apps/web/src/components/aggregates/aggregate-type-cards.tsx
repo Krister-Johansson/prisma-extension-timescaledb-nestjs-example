@@ -10,7 +10,7 @@ export function AggregateTypeCards({ types }: { types: TypeAverage[] }) {
         >
           <div className="flex items-center justify-between">
             <div className="font-mono text-[11px] font-semibold tracking-[0.06em] text-muted-foreground">
-              {t.type}
+              {t.label}
             </div>
             <div className="font-mono text-[11px] text-muted-2">
               {t.count} sensors

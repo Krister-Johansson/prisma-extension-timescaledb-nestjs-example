@@ -1,4 +1,5 @@
-export type SensorType = 'TEMPERATURE' | 'PRESSURE' | 'HUMIDITY';
+/** Measurement type key — dynamic now (any SensorType.key), so just a string. */
+export type SensorType = string;
 export type AlertDirection = 'ABOVE' | 'BELOW';
 
 /** Derived status shown on badges across the app. */
@@ -13,7 +14,11 @@ export interface AlertRule {
 export interface Sensor {
   id: string;
   name: string;
+  /** Measurement type key (e.g. 'CO2') — for chips + grouping. */
   type: SensorType;
+  /** Human label for the type (e.g. 'CO₂'). */
+  typeLabel: string;
+  /** Unit, sourced from the sensor's type. */
   unit: string;
   latest: number;
   /** ISO timestamp of the latest reading, or null if none. */

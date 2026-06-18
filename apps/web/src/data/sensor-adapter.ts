@@ -44,8 +44,9 @@ export function toUiSensor(sensor: GqlSensor): Sensor {
   return {
     id: sensor.id,
     name: sensor.name,
-    type: sensor.type,
-    unit: sensor.unit,
+    type: sensor.type.key,
+    typeLabel: sensor.type.label,
+    unit: sensor.type.unit,
     latest: round(latest),
     latestAt: newest?.time ?? null,
     groupId: sensor.groupId ?? null,

@@ -1,6 +1,7 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { PRISMA_CLIENT } from '../prisma/prisma-client';
 import type { ExtendedPrismaClient } from '../prisma/prisma-client';
+import { CreateSensorTypeInput } from './dto/create-sensor-type.input';
 import { CreateSensorInput } from './dto/create-sensor.input';
 import { SensorWhereInput } from './dto/sensor-where.input';
 import { UpdateSensorInput } from './dto/update-sensor.input';
@@ -14,7 +15,7 @@ export class SensorService {
   findMany(where?: SensorWhereInput) {
     return this.prisma.sensor.findMany({
       where: {
-        type: where?.type,
+        typeKey: where?.typeKey,
         name: where?.nameContains
           ? { contains: where.nameContains, mode: 'insensitive' }
           : undefined,
@@ -29,6 +30,15 @@ export class SensorService {
 
   create(input: CreateSensorInput) {
     return this.prisma.sensor.create({ data: input });
+  }
+
+  /** All measurement types — for the type picker + the types admin. */
+  findTypes() {
+    return this.prisma.sensorType.findMany({ orderBy: { label: 'asc' } });
+  }
+
+  createType(input: CreateSensorTypeInput) {
+    return this.prisma.sensorType.create({ data: input });
   }
 
   update(id: string, input: UpdateSensorInput) {
