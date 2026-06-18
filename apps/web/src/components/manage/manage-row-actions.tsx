@@ -15,9 +15,12 @@ import { useGoTo } from '@/lib/navigation';
 import { routes } from '@/lib/routes';
 
 /**
- * Per-row action menu. The kebab/menu stop click propagation so they don't
- * trigger the row's navigate-to-detail. The edit/delete dialogs are controlled
- * siblings (each owns its mutation); the menu items just open them.
+ * Per-row action menu. Wrapped so clicks/keys inside the menu and the (portaled)
+ * edit/delete dialogs don't bubble — through the React tree — to the row's
+ * navigate-to-detail handler. Without this, confirming a delete would navigate
+ * to the just-removed sensor and 404. `display: contents` keeps the layout flat.
+ * The edit/delete dialogs are controlled siblings (each owns its mutation); the
+ * menu items just open them.
  */
 export function ManageRowActions({ sensor }: { sensor: Sensor }) {
   const goTo = useGoTo();
@@ -25,7 +28,11 @@ export function ManageRowActions({ sensor }: { sensor: Sensor }) {
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   return (
-    <>
+    <span
+      className="contents"
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => e.stopPropagation()}
+    >
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -71,6 +78,6 @@ export function ManageRowActions({ sensor }: { sensor: Sensor }) {
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
       />
-    </>
+    </span>
   );
 }
