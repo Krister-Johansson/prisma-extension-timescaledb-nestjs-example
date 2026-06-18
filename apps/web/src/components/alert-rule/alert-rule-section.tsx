@@ -17,7 +17,7 @@ export function AlertRuleSection({
 }: {
   sensor: { id: string; unit: string };
 }) {
-  const { data, loading, error } = useQuery(SensorAlertRulesDocument, {
+  const { data, loading, error, refetch } = useQuery(SensorAlertRulesDocument, {
     variables: { sensorId: sensor.id },
     context: { suppressErrorToast: true },
   });
@@ -47,8 +47,18 @@ export function AlertRuleSection({
       {loading && !data ? (
         <Skeleton className="h-[120px] rounded-[12px]" />
       ) : loadError ? (
-        <div className="text-[12.5px] text-muted-foreground">
-          Couldn&apos;t load alert rules.
+        <div className="rounded-[12px] border border-dashed border-border p-8 text-center">
+          <div className="text-[12.5px] text-muted-foreground">
+            Couldn&apos;t load alert rules.
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="mt-3"
+            onClick={() => void refetch()}
+          >
+            Try again
+          </Button>
         </div>
       ) : rules.length > 0 ? (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-3.5">
