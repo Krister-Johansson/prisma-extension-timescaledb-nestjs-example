@@ -84,6 +84,24 @@ type Emulator {
   sensorId: ID!
 }
 
+type GroupSeries {
+  agg: SeriesAgg!
+  groupId: ID!
+  points: [GroupSeriesPoint!]!
+  type: SensorType
+}
+
+type GroupSeriesPoint {
+  bucket: DateTime!
+  value: Float
+}
+
+input GroupSeriesSpecInput {
+  agg: SeriesAgg! = AVG
+  groupId: ID!
+  type: SensorType
+}
+
 enum HypertableModel {
   SensorReading
 }
@@ -131,6 +149,7 @@ type Query {
   alertEvents(sensorId: ID, take: Int): [AlertEvent!]!
   alertRules(sensorId: ID!): [AlertRule!]!
   emulators: [Emulator!]!
+  groupSeries(bucket: String! = "1 hour", end: DateTime!, specs: [GroupSeriesSpecInput!]!, start: DateTime!): [GroupSeries!]!
   hypertableStats(model: HypertableModel!): HypertableStats!
   sensor(id: ID!): Sensor!
   sensorGroups: [SensorGroup!]!
@@ -215,6 +234,12 @@ input SensorWhereInput {
   """Case-insensitive substring match on name."""
   nameContains: String
   type: SensorType
+}
+
+enum SeriesAgg {
+  AVG
+  MAX
+  MIN
 }
 
 type Subscription {
