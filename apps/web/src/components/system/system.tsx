@@ -1,31 +1,80 @@
-import { CHUNKS, COMPRESSION } from '@/data/system';
+import { useQuery } from '@apollo/client/react';
+import { QueryError } from '@/components/common/query-error';
+import { Skeleton } from '@/components/ui/skeleton';
+import { formatBytes, formatCount } from '@/data/format';
+import { HypertableStatsDocument } from '@/graphql/system.generated';
 import { SystemGauge } from './system-gauge';
-import { SystemStatCards } from './system-stat-cards';
+import { type SystemStat, SystemStatCards } from './system-stat-cards';
 import { SystemStorage } from './system-storage';
 
 const gaugeCard =
   'flex flex-col items-center rounded-[14px] border border-border bg-card p-5 shadow-sm';
 
 export function System() {
-  const chunkPct = CHUNKS.total
-    ? Math.min(1, Math.max(0, CHUNKS.compressed / CHUNKS.total))
-    : 0;
+  const { data, loading, error } = useQuery(HypertableStatsDocument, {
+    variables: { model: 'SensorReading' },
+    pollInterval: 15_000,
+    context: { suppressErrorToast: true },
+  });
+
+  if (loading && !data) {
+    return (
+      <div className="flex flex-col gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-[104px] rounded-[14px]" />
+          ))}
+        </div>
+        <Skeleton className="h-[220px] rounded-[14px]" />
+      </div>
+    );
+  }
+  if (error || !data) return <QueryError message={error?.message} />;
+
+  const s = data.hypertableStats;
+  const rows = formatCount(s.approximateRowCount);
+  const size = formatBytes(s.totalBytes);
+  const index = formatBytes(s.indexBytes);
+
+  const stats: SystemStat[] = [
+    { label: 'TOTAL READINGS', value: rows.value, unit: rows.unit, sub: 'across all chunks' },
+    { label: 'HYPERTABLE SIZE', value: size.value, unit: size.unit, sub: 'table + indexes + toast' },
+    { label: 'INDEX SIZE', value: index.value, unit: index.unit, sub: 'on (sensorId, time)' },
+    {
+      label: 'CHUNKS',
+      value: String(s.totalChunks),
+      unit: '',
+      sub: `${s.compressedChunks} compressed`,
+    },
+  ];
+
+  const before = s.beforeCompressionBytes;
+  const after = s.afterCompressionBytes;
+  const compressed =
+    before != null && after != null && before > 0 && after > 0;
+  const ratio = compressed ? before / after : null;
+  const savedPct = compressed ? Math.max(0, 1 - after / before) : 0;
+  const chunkPct = s.totalChunks ? s.compressedChunks / s.totalChunks : 0;
 
   return (
     <div className="flex flex-col gap-4">
-      <SystemStatCards />
+      <SystemStatCards stats={stats} />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1.3fr]">
         <div className={gaugeCard}>
           <div className="self-start text-sm font-semibold">
             Compression ratio
           </div>
           <SystemGauge
-            percent={COMPRESSION.savedPct}
-            value={COMPRESSION.ratio}
-            caption="compression"
+            percent={savedPct}
+            value={ratio !== null ? `${ratio.toFixed(1)}×` : '—'}
+            caption="saved"
             color="var(--primary)"
           />
-          <div className="text-xs text-muted-foreground">{COMPRESSION.sub}</div>
+          <div className="text-xs text-muted-foreground">
+            {compressed
+              ? `${Math.round(savedPct * 100)}% space saved (columnstore)`
+              : 'no compressed chunks yet (compresses after 7 days)'}
+          </div>
         </div>
 
         <div className={gaugeCard}>
@@ -39,11 +88,17 @@ export function System() {
             color="var(--ok)"
           />
           <div className="text-xs text-muted-foreground">
-            {CHUNKS.compressed} / {CHUNKS.total} chunks
+            {s.compressedChunks} / {s.totalChunks} chunks
           </div>
         </div>
 
-        <SystemStorage />
+        <SystemStorage
+          rows={[
+            { label: 'Table data', bytes: s.tableBytes },
+            { label: 'Indexes', bytes: s.indexBytes },
+            { label: 'TOAST', bytes: s.toastBytes },
+          ]}
+        />
       </div>
     </div>
   );

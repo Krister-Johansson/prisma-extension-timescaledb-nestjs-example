@@ -1,0 +1,13 @@
+query HypertableStats($model: HypertableModel!) {
+  hypertableStats(model: $model) {
+    approximateRowCount
+    totalBytes
+    tableBytes
+    indexBytes
+    toastBytes
+    totalChunks
+    compressedChunks
+    beforeCompressionBytes
+    afterCompressionBytes
+  }
+}
