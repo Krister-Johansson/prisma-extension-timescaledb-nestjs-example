@@ -5,7 +5,7 @@ export const Route = createFileRoute('/manage')({
   staticData: {
     title: 'Manage sensors',
     subtitle: 'Create sensors and configure alert rules',
-    crumb: 'Manage sensors',
+    crumb: 'Manage',
   },
   component: Manage,
 });
