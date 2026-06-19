@@ -14,6 +14,7 @@ import {
 import { AggregateChart } from './aggregate-chart';
 import { AggregateOverlay } from './aggregate-overlay';
 import { AggregateTypeCards } from './aggregate-type-cards';
+import { PeriodOverlay } from './period-overlay';
 import { TableBuckets } from './table-buckets';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -78,6 +79,8 @@ export function Aggregates() {
       <AggregateChart sensors={sensors} />
 
       <AggregateOverlay />
+
+      <PeriodOverlay />
 
       <div className="flex items-center justify-between pt-2">
         <span className="text-xs text-muted-2">
