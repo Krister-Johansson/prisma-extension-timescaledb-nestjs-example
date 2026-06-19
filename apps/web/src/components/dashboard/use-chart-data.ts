@@ -30,18 +30,38 @@ export interface ChartData {
   loading: boolean;
 }
 
-function seriesLabel(s: ChartSeries, catalog: Catalog): string {
+/** Label/unit for a plain (sensor or group) series — the operands a delta
+ * refers to. */
+function baseLabel(s: ChartSeries, catalog: Catalog): string {
   if (s.label) return s.label;
   if (s.scope === 'sensor')
     return catalog.sensorById.get(s.sensorId ?? '')?.name ?? 'Sensor';
   const g = catalog.groupById.get(s.groupId ?? '')?.name ?? 'Group';
   const t = catalog.typeByKey.get(s.typeKey ?? '')?.label ?? '';
-  return `${g} · ${t}`.replace(/ · $/, '');
+  return `${g} · ${t}`.replace(/ · $/, '') || 'Series';
 }
-function seriesUnit(s: ChartSeries, catalog: Catalog): string {
+function baseUnit(s: ChartSeries, catalog: Catalog): string {
   return s.scope === 'sensor'
     ? (catalog.sensorById.get(s.sensorId ?? '')?.type.unit ?? '')
     : (catalog.typeByKey.get(s.typeKey ?? '')?.unit ?? '');
+}
+
+function seriesLabel(s: ChartSeries, catalog: Catalog, all: ChartSeries[]): string {
+  if (s.label) return s.label;
+  if (s.scope === 'delta') {
+    const a = s.deltaA != null ? all[s.deltaA] : undefined;
+    const b = s.deltaB != null ? all[s.deltaB] : undefined;
+    return `Δ ${a ? baseLabel(a, catalog) : '?'} − ${b ? baseLabel(b, catalog) : '?'}`;
+  }
+  return baseLabel(s, catalog);
+}
+function seriesUnit(s: ChartSeries, catalog: Catalog, all: ChartSeries[]): string {
+  // A delta is a difference of two like-typed series — same unit as operand A.
+  if (s.scope === 'delta') {
+    const a = s.deltaA != null ? all[s.deltaA] : undefined;
+    return a ? baseUnit(a, catalog) : '';
+  }
+  return baseUnit(s, catalog);
 }
 
 /** Resolve every configured series (group + sensor) over the window and merge
@@ -127,6 +147,20 @@ export function useChartData(cfg: ChartConfig): ChartData {
         row(new Date(b.bucket).getTime())[`s${x.i}`] = b.avg;
     });
 
+    // Delta series are computed from two already-merged series (by index), on the
+    // same rows: s{i} = s{deltaA} − s{deltaB} where both operands have a value.
+    cfg.series.forEach((s, i) => {
+      if (s.scope !== 'delta' || !chartSeriesComplete(s)) return;
+      const ka = `s${s.deltaA}`;
+      const kb = `s${s.deltaB}`;
+      for (const r of byTime.values()) {
+        const a = r[ka];
+        const b = r[kb];
+        r[`s${i}`] =
+          typeof a === 'number' && typeof b === 'number' ? a - b : null;
+      }
+    });
+
     const rows = [...byTime.entries()]
       .sort((a, b) => a[0] - b[0])
       .map(([, r]) => r);
@@ -135,14 +169,14 @@ export function useChartData(cfg: ChartConfig): ChartData {
       .filter((x) => chartSeriesComplete(x.s))
       .map((x) => ({
         key: `s${x.i}`,
-        label: seriesLabel(x.s, catalog),
+        label: seriesLabel(x.s, catalog, cfg.series),
         color: SERIES_COLORS[x.i % SERIES_COLORS.length],
       }));
     // Only consider rendered (complete) series so the header unit matches.
     const unit =
       cfg.series
         .filter(chartSeriesComplete)
-        .map((s) => seriesUnit(s, catalog))
+        .map((s) => seriesUnit(s, catalog, cfg.series))
         .find(Boolean) ?? '';
 
     return {
