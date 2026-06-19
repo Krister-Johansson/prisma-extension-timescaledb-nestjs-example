@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from '@apollo/client/react';
 import { Lock, Plus, Unlock } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,13 +40,12 @@ export function Dashboards() {
   const { data, loading } = useQuery(DashboardsDocument);
   const dashboards = data?.dashboards ?? [];
 
+  // activeSlug holds the user's explicit tab choice; `active` derives from it and
+  // falls back to the first dashboard, so no effect is needed to "sync" it (a
+  // stale slug — e.g. after delete — simply falls back).
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
   const active =
     dashboards.find((d) => d.slug === activeSlug) ?? dashboards[0] ?? null;
-  // Keep the active slug pointed at a real dashboard as data loads/changes.
-  useEffect(() => {
-    if (active && active.slug !== activeSlug) setActiveSlug(active.slug);
-  }, [active, activeSlug]);
 
   const refetchQueries = [{ query: DashboardsDocument }];
   const [createDashboard] = useMutation(CreateDashboardDocument, {

@@ -43,7 +43,7 @@ const c = <T>(schema: z.ZodType<T>, fallback: T) => schema.catch(fallback);
  * (averaged across the group's subtree). Parsed leniently so a malformed or
  * partial blob still yields a usable widget rather than throwing.
  */
-export const statConfigSchema = z.object({
+const statConfigSchema = z.object({
   title: c(z.string().max(60).optional(), undefined),
   scope: c(z.enum(['sensor', 'group']), 'sensor'),
   sensorId: c(z.string().optional(), undefined),
@@ -84,7 +84,7 @@ const chartSeriesSchema = z.object({
 });
 export type ChartSeries = z.infer<typeof chartSeriesSchema>;
 
-export const chartConfigSchema = z.object({
+const chartConfigSchema = z.object({
   title: c(z.string().max(60).optional(), undefined),
   window: c(z.enum(WINDOWS), '7d'),
   chartType: c(z.enum(CHART_TYPES), 'line'),
@@ -106,7 +106,7 @@ export function chartSeriesComplete(s: ChartSeries): boolean {
 
 /** A gauge reuses the Stat source + reduces to a value, shown against a range
  * with optional warning/danger thresholds. */
-export const gaugeConfigSchema = z.object({
+const gaugeConfigSchema = z.object({
   title: c(z.string().max(60).optional(), undefined),
   scope: c(z.enum(['sensor', 'group']), 'group'),
   sensorId: c(z.string().optional(), undefined),
@@ -129,7 +129,7 @@ export const gaugeConfigComplete = (cfg: GaugeConfig): boolean =>
 
 // ---- alerts widget ---------------------------------------------------------
 
-export const alertsConfigSchema = z.object({
+const alertsConfigSchema = z.object({
   title: c(z.string().max(60).optional(), undefined),
   limit: c(z.number().int().min(1).max(50), 8),
 });
@@ -140,7 +140,7 @@ export const parseAlertsConfig = (config: unknown): AlertsConfig =>
 // ---- sensor table widget ---------------------------------------------------
 
 /** Empty group/type = all sensors. group includes the whole subtree. */
-export const tableConfigSchema = z.object({
+const tableConfigSchema = z.object({
   title: c(z.string().max(60).optional(), undefined),
   groupId: c(z.string().optional(), undefined),
   typeKey: c(z.string().optional(), undefined),

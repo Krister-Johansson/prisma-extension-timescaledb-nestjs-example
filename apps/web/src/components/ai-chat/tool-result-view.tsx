@@ -142,7 +142,7 @@ function ChartTip({
     <div className="rounded-md border border-border bg-popover px-2 py-1 text-[11px] shadow-md">
       <div className="mb-0.5 text-muted-2">{label}</div>
       {payload.map((p, i) => (
-        <div key={i} className="flex items-center gap-1.5">
+        <div key={p.name ?? i} className="flex items-center gap-1.5">
           <span
             className="size-2 rounded-full"
             style={{ background: p.color }}
@@ -207,7 +207,7 @@ function CompareView({ o }: { o: CompareOut }) {
           <Tooltip content={<ChartTip />} />
           {o.series.map((s, i) => (
             <Line
-              key={i}
+              key={s.label ?? i}
               name={s.label}
               dataKey={`s${i}`}
               type="monotone"
@@ -221,7 +221,7 @@ function CompareView({ o }: { o: CompareOut }) {
       </ResponsiveContainer>
       <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
         {o.series.map((s, i) => (
-          <span key={i} className="flex items-center gap-1 text-[10.5px]">
+          <span key={s.label ?? i} className="flex items-center gap-1 text-[10.5px]">
             <span
               className="size-2 rounded-full"
               style={{ background: SERIES_COLORS[i % SERIES_COLORS.length] }}
