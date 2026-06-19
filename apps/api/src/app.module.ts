@@ -19,6 +19,7 @@ import { EmulatorTools } from './mcp/tools/emulator.tools';
 import { GroupTools } from './mcp/tools/group.tools';
 import { SensorTypeTools } from './mcp/tools/sensor-type.tools';
 import { SensorTools } from './mcp/tools/sensor.tools';
+import { AgentModule } from './agent/agent.module';
 import { ExtendedPrismaClient, PRISMA_CLIENT } from './prisma/prisma-client';
 import { PrismaModule } from './prisma/prisma.module';
 import { PubSubModule } from './pubsub/pubsub.module';
@@ -40,6 +41,14 @@ const MCP_TOOLS = [
   EmulatorTools,
   DataTools,
 ];
+
+// The /agent/chat endpoint has no auth and calls a paid model. Require BOTH an
+// OpenRouter key AND an explicit opt-in (dev, or AI_CHAT_ENABLED=true) — so a
+// key configured for some other reason never auto-exposes it in production.
+const AGENT_ENABLED =
+  Boolean(process.env.OPENROUTER_API_KEY) &&
+  (process.env.AI_CHAT_ENABLED === 'true' ||
+    process.env.NODE_ENV !== 'production');
 
 @Module({
   imports: [
@@ -79,6 +88,7 @@ const MCP_TOOLS = [
     EmulatorModule,
     GroupModule,
     TimescaleAdminModule,
+    ...(AGENT_ENABLED ? [AgentModule] : []),
   ],
   providers: [
     // MCP @Tool providers — mcp-nest discovers them in the module that hosts
