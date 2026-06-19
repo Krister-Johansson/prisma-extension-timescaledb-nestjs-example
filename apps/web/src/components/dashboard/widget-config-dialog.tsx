@@ -206,6 +206,26 @@ function ChartFields({
       series: cfg.series.map((s, i) => (i === idx ? { ...s, ...p } : s)),
     });
 
+  // Short label for a series, used when picking delta operands.
+  const optionLabel = (s: ChartSeries, i: number): string => {
+    if (s.label) return s.label;
+    if (s.scope === 'sensor')
+      return catalog.sensorById.get(s.sensorId ?? '')?.name ?? `Series ${i + 1}`;
+    if (s.scope === 'group') {
+      const g = catalog.groupById.get(s.groupId ?? '')?.name;
+      const t = catalog.typeByKey.get(s.typeKey ?? '')?.label;
+      return g && t ? `${g} · ${t}` : `Series ${i + 1}`;
+    }
+    return `Series ${i + 1}`;
+  };
+  // Delta operands can be any other non-delta series in this chart.
+  const operandOptions = (selfIdx: number) =>
+    cfg.series.flatMap((s, i) =>
+      i !== selfIdx && s.scope !== 'delta'
+        ? [{ value: String(i), label: optionLabel(s, i) }]
+        : [],
+    );
+
   return (
     <>
       <div className="grid grid-cols-2 gap-2">
@@ -262,6 +282,14 @@ function ChartFields({
               </Button>
               <Button
                 type="button"
+                size="xs"
+                variant={s.scope === 'delta' ? 'default' : 'outline'}
+                onClick={() => updateSeries(idx, { scope: 'delta' })}
+              >
+                Delta
+              </Button>
+              <Button
+                type="button"
                 size="icon-xs"
                 variant="ghost"
                 className="ml-auto"
@@ -273,56 +301,94 @@ function ChartFields({
                 <Trash2 className="size-3.5" />
               </Button>
             </div>
-            {s.scope === 'sensor' ? (
-              <SelectBox
-                value={s.sensorId}
-                placeholder="Sensor"
-                onValueChange={(v) => updateSeries(idx, { sensorId: v })}
-                options={catalog.sensors.map((x) => ({
-                  value: x.id,
-                  label: x.name,
-                }))}
-              />
+            {s.scope === 'delta' ? (
+              <>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <SelectBox
+                    value={s.deltaA != null ? String(s.deltaA) : undefined}
+                    placeholder="Series A"
+                    onValueChange={(v) =>
+                      updateSeries(idx, { deltaA: Number(v) })
+                    }
+                    options={operandOptions(idx).filter(
+                      (o) => o.value !== String(s.deltaB),
+                    )}
+                  />
+                  <SelectBox
+                    value={s.deltaB != null ? String(s.deltaB) : undefined}
+                    placeholder="− Series B"
+                    onValueChange={(v) =>
+                      updateSeries(idx, { deltaB: Number(v) })
+                    }
+                    options={operandOptions(idx).filter(
+                      (o) => o.value !== String(s.deltaA),
+                    )}
+                  />
+                </div>
+                <Input
+                  className="h-8 text-[13px]"
+                  placeholder="Label (optional)"
+                  value={s.label ?? ''}
+                  maxLength={40}
+                  onChange={(e) =>
+                    updateSeries(idx, { label: e.target.value || undefined })
+                  }
+                />
+              </>
             ) : (
-              <div className="grid grid-cols-2 gap-1.5">
-                <SelectBox
-                  value={s.groupId}
-                  placeholder="Group"
-                  onValueChange={(v) => updateSeries(idx, { groupId: v })}
-                  options={catalog.groups.map((g) => ({
-                    value: g.id,
-                    label: g.name,
-                  }))}
-                />
-                <SelectBox
-                  value={s.typeKey}
-                  placeholder="Type"
-                  onValueChange={(v) => updateSeries(idx, { typeKey: v })}
-                  options={catalog.types.map((t) => ({
-                    value: t.key,
-                    label: t.label,
-                  }))}
-                />
-              </div>
+              <>
+                {s.scope === 'sensor' ? (
+                  <SelectBox
+                    value={s.sensorId}
+                    placeholder="Sensor"
+                    onValueChange={(v) => updateSeries(idx, { sensorId: v })}
+                    options={catalog.sensors.map((x) => ({
+                      value: x.id,
+                      label: x.name,
+                    }))}
+                  />
+                ) : (
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <SelectBox
+                      value={s.groupId}
+                      placeholder="Group"
+                      onValueChange={(v) => updateSeries(idx, { groupId: v })}
+                      options={catalog.groups.map((g) => ({
+                        value: g.id,
+                        label: g.name,
+                      }))}
+                    />
+                    <SelectBox
+                      value={s.typeKey}
+                      placeholder="Type"
+                      onValueChange={(v) => updateSeries(idx, { typeKey: v })}
+                      options={catalog.types.map((t) => ({
+                        value: t.key,
+                        label: t.label,
+                      }))}
+                    />
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-1.5">
+                  <SelectBox
+                    value={s.agg}
+                    onValueChange={(v) =>
+                      updateSeries(idx, { agg: v as ChartSeries['agg'] })
+                    }
+                    options={SERIES_AGGS.map((a) => ({ value: a, label: a }))}
+                  />
+                  <Input
+                    className="h-8 text-[13px]"
+                    placeholder="Label (optional)"
+                    value={s.label ?? ''}
+                    maxLength={40}
+                    onChange={(e) =>
+                      updateSeries(idx, { label: e.target.value || undefined })
+                    }
+                  />
+                </div>
+              </>
             )}
-            <div className="grid grid-cols-2 gap-1.5">
-              <SelectBox
-                value={s.agg}
-                onValueChange={(v) =>
-                  updateSeries(idx, { agg: v as ChartSeries['agg'] })
-                }
-                options={SERIES_AGGS.map((a) => ({ value: a, label: a }))}
-              />
-              <Input
-                className="h-8 text-[13px]"
-                placeholder="Label (optional)"
-                value={s.label ?? ''}
-                maxLength={40}
-                onChange={(e) =>
-                  updateSeries(idx, { label: e.target.value || undefined })
-                }
-              />
-            </div>
           </div>
         ))}
         {cfg.series.length < 6 && (
@@ -340,6 +406,8 @@ function ChartFields({
                     sensorId: undefined,
                     groupId: undefined,
                     typeKey: undefined,
+                    deltaA: undefined,
+                    deltaB: undefined,
                     label: undefined,
                   },
                 ],

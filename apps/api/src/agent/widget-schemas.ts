@@ -42,11 +42,15 @@ const gaugeConfig = z.object({
 });
 
 const chartSeries = z.object({
-  scope: scopeEnum,
+  // A chart series is a sensor, a group+type aggregate, or a "delta" — the
+  // difference of two other series in the same chart (by 0-based index).
+  scope: z.enum(['sensor', 'group', 'delta']),
   sensorId: z.string().optional(),
   groupId: z.string().optional(),
   typeKey: z.string().optional(),
   agg: z.enum(SERIES_AGGS).default('AVG'),
+  deltaA: z.number().int().optional(),
+  deltaB: z.number().int().optional(),
   label: z.string().max(40).optional(),
 });
 
@@ -121,6 +125,20 @@ function sourceReason(c: SourceLike): string | null {
     : 'group scope requires a groupId and a typeKey';
 }
 
+type ChartSeriesLike = SourceLike & { deltaA?: number; deltaB?: number };
+
+function chartSeriesReason(s: ChartSeriesLike, count: number): string | null {
+  if (s.scope === 'delta') {
+    if (s.deltaA == null || s.deltaB == null)
+      return 'a delta series requires deltaA and deltaB (0-based indexes of two other series in this chart)';
+    const ok = (n: number) => Number.isInteger(n) && n >= 0 && n < count;
+    return ok(s.deltaA) && ok(s.deltaB)
+      ? null
+      : 'delta deltaA/deltaB must index existing series in this chart';
+  }
+  return sourceReason(s);
+}
+
 /** Why a generated widget can't be rendered yet, or null if it's complete.
  * Lets the tool reject under-specified widgets so the model self-corrects. */
 export function widgetIncompleteReason(w: AddWidgetInput): string | null {
@@ -130,7 +148,7 @@ export function widgetIncompleteReason(w: AddWidgetInput): string | null {
       return sourceReason(w.config);
     case 'chart': {
       for (const s of w.config.series) {
-        const r = sourceReason(s);
+        const r = chartSeriesReason(s, w.config.series.length);
         if (r) return `a chart series is invalid: ${r}`;
       }
       return null;

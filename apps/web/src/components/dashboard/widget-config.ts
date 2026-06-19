@@ -100,13 +100,17 @@ export type SeriesAggKey = (typeof SERIES_AGGS)[number];
 export const CHART_TYPES = ['line', 'area', 'bar'] as const;
 export type ChartType = (typeof CHART_TYPES)[number];
 
-/** One line/series on a chart — a single sensor or a group + type aggregate. */
+/** One line/series on a chart: a single sensor, a group + type aggregate, or a
+ * "delta" — the computed difference between two other series in the same chart
+ * (`series[deltaA] − series[deltaB]`, by their 0-based index). */
 const chartSeriesSchema = z.object({
-  scope: c(z.enum(['sensor', 'group']), 'group'),
+  scope: c(z.enum(['sensor', 'group', 'delta']), 'group'),
   sensorId: c(z.string().optional(), undefined),
   groupId: c(z.string().optional(), undefined),
   typeKey: c(z.string().optional(), undefined),
   agg: c(z.enum(SERIES_AGGS), 'AVG'),
+  deltaA: c(z.number().int().optional(), undefined),
+  deltaB: c(z.number().int().optional(), undefined),
   label: c(z.string().max(40).optional(), undefined),
 });
 export type ChartSeries = z.infer<typeof chartSeriesSchema>;
@@ -124,6 +128,7 @@ export function parseChartConfig(config: unknown): ChartConfig {
 }
 
 export function chartSeriesComplete(s: ChartSeries): boolean {
+  if (s.scope === 'delta') return s.deltaA != null && s.deltaB != null;
   return s.scope === 'sensor'
     ? Boolean(s.sensorId)
     : Boolean(s.groupId && s.typeKey);
