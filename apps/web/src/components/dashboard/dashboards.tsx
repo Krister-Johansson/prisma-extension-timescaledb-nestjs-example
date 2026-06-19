@@ -29,6 +29,7 @@ import {
   UpdateWidgetLayoutDocument,
   type WidgetFieldsFragment,
 } from '@/graphql/dashboards.generated';
+import { DashboardGenerateEmpty } from './dashboard-generate-empty';
 import { DashboardGrid, type LayoutItem } from './dashboard-grid';
 import { DashboardLive } from './dashboard-live';
 import { DashboardTabs } from './dashboard-tabs';
@@ -37,7 +38,7 @@ import { WidgetConfigDialog, type WidgetSave } from './widget-config-dialog';
 import { SIZE_PRESETS, WIDGET_TYPES } from './widget-meta';
 
 export function Dashboards() {
-  const { data, loading } = useQuery(DashboardsDocument);
+  const { data, loading, refetch } = useQuery(DashboardsDocument);
   const dashboards = data?.dashboards ?? [];
 
   // activeSlug holds the user's explicit tab choice; `active` derives from it and
@@ -188,9 +189,11 @@ export function Dashboards() {
       </div>
 
       {active && active.widgets.length === 0 ? (
-        <div className="rounded-[14px] border border-dashed border-border py-16 text-center text-sm text-muted-foreground">
-          {locked ? 'This dashboard is empty.' : 'Add a widget to get started.'}
-        </div>
+        <DashboardGenerateEmpty
+          key={active.id}
+          dashboardId={active.id}
+          onGenerated={() => void refetch()}
+        />
       ) : active ? (
         // Key by dashboard id so switching tabs remounts the grid with fresh
         // layout state — avoids rgl looping when the prior dashboard's layout

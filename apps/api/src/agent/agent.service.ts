@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { z } from 'zod';
 import { AlertService } from '../alert/alert.service';
+import { DashboardService } from '../dashboard/dashboard.service';
 import { EmulatorService } from '../emulator/emulator.service';
 import { GroupService } from '../group/group.service';
 import { PRISMA_CLIENT } from '../prisma/prisma-client';
@@ -11,7 +12,17 @@ import { SensorService } from '../sensor/sensor.service';
 import { HypertableModel } from '../timescale-admin/models/hypertable-stats.model';
 import { TimescaleAdminService } from '../timescale-admin/timescale-admin.service';
 import { loadAi, type ChatParams, type TanstackAi } from './ai-runtime';
-import { buildSystemPrompt, type Catalog } from './agent.system-prompt';
+import {
+  buildDashboardPrompt,
+  buildSystemPrompt,
+  type Catalog,
+} from './agent.system-prompt';
+import {
+  addWidgetInput,
+  widgetIncompleteReason,
+  WIDGET_DEFAULT_SIZE,
+  type AddWidgetInput,
+} from './widget-schemas';
 
 /** Permissive output schema — keeps every key the tool returns (a strict
  * `z.object` would strip them, gutting the result the model sees). */
@@ -33,6 +44,7 @@ export class AgentService {
     private readonly alerts: AlertService,
     private readonly admin: TimescaleAdminService,
     private readonly emulators: EmulatorService,
+    private readonly dashboards: DashboardService,
     private readonly config: ConfigService,
   ) {}
 
@@ -74,6 +86,70 @@ export class AgentService {
     });
 
     return ai.toServerSentEventsResponse(stream);
+  }
+
+  /** Generate a dashboard's widgets from a natural-language prompt. The model
+   * calls `add_widget` once per widget; each call persists a widget (auto-laid
+   * out) to `dashboardId`, streamed back over the same AG-UI SSE transport. */
+  async generateDashboard(body: unknown): Promise<Response> {
+    const { ai, or } = await loadAi();
+    const params: ChatParams = await ai.chatParamsFromRequestBody(body);
+    const timezone = this.safeTimezone(params.forwardedProps?.timezone);
+    const rawId = params.forwardedProps?.dashboardId;
+    const dashboardId = typeof rawId === 'string' ? rawId : '';
+
+    const catalog = await this.catalog();
+    const model = this.config.get<string>(
+      'OPENROUTER_MODEL',
+      'anthropic/claude-opus-4.8',
+    );
+
+    const stream = ai.chat({
+      adapter: or.openRouterText(model),
+      systemPrompts: [buildDashboardPrompt({ timezone, catalog })],
+      messages: params.messages,
+      tools: this.buildGenerateTools(ai, dashboardId),
+      modelOptions: { reasoning: { enabled: true } },
+    });
+
+    return ai.toServerSentEventsResponse(stream);
+  }
+
+  private buildGenerateTools(ai: TanstackAi, dashboardId: string): unknown[] {
+    return [
+      ai
+        .toolDefinition({
+          name: 'add_widget',
+          description:
+            'Add one widget to the dashboard. Call once per widget you want to create; widgets are auto-arranged on the grid.',
+          inputSchema: addWidgetInput,
+          outputSchema: anyObject,
+        })
+        .server((input: AddWidgetInput) => this.addWidget(dashboardId, input)),
+    ];
+  }
+
+  /** Validate one generated widget and persist it to the dashboard. Returns an
+   * error result (rather than throwing) on an under-specified widget so the
+   * model can correct and retry. */
+  private async addWidget(dashboardId: string, input: AddWidgetInput) {
+    if (!dashboardId) return { ok: false, error: 'no dashboard to add to' };
+    const reason = widgetIncompleteReason(input);
+    if (reason) return { ok: false, error: reason };
+
+    const size = WIDGET_DEFAULT_SIZE[input.type] ?? { w: 4, h: 3 };
+    const widget = await this.dashboards.addGeneratedWidget(
+      dashboardId,
+      input.type,
+      input.config,
+      size,
+    );
+    return {
+      kind: 'widget-added',
+      type: input.type,
+      title: input.config.title ?? null,
+      id: widget.id,
+    };
   }
 
   // ---- tools ----------------------------------------------------------------

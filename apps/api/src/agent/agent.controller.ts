@@ -22,10 +22,29 @@ export class AgentController {
 
   @Post('chat')
   async chat(@Body() body: unknown, @Res() res: Response): Promise<void> {
+    await this.stream(() => this.agent.chat(body), res);
+  }
+
+  /** Generate a dashboard's widgets from a prompt (streams progress per widget).
+   * `dashboardId` + `timezone` ride along in the request's forwardedProps. */
+  @Post('generate-dashboard')
+  async generateDashboard(
+    @Body() body: unknown,
+    @Res() res: Response,
+  ): Promise<void> {
+    await this.stream(() => this.agent.generateDashboard(body), res);
+  }
+
+  /** Pipe an agent SSE Response through Express, gated on the agent being
+   * configured. */
+  private async stream(
+    produce: () => Promise<globalThis.Response>,
+    res: Response,
+  ): Promise<void> {
     if (!this.agent.enabled) {
       throw new ServiceUnavailableException('AI agent is not configured');
     }
-    const response = await this.agent.chat(body);
+    const response = await produce();
     res.status(response.status);
     response.headers.forEach((value, key) => res.setHeader(key, value));
     if (!response.body) {
