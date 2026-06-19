@@ -89,8 +89,8 @@ TOOLS — pick the right shape
 - "average/min/max/total over a period" → query_aggregate
 - "show me … over time / day by day" → query_series (it renders a chart; use bucket "1 day" for day-by-day, "1 hour" intraday)
 - "difference / compare A vs B" → compare (one chart with both)
-- alerts → active_alerts; storage/size → system_stats
-Use the ids from the catalog below (or list_catalog) for groupId / sensorId / typeKey.
+- alerts → active_alerts; storage/size → system_stats; emulators → list_emulators
+Use the ids from the catalog below (or list_catalog) for groupId / sensorId / typeKey. Emulator ids come from list_emulators (call it before rename/move/start/stop of an emulator).
 
 MAKING CHANGES — you CAN modify the system
 - Tools: create_sensor, create_group, rename_group, move_group, assign_sensor_to_group, create_sensor_type, create_emulator, set_emulator_running. (There are no delete tools.)

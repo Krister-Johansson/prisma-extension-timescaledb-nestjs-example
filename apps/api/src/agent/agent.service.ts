@@ -192,6 +192,12 @@ export class AgentService {
         z.object({}),
         () => this.admin.hypertableStats(HypertableModel.SensorReading),
       ),
+      tool(
+        'list_emulators',
+        'The value emulators with their ids, target sensor, range, interval and running state. Use these ids for set_emulator_running.',
+        z.object({}),
+        () => this.emulators.list(),
+      ),
 
       // ---- writes (approval-gated) ----
       writeTool(
@@ -300,11 +306,18 @@ export class AgentService {
     typeKey: string;
     groupId?: string;
   }) {
-    const sensor = await this.sensors.create({
-      name: i.name,
-      typeKey: i.typeKey,
+    // Atomic: if the group assignment fails (e.g. a bad groupId), the create
+    // rolls back too — no orphaned, ungrouped sensor. Returns the final state.
+    const sensor = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.sensor.create({
+        data: { name: i.name, typeKey: i.typeKey },
+      });
+      if (!i.groupId) return created;
+      return tx.sensor.update({
+        where: { id: created.id },
+        data: { groupId: i.groupId },
+      });
     });
-    if (i.groupId) await this.groups.assignSensor(sensor.id, i.groupId);
     return {
       kind: 'done',
       label: `Created sensor "${i.name}"`,
