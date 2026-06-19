@@ -1,11 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { Overview } from '@/components/overview/overview';
+import { Dashboards } from '@/components/dashboard/dashboards';
 
 export const Route = createFileRoute('/')({
   staticData: {
-    title: 'Overview',
-    subtitle: 'Real-time status across all sensors',
-    crumb: 'Overview',
+    title: 'Dashboards',
+    subtitle: 'Your customizable views',
+    crumb: 'Dashboards',
   },
-  component: Overview,
+  component: Dashboards,
 });

@@ -3,7 +3,8 @@ import type { CodegenConfig } from '@graphql-codegen/cli';
 const shared = {
   useTypeImports: true,
   enumsAsTypes: true,
-  scalars: { DateTime: 'string', ID: 'string' },
+  // Widget config is an opaque blob validated client-side by Zod per widget type.
+  scalars: { DateTime: 'string', ID: 'string', JSON: 'unknown' },
 };
 
 /**

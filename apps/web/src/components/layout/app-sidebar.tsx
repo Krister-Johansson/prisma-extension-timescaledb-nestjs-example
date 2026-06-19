@@ -18,7 +18,12 @@ interface NavItem {
 }
 
 const NAV: NavItem[] = [
-  { label: 'Overview', to: routes.overview(), icon: LayoutDashboard, exact: true },
+  {
+    label: 'Dashboards',
+    to: routes.overview(),
+    icon: LayoutDashboard,
+    exact: true,
+  },
   { label: 'Alerts', to: routes.alerts(), icon: Bell },
   { label: 'Aggregates', to: routes.aggregates(), icon: BarChart3 },
   { label: 'System', to: routes.system(), icon: Server },
