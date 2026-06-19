@@ -24,7 +24,21 @@ function Conversation() {
     forwardedProps: { timezone: TIMEZONE },
   });
   const messages = chat.messages as unknown as UIMessage[];
-  const { sendMessage, isLoading, stop, error } = chat;
+  const { sendMessage, isLoading, stop, error, addToolApprovalResponse } = chat;
+
+  const onApproval = (id: string, approved: boolean) => {
+    void addToolApprovalResponse({ id, approved });
+  };
+
+  // A tool call can appear in both the pre- and post-approval messages; keep
+  // only its final occurrence so its card (and result) renders once.
+  const lastToolPos = new Map<string, string>();
+  messages.forEach((m, mi) =>
+    m.parts.forEach((p, pi) => {
+      const id = p.id as string | undefined;
+      if (p.type === 'tool-call' && id) lastToolPos.set(id, `${mi}:${pi}`);
+    }),
+  );
 
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -61,7 +75,7 @@ function Conversation() {
             ))}
           </div>
         ) : (
-          messages.map((m) =>
+          messages.map((m, mi) =>
             m.role === 'user' ? (
               <div key={m.id} className="flex justify-end">
                 <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-primary px-3 py-1.5 text-[13px] text-primary-foreground">
@@ -73,9 +87,18 @@ function Conversation() {
               </div>
             ) : (
               <div key={m.id} className="flex flex-col gap-1.5">
-                {m.parts.map((part, i) => (
-                  <MessagePart key={i} part={part} />
-                ))}
+                {m.parts.map((part, pi) => {
+                  const id = part.id as string | undefined;
+                  if (
+                    part.type === 'tool-call' &&
+                    id &&
+                    lastToolPos.get(id) !== `${mi}:${pi}`
+                  )
+                    return null;
+                  return (
+                    <MessagePart key={pi} part={part} onApproval={onApproval} />
+                  );
+                })}
               </div>
             ),
           )

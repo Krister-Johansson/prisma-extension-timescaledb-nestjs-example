@@ -1,3 +1,4 @@
+import { Check } from 'lucide-react';
 import {
   CartesianGrid,
   Line,
@@ -60,6 +61,10 @@ interface StatsOut {
   compressionRatio?: number;
   totalBytes?: number;
 }
+interface DoneOut {
+  kind: 'done';
+  label: string;
+}
 
 export type ToolOutput =
   | SeriesOut
@@ -67,7 +72,8 @@ export type ToolOutput =
   | StatOut
   | ValuesOut
   | AlertsOut
-  | StatsOut;
+  | StatsOut
+  | DoneOut;
 
 export const RENDERABLE_KINDS = new Set([
   'series',
@@ -76,6 +82,7 @@ export const RENDERABLE_KINDS = new Set([
   'values',
   'alerts',
   'stats',
+  'done',
 ]);
 
 // ---- helpers ---------------------------------------------------------------
@@ -306,6 +313,15 @@ function StatsView({ o }: { o: StatsOut }) {
   );
 }
 
+function DoneView({ o }: { o: DoneOut }) {
+  return (
+    <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-2 px-2.5 py-1 text-[12px] text-foreground">
+      <Check className="size-3.5 text-primary" />
+      {o.label}
+    </div>
+  );
+}
+
 /** Render a tool's structured output as a chart/card. Returns null for outputs
  * without a renderable `kind`. */
 export function ToolResultView({ output }: { output: ToolOutput }) {
@@ -322,6 +338,8 @@ export function ToolResultView({ output }: { output: ToolOutput }) {
       return <AlertsView o={output} />;
     case 'stats':
       return <StatsView o={output} />;
+    case 'done':
+      return <DoneView o={output} />;
     default:
       return null;
   }
