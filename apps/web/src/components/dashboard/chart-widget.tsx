@@ -51,9 +51,19 @@ function ChartTip({
   label?: string;
 }) {
   if (!active || !payload?.length) return null;
+  // `label` is the point's ISO timestamp (the x dataKey); show date + time so
+  // the hovered point is unambiguous.
+  const when = label
+    ? new Date(label).toLocaleString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : '';
   return (
     <div className="rounded-md border border-border bg-popover px-2 py-1 text-[11px] shadow-md">
-      <div className="mb-0.5 text-muted-2">{label}</div>
+      <div className="mb-0.5 text-muted-2">{when}</div>
       {payload.map((p, i) => (
         <div key={p.name ?? i} className="flex items-center gap-1.5">
           <span className="size-2 rounded-full" style={{ background: p.color }} />
@@ -131,10 +141,6 @@ export function ChartWidget({ widget }: { widget: WidgetFieldsFragment }) {
   }
 
   const multiDay = windowIsMultiDay(cfg.window);
-  const rows = data.rows.map((r) => ({
-    ...r,
-    label: fmtAxis(r.t as string, multiDay),
-  }));
   const Chart =
     cfg.chartType === 'area'
       ? AreaChart
@@ -152,9 +158,14 @@ export function ChartWidget({ widget }: { widget: WidgetFieldsFragment }) {
       </div>
       <div className="min-h-0 flex-1">
         <ResponsiveContainer width="100%" height="100%">
-          <Chart data={rows} margin={{ left: 0, right: 8, top: 4, bottom: 0 }}>
+          <Chart data={data.rows} margin={{ left: 0, right: 8, top: 4, bottom: 0 }}>
             <CartesianGrid vertical={false} stroke="var(--grid)" />
-            <XAxis dataKey="label" minTickGap={28} tick={axisTick} />
+            <XAxis
+              dataKey="t"
+              tickFormatter={(t: string) => fmtAxis(t, multiDay)}
+              minTickGap={multiDay ? 44 : 28}
+              tick={axisTick}
+            />
             <YAxis width={32} tick={axisTick} domain={['auto', 'auto']} />
             <Tooltip content={<ChartTip />} />
             {data.series.map((s) =>
