@@ -55,9 +55,6 @@ export class Dashboard {
   @Field(() => Int)
   position!: number;
 
-  @Field()
-  locked!: boolean;
-
   @Field(() => GraphQLISODateTime)
   createdAt!: Date;
 

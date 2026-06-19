@@ -60,7 +60,10 @@ export function AppBreadcrumb() {
   });
 
   const crumbs = buildCrumbs(matches, sensorId, data?.sensor?.name);
-  if (crumbs.length === 0) return null;
+  // The dashboards home is the app root — its "Dashboard / Dashboards" trail is
+  // redundant with the page title, so skip the breadcrumb there.
+  const onDashboardsHome = matches.at(-1)?.routeId === '/';
+  if (crumbs.length === 0 || onDashboardsHome) return null;
 
   return (
     <Breadcrumb className="mb-[18px]">

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 // The v2 core restructured drag/resize into a `gridConfig` object the responsive
 // component doesn't expose; the `/legacy` entry keeps the classic flat props
 // (isDraggable, draggableHandle, onDragStop, …) on the same React-19-safe core.
@@ -25,17 +25,7 @@ export interface LayoutItem {
   w: number;
   h: number;
 }
-
-const toLayout = (widgets: WidgetFieldsFragment[]): Layout =>
-  widgets.map((w) => ({
-    i: w.id,
-    x: w.x,
-    y: w.y,
-    w: w.w,
-    h: w.h,
-    minW: 2,
-    minH: 2,
-  }));
+type Pos = { x: number; y: number; w: number; h: number };
 
 export function DashboardGrid({
   widgets,
@@ -51,23 +41,44 @@ export function DashboardGrid({
   onRemove: (w: WidgetFieldsFragment) => void;
 }) {
   const { width, containerRef, mounted } = useContainerWidth();
-  const [layout, setLayout] = useState<Layout>(() => toLayout(widgets));
+  // Positions changed by drag/resize this session (not yet reflected in props).
+  const [overrides, setOverrides] = useState<Record<string, Pos>>({});
 
-  // Re-sync only when the widget set changes structurally (add/remove/resize from
-  // a config), not on our own in-flight drags — keyed on a position signature.
+  // Layout is DERIVED from the current widgets (+ session overrides) every
+  // render, so it always has exactly one entry per rendered child. That avoids
+  // the controlled-state lag where rgl sees a child with no layout entry,
+  // regenerates one, fires onLayoutChange → setState → re-render → repeat
+  // ("Maximum update depth"). There is intentionally no onLayoutChange handler.
   const sig = widgets
     .map((w) => `${w.id}:${w.x},${w.y},${w.w},${w.h}`)
     .join('|');
-  useEffect(() => {
-    setLayout(toLayout(widgets));
+  const layouts = useMemo(() => {
+    const layout: Layout = widgets.map((w) => {
+      const o = overrides[w.id];
+      return {
+        i: w.id,
+        x: o?.x ?? w.x,
+        y: o?.y ?? w.y,
+        w: o?.w ?? w.w,
+        h: o?.h ?? w.h,
+        minW: 2,
+        minH: 2,
+      };
+    });
+    return { lg: layout, md: layout, sm: layout, xs: layout, xxs: layout };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sig encodes widgets
-  }, [sig]);
+  }, [sig, overrides]);
 
-  const persist = (current: Layout) => {
+  const commit = (current: Layout) => {
     // Only persist edits made on the canonical 12-col (lg) layout — the backend
     // stores one x/y/w/h per widget, so saving a reflowed small-screen layout
     // would corrupt the desktop arrangement.
     if (breakpointFor(width) !== 'lg') return;
+    setOverrides((prev) => {
+      const next = { ...prev };
+      for (const l of current) next[l.i] = { x: l.x, y: l.y, w: l.w, h: l.h };
+      return next;
+    });
     onPersist(current.map((l) => ({ id: l.i, x: l.x, y: l.y, w: l.w, h: l.h })));
   };
 
@@ -76,7 +87,7 @@ export function DashboardGrid({
       {mounted && (
         <Responsive
           className="dashboard-grid"
-          layouts={{ lg: layout, md: layout, sm: layout, xs: layout, xxs: layout }}
+          layouts={layouts}
           width={width}
           breakpoints={BREAKPOINTS}
           cols={COLS}
@@ -89,9 +100,8 @@ export function DashboardGrid({
           compactType="vertical"
           preventCollision={false}
           resizeHandles={['se']}
-          onLayoutChange={(current) => setLayout(current)}
-          onDragStop={(current) => persist(current)}
-          onResizeStop={(current) => persist(current)}
+          onDragStop={(current) => commit(current)}
+          onResizeStop={(current) => commit(current)}
         >
           {widgets.map((w) => (
             <div key={w.id}>

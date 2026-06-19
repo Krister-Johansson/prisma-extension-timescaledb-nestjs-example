@@ -164,7 +164,6 @@ model Dashboard {
   name      String
   slug      String   @unique
   position  Int      @default(0)
-  locked    Boolean  @default(false)
   createdAt DateTime @default(now())
   widgets   Widget[]
 }

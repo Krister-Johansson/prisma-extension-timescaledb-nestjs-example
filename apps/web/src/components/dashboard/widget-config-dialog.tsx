@@ -661,7 +661,18 @@ export function WidgetConfigDialog({
 }) {
   return (
     <Dialog open={widget !== null} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-md">
+      <DialogContent
+        className="max-w-md"
+        // The Select/Popover dropdowns render in a portal outside the dialog, so
+        // dismissing one reads as an "interact outside". Ignore those so only a
+        // genuine outside click closes the dialog.
+        onInteractOutside={(e) => {
+          const target = e.target as HTMLElement | null;
+          if (target?.closest('[data-radix-popper-content-wrapper]')) {
+            e.preventDefault();
+          }
+        }}
+      >
         {widget && (
           // Key by id so switching the target widget remounts the form with
           // fresh state instead of keeping the previous widget's values.

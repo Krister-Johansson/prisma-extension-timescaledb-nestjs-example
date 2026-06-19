@@ -66,6 +66,9 @@ export function Dashboards() {
   const [configuring, setConfiguring] = useState<WidgetFieldsFragment | null>(
     null,
   );
+  // Lock is a client-side view preference — dashboards open locked; the toggle is
+  // local and resets to locked on reload.
+  const [locked, setLocked] = useState(true);
   const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const onCreate = async (name: string) => {
@@ -84,12 +87,7 @@ export function Dashboards() {
     setActiveSlug(fallback);
     setConfirmDelete(false);
   };
-  const toggleLock = () => {
-    if (active)
-      updateDashboard({
-        variables: { id: active.id, input: { locked: !active.locked } },
-      });
-  };
+  const toggleLock = () => setLocked((l) => !l);
   const onAddWidget = (type: string) => {
     if (!active) return;
     const { w, h } = SIZE_PRESETS[WIDGET_TYPES[type].defaultSize];
@@ -142,7 +140,6 @@ export function Dashboards() {
     );
   }
 
-  const locked = active?.locked ?? false;
   return (
     <DashboardLive>
       <div className="flex flex-col gap-3">
@@ -196,7 +193,11 @@ export function Dashboards() {
           {locked ? 'This dashboard is empty.' : 'Add a widget to get started.'}
         </div>
       ) : active ? (
+        // Key by dashboard id so switching tabs remounts the grid with fresh
+        // layout state — avoids rgl looping when the prior dashboard's layout
+        // briefly mismatches the new widgets.
         <DashboardGrid
+          key={active.id}
           widgets={active.widgets}
           locked={locked}
           onPersist={onPersist}
