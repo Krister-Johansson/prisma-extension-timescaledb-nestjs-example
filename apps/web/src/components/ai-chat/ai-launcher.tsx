@@ -1,5 +1,13 @@
 import { fetchServerSentEvents, useChat } from '@tanstack/ai-react';
-import { Loader2, Send, Sparkles, Square, X } from 'lucide-react';
+import {
+  Loader2,
+  Maximize2,
+  Minimize2,
+  Send,
+  Sparkles,
+  Square,
+  X,
+} from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { MessagePart, type Part } from './message-parts';
@@ -161,24 +169,45 @@ function Conversation() {
 /** Floating AI assistant — a bottom-right button that opens a chat panel. */
 export function AiLauncher() {
   const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   return (
     <>
       {open && (
-        <div className="fixed bottom-20 right-4 z-50 flex h-[min(70vh,560px)] w-[min(92vw,380px)] flex-col overflow-hidden rounded-[16px] border border-border bg-popover shadow-xl">
+        <div
+          className={`fixed bottom-20 right-4 z-50 flex flex-col overflow-hidden rounded-[16px] border border-border bg-popover shadow-xl ${
+            expanded
+              ? 'h-[min(86vh,820px)] w-[min(96vw,620px)]'
+              : 'h-[min(70vh,560px)] w-[min(92vw,380px)]'
+          }`}
+        >
           <div className="flex items-center justify-between border-b border-border bg-card px-3 py-2">
             <div className="flex items-center gap-1.5 text-sm font-semibold">
               <Sparkles className="size-4 text-primary" />
               Assistant
             </div>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Close assistant"
-              onClick={() => setOpen(false)}
-            >
-              <X className="size-4" />
-            </Button>
+            <div className="flex items-center gap-0.5">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={expanded ? 'Shrink assistant' : 'Expand assistant'}
+                onClick={() => setExpanded((e) => !e)}
+              >
+                {expanded ? (
+                  <Minimize2 className="size-4" />
+                ) : (
+                  <Maximize2 className="size-4" />
+                )}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Close assistant"
+                onClick={() => setOpen(false)}
+              >
+                <X className="size-4" />
+              </Button>
+            </div>
           </div>
           {/* Remount per open so a fresh conversation starts each time. */}
           <Conversation key={open ? 'open' : 'closed'} />
