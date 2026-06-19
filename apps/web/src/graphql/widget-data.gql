@@ -1,0 +1,70 @@
+# Shared catalog for widget config pickers + labels/units (cached once).
+query WidgetCatalog {
+  sensors {
+    id
+    name
+    typeKey
+    groupId
+    type {
+      label
+      unit
+    }
+  }
+  sensorGroups {
+    id
+    name
+    parentId
+  }
+  sensorTypes {
+    key
+    label
+    unit
+  }
+}
+
+# A single sensor's bucketed series over a window (value derived client-side).
+query StatSensorSeries(
+  $sensorId: ID!
+  $bucket: String!
+  $start: DateTime!
+  $end: DateTime!
+) {
+  sensorReadingsBucketed(
+    sensorId: $sensorId
+    bucket: $bucket
+    start: $start
+    end: $end
+  ) {
+    bucket
+    avg
+  }
+}
+
+# A group + type aggregate series (averaged across the group's subtree).
+query StatGroupSeries(
+  $groupId: ID!
+  $type: String!
+  $agg: SeriesAgg! = AVG
+  $bucket: String!
+  $start: DateTime!
+  $end: DateTime!
+) {
+  groupSeries(
+    specs: [{ groupId: $groupId, type: $type, agg: $agg }]
+    bucket: $bucket
+    start: $start
+    end: $end
+  ) {
+    points {
+      bucket
+      value
+    }
+  }
+}
+
+# Fires on every ingested reading — drives the dashboard's real-time refresh.
+subscription ReadingTick {
+  readingIngested {
+    sensorId
+  }
+}

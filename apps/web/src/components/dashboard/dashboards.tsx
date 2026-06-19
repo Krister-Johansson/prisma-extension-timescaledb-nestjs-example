@@ -1,7 +1,6 @@
 import { useMutation, useQuery } from '@apollo/client/react';
 import { Lock, Plus, Unlock } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { toast } from 'sonner';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,12 +25,15 @@ import {
   DeleteDashboardDocument,
   DeleteWidgetDocument,
   UpdateDashboardDocument,
+  UpdateWidgetDocument,
   UpdateWidgetLayoutDocument,
   type WidgetFieldsFragment,
 } from '@/graphql/dashboards.generated';
 import { DashboardGrid, type LayoutItem } from './dashboard-grid';
+import { DashboardLive } from './dashboard-live';
 import { DashboardTabs } from './dashboard-tabs';
 import { NameDialog } from './name-dialog';
+import { WidgetConfigDialog, type WidgetSave } from './widget-config-dialog';
 import { SIZE_PRESETS, WIDGET_TYPES } from './widget-meta';
 
 export function Dashboards() {
@@ -56,10 +58,14 @@ export function Dashboards() {
   });
   const [addWidget] = useMutation(AddWidgetDocument, { refetchQueries });
   const [deleteWidget] = useMutation(DeleteWidgetDocument, { refetchQueries });
+  const [updateWidget] = useMutation(UpdateWidgetDocument);
   const [updateWidgetLayout] = useMutation(UpdateWidgetLayoutDocument);
 
   const [dialog, setDialog] = useState<'create' | 'rename' | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [configuring, setConfiguring] = useState<WidgetFieldsFragment | null>(
+    null,
+  );
   const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const onCreate = async (name: string) => {
@@ -103,8 +109,14 @@ export function Dashboards() {
       250,
     );
   };
-  const onConfigure = () =>
-    toast('Widget configuration arrives in the next update.');
+  const onConfigure = (widget: WidgetFieldsFragment) =>
+    setConfiguring(widget);
+  const onSaveWidget = async ({ config, w, h }: WidgetSave) => {
+    if (configuring)
+      await updateWidget({
+        variables: { id: configuring.id, input: { config, w, h } },
+      });
+  };
 
   if (loading && dashboards.length === 0) {
     return (
@@ -132,7 +144,8 @@ export function Dashboards() {
 
   const locked = active?.locked ?? false;
   return (
-    <div className="flex flex-col gap-3">
+    <DashboardLive>
+      <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2 border-b border-border">
         <DashboardTabs
           dashboards={dashboards}
@@ -227,6 +240,13 @@ export function Dashboards() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+
+      <WidgetConfigDialog
+        widget={configuring}
+        onClose={() => setConfiguring(null)}
+        onSave={onSaveWidget}
+      />
+      </div>
+    </DashboardLive>
   );
 }
