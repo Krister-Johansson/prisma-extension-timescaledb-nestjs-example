@@ -22,7 +22,9 @@ export class DashboardService {
 
   findMany() {
     return this.prisma.dashboard.findMany({
-      orderBy: { position: 'asc' },
+      // createdAt breaks position ties so tab order is deterministic even if two
+      // dashboards momentarily share a position.
+      orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
       ...withWidgets,
     });
   }
@@ -35,14 +37,34 @@ export class DashboardService {
   }
 
   async create(input: CreateDashboardInput) {
-    const slug = await this.uniqueSlug(input.name);
-    const max = await this.prisma.dashboard.aggregate({
-      _max: { position: true },
-    });
-    return this.prisma.dashboard.create({
-      data: { name: input.name, slug, position: (max._max.position ?? -1) + 1 },
-      ...withWidgets,
-    });
+    // The slug unique index is the source of truth; if a concurrent create grabs
+    // the same slug we just lose the race (P2002) and retry with a fresh suffix.
+    // Position ties are harmless thanks to the createdAt tiebreaker in findMany.
+    for (let attempt = 0; ; attempt++) {
+      const slug = await this.uniqueSlug(input.name);
+      const max = await this.prisma.dashboard.aggregate({
+        _max: { position: true },
+      });
+      try {
+        return await this.prisma.dashboard.create({
+          data: {
+            name: input.name,
+            slug,
+            position: (max._max.position ?? -1) + 1,
+          },
+          ...withWidgets,
+        });
+      } catch (error) {
+        if (
+          attempt < 4 &&
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2002'
+        ) {
+          continue;
+        }
+        throw error;
+      }
+    }
   }
 
   update(id: string, input: UpdateDashboardInput) {
@@ -90,8 +112,10 @@ export class DashboardService {
         y: input.y,
         w: input.w,
         h: input.h,
+        // Treat null like "unchanged" — Widget.config is non-null (JSON!), so we
+        // never persist null; an explicit reset should send {}.
         config:
-          input.config === undefined
+          input.config == null
             ? undefined
             : (input.config as Prisma.InputJsonValue),
       },
