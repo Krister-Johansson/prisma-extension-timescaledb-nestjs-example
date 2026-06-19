@@ -1,0 +1,70 @@
+fragment WidgetFields on Widget {
+  id
+  dashboardId
+  type
+  x
+  y
+  w
+  h
+  config
+}
+
+fragment DashboardFields on Dashboard {
+  id
+  name
+  slug
+  position
+  locked
+  widgets {
+    ...WidgetFields
+  }
+}
+
+query Dashboards {
+  dashboards {
+    ...DashboardFields
+  }
+}
+
+mutation CreateDashboard($input: CreateDashboardInput!) {
+  createDashboard(input: $input) {
+    ...DashboardFields
+  }
+}
+
+mutation UpdateDashboard($id: ID!, $input: UpdateDashboardInput!) {
+  updateDashboard(id: $id, input: $input) {
+    ...DashboardFields
+  }
+}
+
+mutation DeleteDashboard($id: ID!) {
+  deleteDashboard(id: $id)
+}
+
+mutation ReorderDashboards($ids: [ID!]!) {
+  reorderDashboards(ids: $ids) {
+    id
+    position
+  }
+}
+
+mutation AddWidget($input: CreateWidgetInput!) {
+  addWidget(input: $input) {
+    ...WidgetFields
+  }
+}
+
+mutation UpdateWidget($id: ID!, $input: UpdateWidgetInput!) {
+  updateWidget(id: $id, input: $input) {
+    ...WidgetFields
+  }
+}
+
+mutation DeleteWidget($id: ID!) {
+  deleteWidget(id: $id)
+}
+
+mutation UpdateWidgetLayout($items: [WidgetLayoutInput!]!) {
+  updateWidgetLayout(items: $items)
+}
