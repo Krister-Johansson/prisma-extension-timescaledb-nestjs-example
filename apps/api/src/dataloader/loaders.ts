@@ -29,6 +29,12 @@ export interface GraphQLContext {
  * without scanning the whole hypertable for high-frequency sensors. */
 const MAX_READINGS_PER_SENSOR = 60;
 
+/** Only rank rows from the recent past so TimescaleDB excludes old chunks — the
+ * newest 60 readings (and the latest value) of any live sensor are well within
+ * this window. Without it, the window function scans years of history. A sensor
+ * idle longer than this simply shows no recent value, which is the honest state. */
+const RECENT_WINDOW = Prisma.sql`AND time > now() - interval '30 days'`;
+
 /** Build a fresh set of loaders per request (loaders cache within one request). */
 export function createLoaders(prisma: ExtendedPrismaClient): Loaders {
   return {
@@ -45,6 +51,7 @@ export function createLoaders(prisma: ExtendedPrismaClient): Loaders {
                    ) AS rn
             FROM "SensorReading"
             WHERE "sensorId" IN (${Prisma.join([...sensorIds])})
+              ${RECENT_WINDOW}
           ) ranked
           WHERE rn <= ${MAX_READINGS_PER_SENSOR}
           ORDER BY time DESC
@@ -73,6 +80,7 @@ export function createLoaders(prisma: ExtendedPrismaClient): Loaders {
                    ) AS rn
             FROM "SensorReading"
             WHERE "sensorId" IN (${Prisma.join([...sensorIds])})
+              ${RECENT_WINDOW}
           ) ranked
           WHERE rn = 1
         `;
