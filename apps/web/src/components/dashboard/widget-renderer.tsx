@@ -1,13 +1,13 @@
 import { LayoutDashboard } from 'lucide-react';
 import type { WidgetFieldsFragment } from '@/graphql/dashboards.generated';
+import { StatWidget } from './stat-widget';
 import { WIDGET_TYPES } from './widget-meta';
 
-/**
- * Maps a widget to its renderer. The real per-type renderers (chart, stat,
- * gauge, …) land in later phases; for now every widget shows a labeled
- * placeholder so the grid mechanics can be built and tested.
- */
+/** Maps a widget to its renderer. Chart/gauge/alerts/table land in later phases
+ * and still show a labeled placeholder. */
 export function WidgetRenderer({ widget }: { widget: WidgetFieldsFragment }) {
+  if (widget.type === 'stat') return <StatWidget widget={widget} />;
+
   const meta = WIDGET_TYPES[widget.type];
   return (
     <div className="flex h-full flex-col items-center justify-center gap-1.5 text-center text-muted-2">
