@@ -105,3 +105,20 @@ query ChartSensorSeries(
     avg
   }
 }
+
+# Sensor table widget: sensors (optionally filtered by type) with latest values.
+query TableSensors($where: SensorWhereInput) {
+  sensors(where: $where) {
+    id
+    name
+    groupId
+    type {
+      label
+      unit
+    }
+    latestReading {
+      value
+      time
+    }
+  }
+}

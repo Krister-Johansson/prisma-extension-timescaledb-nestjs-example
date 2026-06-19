@@ -21,16 +21,22 @@ import type { WidgetFieldsFragment } from '@/graphql/dashboards.generated';
 import { useCatalog } from './use-catalog';
 import {
   CHART_TYPES,
+  parseAlertsConfig,
   parseChartConfig,
+  parseGaugeConfig,
   parseStatConfig,
+  parseTableConfig,
   SERIES_AGGS,
   STAT_AGGS,
   STAT_AGG_LABEL,
   WINDOWS,
   WINDOW_LABEL,
+  type AlertsConfig,
   type ChartConfig,
   type ChartSeries,
+  type GaugeConfig,
   type StatConfig,
+  type TableConfig,
 } from './widget-config';
 import {
   SIZE_KEYS,
@@ -348,12 +354,194 @@ function ChartFields({
   );
 }
 
+function NumberInput({
+  value,
+  onChange,
+}: {
+  value?: number;
+  onChange: (n: number | undefined) => void;
+}) {
+  return (
+    <Input
+      type="number"
+      className="h-8 text-[13px]"
+      value={value ?? ''}
+      onChange={(e) =>
+        onChange(e.target.value === '' ? undefined : Number(e.target.value))
+      }
+    />
+  );
+}
+
+/** Shared sensor/group+type source picker used by Stat and Gauge. */
+function SourcePicker({
+  cfg,
+  set,
+}: {
+  cfg: { scope: 'sensor' | 'group'; sensorId?: string; groupId?: string; typeKey?: string };
+  set: (p: { scope?: 'sensor' | 'group'; sensorId?: string; groupId?: string; typeKey?: string }) => void;
+}) {
+  const catalog = useCatalog();
+  return (
+    <>
+      <Field label="Source">
+        <div className="flex gap-1">
+          <Button
+            type="button"
+            size="sm"
+            variant={cfg.scope === 'sensor' ? 'default' : 'outline'}
+            onClick={() => set({ scope: 'sensor' })}
+          >
+            Sensor
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={cfg.scope === 'group' ? 'default' : 'outline'}
+            onClick={() => set({ scope: 'group' })}
+          >
+            Group + type
+          </Button>
+        </div>
+      </Field>
+      {cfg.scope === 'sensor' ? (
+        <Field label="Sensor">
+          <SelectBox
+            value={cfg.sensorId}
+            placeholder="Pick a sensor"
+            onValueChange={(v) => set({ sensorId: v })}
+            options={catalog.sensors.map((s) => ({ value: s.id, label: s.name }))}
+          />
+        </Field>
+      ) : (
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Group">
+            <SelectBox
+              value={cfg.groupId}
+              placeholder="Group"
+              onValueChange={(v) => set({ groupId: v })}
+              options={catalog.groups.map((g) => ({ value: g.id, label: g.name }))}
+            />
+          </Field>
+          <Field label="Type">
+            <SelectBox
+              value={cfg.typeKey}
+              placeholder="Type"
+              onValueChange={(v) => set({ typeKey: v })}
+              options={catalog.types.map((t) => ({ value: t.key, label: t.label }))}
+            />
+          </Field>
+        </div>
+      )}
+    </>
+  );
+}
+
+function GaugeFields({
+  cfg,
+  set,
+}: {
+  cfg: GaugeConfig;
+  set: (p: Partial<GaugeConfig>) => void;
+}) {
+  return (
+    <>
+      <SourcePicker cfg={cfg} set={set} />
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="Value">
+          <SelectBox
+            value={cfg.agg}
+            onValueChange={(v) => set({ agg: v as GaugeConfig['agg'] })}
+            options={STAT_AGGS.map((a) => ({ value: a, label: STAT_AGG_LABEL[a] }))}
+          />
+        </Field>
+        <Field label="Window">
+          <SelectBox
+            value={cfg.window}
+            onValueChange={(v) => set({ window: v as GaugeConfig['window'] })}
+            options={WINDOWS.map((w) => ({ value: w, label: WINDOW_LABEL[w] }))}
+          />
+        </Field>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="Min">
+          <NumberInput value={cfg.min} onChange={(n) => set({ min: n ?? 0 })} />
+        </Field>
+        <Field label="Max">
+          <NumberInput value={cfg.max} onChange={(n) => set({ max: n ?? 100 })} />
+        </Field>
+        <Field label="Warn ≥">
+          <NumberInput value={cfg.warn} onChange={(n) => set({ warn: n })} />
+        </Field>
+        <Field label="Danger ≥">
+          <NumberInput value={cfg.danger} onChange={(n) => set({ danger: n })} />
+        </Field>
+      </div>
+    </>
+  );
+}
+
+function AlertsFields({
+  cfg,
+  set,
+}: {
+  cfg: AlertsConfig;
+  set: (p: Partial<AlertsConfig>) => void;
+}) {
+  return (
+    <Field label="Max rows">
+      <NumberInput value={cfg.limit} onChange={(n) => set({ limit: n ?? 8 })} />
+    </Field>
+  );
+}
+
+const ALL = '__all__';
+function TableFields({
+  cfg,
+  set,
+}: {
+  cfg: TableConfig;
+  set: (p: Partial<TableConfig>) => void;
+}) {
+  const catalog = useCatalog();
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      <Field label="Group">
+        <SelectBox
+          value={cfg.groupId ?? ALL}
+          onValueChange={(v) => set({ groupId: v === ALL ? undefined : v })}
+          options={[
+            { value: ALL, label: 'All groups' },
+            ...catalog.groups.map((g) => ({ value: g.id, label: g.name })),
+          ]}
+        />
+      </Field>
+      <Field label="Type">
+        <SelectBox
+          value={cfg.typeKey ?? ALL}
+          onValueChange={(v) => set({ typeKey: v === ALL ? undefined : v })}
+          options={[
+            { value: ALL, label: 'All types' },
+            ...catalog.types.map((t) => ({ value: t.key, label: t.label })),
+          ]}
+        />
+      </Field>
+    </div>
+  );
+}
+
 function initialConfig(widget: WidgetFieldsFragment): Record<string, unknown> {
-  if (widget.type === 'stat')
-    return parseStatConfig(widget.config) as unknown as Record<string, unknown>;
-  if (widget.type === 'chart')
-    return parseChartConfig(widget.config) as unknown as Record<string, unknown>;
-  return { ...((widget.config as object) ?? {}) };
+  const parse: Record<string, (c: unknown) => object> = {
+    stat: parseStatConfig,
+    chart: parseChartConfig,
+    gauge: parseGaugeConfig,
+    alerts: parseAlertsConfig,
+    table: parseTableConfig,
+  };
+  const fn = parse[widget.type];
+  return fn
+    ? (fn(widget.config) as Record<string, unknown>)
+    : { ...((widget.config as object) ?? {}) };
 }
 
 function ConfigForm({
@@ -431,10 +619,23 @@ function ConfigForm({
             set={patch as (p: Partial<ChartConfig>) => void}
           />
         )}
-        {widget.type !== 'stat' && widget.type !== 'chart' && (
-          <p className="text-[12px] text-muted-2">
-            More options for this widget type are coming soon.
-          </p>
+        {widget.type === 'gauge' && (
+          <GaugeFields
+            cfg={config as unknown as GaugeConfig}
+            set={patch as (p: Partial<GaugeConfig>) => void}
+          />
+        )}
+        {widget.type === 'alerts' && (
+          <AlertsFields
+            cfg={config as unknown as AlertsConfig}
+            set={patch as (p: Partial<AlertsConfig>) => void}
+          />
+        )}
+        {widget.type === 'table' && (
+          <TableFields
+            cfg={config as unknown as TableConfig}
+            set={patch as (p: Partial<TableConfig>) => void}
+          />
         )}
       </div>
       <DialogFooter>
