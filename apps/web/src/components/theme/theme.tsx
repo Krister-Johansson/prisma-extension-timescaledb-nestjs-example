@@ -2,6 +2,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useMemo,
   useState,
   type ReactNode,
 } from 'react';
@@ -43,13 +44,18 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
   }, [theme]);
 
-  const toggle = () =>
-    setTheme((current) => (current === 'dark' ? 'light' : 'dark'));
+  // Memoized so context consumers don't re-render on every provider render.
+  const value = useMemo(
+    () => ({
+      theme,
+      toggle: () =>
+        setTheme((current) => (current === 'dark' ? 'light' : 'dark')),
+    }),
+    [theme],
+  );
 
   return (
-    <ThemeContext.Provider value={{ theme, toggle }}>
-      {children}
-    </ThemeContext.Provider>
+    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
   );
 }
 

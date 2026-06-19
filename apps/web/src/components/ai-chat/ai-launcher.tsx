@@ -138,6 +138,7 @@ function Conversation() {
               }
             }}
             rows={1}
+            aria-label="Message the assistant"
             placeholder="Ask about your data…"
             className="max-h-28 min-h-9 flex-1 resize-none rounded-md border border-border bg-card px-2.5 py-2 text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
