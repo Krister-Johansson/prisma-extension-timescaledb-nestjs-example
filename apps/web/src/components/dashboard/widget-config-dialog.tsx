@@ -23,9 +23,11 @@ import {
   CHART_TYPES,
   parseAlertsConfig,
   parseChartConfig,
+  parseCompareConfig,
   parseGaugeConfig,
   parseStatConfig,
   parseTableConfig,
+  PERIOD_UNITS,
   SERIES_AGGS,
   STAT_AGGS,
   STAT_AGG_LABEL,
@@ -34,12 +36,15 @@ import {
   type AlertsConfig,
   type ChartConfig,
   type ChartSeries,
+  type CompareConfig,
   type GaugeConfig,
+  type PeriodUnitKey,
   type StatConfig,
   type TableConfig,
   type WindowSpec,
   type WindowUnit,
 } from './widget-config';
+import { PERIOD_UNIT_LABEL } from '@/components/charts/period-series';
 import {
   SIZE_KEYS,
   SIZE_PRESETS,
@@ -623,6 +628,85 @@ function TableFields({
   );
 }
 
+function CompareFields({
+  cfg,
+  set,
+}: {
+  cfg: CompareConfig;
+  set: (p: Partial<CompareConfig>) => void;
+}) {
+  const catalog = useCatalog();
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="Group">
+          <SelectBox
+            value={cfg.groupId}
+            placeholder="Group"
+            onValueChange={(v) => set({ groupId: v })}
+            options={catalog.groups.map((g) => ({ value: g.id, label: g.name }))}
+          />
+        </Field>
+        <Field label="Type">
+          <SelectBox
+            value={cfg.typeKey}
+            placeholder="Type"
+            onValueChange={(v) => set({ typeKey: v })}
+            options={catalog.types.map((t) => ({ value: t.key, label: t.label }))}
+          />
+        </Field>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="Value">
+          <SelectBox
+            value={cfg.agg}
+            onValueChange={(v) => set({ agg: v as CompareConfig['agg'] })}
+            options={SERIES_AGGS.map((a) => ({ value: a, label: a }))}
+          />
+        </Field>
+        <Field label="Periods">
+          <Input
+            type="number"
+            min={2}
+            max={6}
+            className="h-8 text-[13px]"
+            value={cfg.count}
+            onChange={(e) =>
+              set({
+                count: Math.min(6, Math.max(2, Number(e.target.value) || 2)),
+              })
+            }
+          />
+        </Field>
+      </div>
+      <Field label="Period length">
+        <div className="grid grid-cols-[5rem_1fr] gap-2">
+          <Input
+            type="number"
+            min={1}
+            className="h-8 text-[13px]"
+            aria-label="Period length"
+            value={cfg.amount}
+            onChange={(e) =>
+              set({
+                amount: Math.min(999, Math.max(1, Number(e.target.value) || 1)),
+              })
+            }
+          />
+          <SelectBox
+            value={cfg.unit}
+            onValueChange={(u) => set({ unit: u as PeriodUnitKey })}
+            options={PERIOD_UNITS.map((u) => ({
+              value: u,
+              label: PERIOD_UNIT_LABEL[u],
+            }))}
+          />
+        </div>
+      </Field>
+    </>
+  );
+}
+
 function initialConfig(widget: WidgetFieldsFragment): Record<string, unknown> {
   const parse: Record<string, (c: unknown) => object> = {
     stat: parseStatConfig,
@@ -630,6 +714,7 @@ function initialConfig(widget: WidgetFieldsFragment): Record<string, unknown> {
     gauge: parseGaugeConfig,
     alerts: parseAlertsConfig,
     table: parseTableConfig,
+    compare: parseCompareConfig,
   };
   const fn = parse[widget.type];
   return fn
@@ -728,6 +813,12 @@ function ConfigForm({
           <TableFields
             cfg={config as unknown as TableConfig}
             set={patch as (p: Partial<TableConfig>) => void}
+          />
+        )}
+        {widget.type === 'compare' && (
+          <CompareFields
+            cfg={config as unknown as CompareConfig}
+            set={patch as (p: Partial<CompareConfig>) => void}
           />
         )}
       </div>

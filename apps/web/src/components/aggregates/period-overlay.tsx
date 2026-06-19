@@ -11,10 +11,19 @@ import {
 } from 'recharts';
 import { InteractiveLegend } from '@/components/charts/interactive-legend';
 import {
+  buildPeriodRows,
+  MAX_PERIODS,
+  periodMsOf,
+  periodSeriesMeta,
+  periodWindow,
+  PERIOD_UNIT_LABEL,
+  PERIOD_UNIT_MS,
+  type PeriodUnit,
+} from '@/components/charts/period-series';
+import {
   dimStroke,
   useSeriesToggle,
 } from '@/components/charts/use-series-toggle';
-import { bucketFor } from '@/components/dashboard/widget-config';
 import {
   Select,
   SelectContent,
@@ -23,7 +32,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { SERIES_COLORS } from '@/data/aggregates';
 import {
   GroupSeriesDocument,
   SensorGroupsDocument,
@@ -31,13 +39,6 @@ import {
 } from '@/graphql/sensors.generated';
 import { SERIES_AGGS } from './aggregate-chart-params';
 
-// Fixed-length period units (calendar units like month/year — which need
-// year-over-year calendar alignment — come in a later pass).
-const UNIT_MS = { day: 86_400_000, week: 604_800_000 } as const;
-type PeriodUnit = keyof typeof UNIT_MS;
-const UNIT_LABEL: Record<PeriodUnit, string> = { day: 'Days', week: 'Weeks' };
-// Cap to the palette so two periods never share a colour.
-const MAX_PERIODS = SERIES_COLORS.length;
 const MAX_AMOUNT = 999;
 const POLL_MS = 30_000;
 const ALL = '__all__';
@@ -129,25 +130,19 @@ export function PeriodOverlay() {
   }, []);
 
   const g = group ?? groups[0]?.id;
-  const periodMs = amount * UNIT_MS[unit];
+  const periodMs = periodMsOf(amount, unit);
   const ready = Boolean(g) && periodMs > 0 && count >= 2;
 
-  // One query covers all `count` periods back from now. Snap the end UP to the
-  // bucket so the in-progress bucket is included and variables stay stable.
-  const bucket = bucketFor(periodMs);
-  const { start, end, nowAnchor } = useMemo(() => {
-    const anchor = Math.ceil(now / bucket.ms) * bucket.ms;
-    return {
-      end: new Date(anchor).toISOString(),
-      start: new Date(anchor - periodMs * count).toISOString(),
-      nowAnchor: anchor,
-    };
-  }, [bucket.ms, periodMs, count, now]);
+  // One query covers all `count` periods back from now (bucket-snapped window).
+  const { start, end, bucket, nowAnchor } = useMemo(
+    () => periodWindow(periodMs, count, now),
+    [periodMs, count, now],
+  );
 
   const { data, loading, error } = useQuery(GroupSeriesDocument, {
     variables: {
       specs: [{ groupId: g ?? '', type: type ?? null, agg }],
-      bucket: bucket.interval,
+      bucket,
       start,
       end,
     },
@@ -157,40 +152,20 @@ export function PeriodOverlay() {
   });
 
   const series: SeriesMeta[] = useMemo(
-    () =>
-      Array.from({ length: count }, (_, k) => {
-        const ago = k * amount;
-        return {
-          key: `p${k}`,
-          label:
-            k === 0 ? 'Latest' : `${ago} ${unit}${ago > 1 ? 's' : ''} ago`,
-          color: SERIES_COLORS[k % SERIES_COLORS.length],
-        };
-      }),
-    [count, unit, amount],
+    () => periodSeriesMeta(count, amount, unit),
+    [count, amount, unit],
   );
 
-  const rows = useMemo<Row[]>(() => {
-    const pts = data?.groupSeries?.[0]?.points ?? [];
-    const byTime = new Map<number, Row>();
-    for (const p of pts) {
-      if (p.value == null) continue;
-      // Bucket timestamps are period *starts*, so a point exactly at a period
-      // boundary belongs to the newer period — the `-1` keeps it in p0.
-      const bt = new Date(p.bucket).getTime();
-      const periodsAgo = Math.floor((nowAnchor - 1 - bt) / periodMs);
-      if (periodsAgo < 0 || periodsAgo >= count) continue;
-      // Shift older periods forward onto the latest period's timeline.
-      const rebased = bt + periodsAgo * periodMs;
-      let row = byTime.get(rebased);
-      if (!row) {
-        row = { t: rebased };
-        byTime.set(rebased, row);
-      }
-      row[`p${periodsAgo}`] = p.value;
-    }
-    return [...byTime.values()].sort((a, b) => a.t - b.t);
-  }, [data, nowAnchor, periodMs, count]);
+  const rows = useMemo<Row[]>(
+    () =>
+      buildPeriodRows(
+        data?.groupSeries?.[0]?.points ?? [],
+        periodMs,
+        count,
+        nowAnchor,
+      ),
+    [data, periodMs, count, nowAnchor],
+  );
   const unitStr = type ? (typeByKey.get(type)?.unit ?? '') : '';
 
   const toggle = useSeriesToggle(count);
@@ -209,7 +184,7 @@ export function PeriodOverlay() {
         <h3 className="text-sm font-semibold">Period comparison</h3>
         <div className="mt-0.5 text-xs text-muted-foreground">
           Overlay the same metric across the last {count * amount}{' '}
-          {UNIT_LABEL[unit].toLowerCase()}, aligned so periods line up.
+          {PERIOD_UNIT_LABEL[unit].toLowerCase()}, aligned so periods line up.
         </div>
       </div>
 
@@ -277,9 +252,9 @@ export function PeriodOverlay() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {(Object.keys(UNIT_MS) as PeriodUnit[]).map((u) => (
+            {(Object.keys(PERIOD_UNIT_MS) as PeriodUnit[]).map((u) => (
               <SelectItem key={u} value={u}>
-                {UNIT_LABEL[u]}
+                {PERIOD_UNIT_LABEL[u]}
               </SelectItem>
             ))}
           </SelectContent>

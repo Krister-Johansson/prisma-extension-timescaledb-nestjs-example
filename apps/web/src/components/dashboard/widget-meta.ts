@@ -31,6 +31,11 @@ export const WIDGET_TYPES: Record<string, WidgetTypeMeta> = {
     description: 'A time-series chart — one or more series over a range.',
     defaultSize: 'l',
   },
+  compare: {
+    label: 'Period comparison',
+    description: 'Overlay a metric across periods (e.g. the last 6 weeks).',
+    defaultSize: 'l',
+  },
   gauge: {
     label: 'Gauge',
     description: 'A value against good / warning / bad zones.',
