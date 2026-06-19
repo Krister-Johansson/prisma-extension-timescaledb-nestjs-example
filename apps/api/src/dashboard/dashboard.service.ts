@@ -29,6 +29,15 @@ export function packWidget(existing: Box[], w: number, h: number): Box {
       heights[c] = Math.max(heights[c], bottom);
     }
   }
+
+  // Wide widgets (most of the row, e.g. charts) take a fresh row at the left
+  // edge rather than being tucked into a narrow gap — so smaller widgets
+  // (stats, gauges) group into tidy rows instead of wrapping around a big one.
+  if (width >= 8) {
+    const maxY = heights.reduce((m, v) => Math.max(m, v), 0);
+    return { x: 0, y: maxY, w: width, h };
+  }
+
   let bestX = 0;
   let bestY = Number.POSITIVE_INFINITY;
   for (let x = 0; x <= GRID_COLS - width; x++) {
