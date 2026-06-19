@@ -83,6 +83,16 @@ const tableConfig = z.object({
   typeKey: z.string().optional(),
 });
 
+const compareConfig = z.object({
+  title: z.string().max(60).optional(),
+  groupId: z.string().optional(),
+  typeKey: z.string().optional(),
+  agg: z.enum(SERIES_AGGS).default('AVG'),
+  amount: z.number().int().min(1).max(999).default(1),
+  unit: z.enum(['day', 'week']).default('week'),
+  count: z.number().int().min(2).max(6).default(4),
+});
+
 /** Coerce a JSON-stringified object back to an object before validating. Models
  * frequently emit a nested tool-call field (`config`) as a stringified JSON blob
  * rather than a real object; without this the schema rejects it outright. */
@@ -108,6 +118,7 @@ export const addWidgetInput = z.discriminatedUnion('type', [
   z.object({ type: z.literal('chart'), config: asObject(chartConfig) }),
   z.object({ type: z.literal('alerts'), config: asObject(alertsConfig) }),
   z.object({ type: z.literal('table'), config: asObject(tableConfig) }),
+  z.object({ type: z.literal('compare'), config: asObject(compareConfig) }),
 ]);
 export type AddWidgetInput = z.infer<typeof addWidgetInput>;
 
@@ -119,6 +130,7 @@ export const WIDGET_DEFAULT_SIZE: Record<string, { w: number; h: number }> = {
   gauge: { w: 4, h: 4 },
   alerts: { w: 6, h: 5 },
   table: { w: 6, h: 5 },
+  compare: { w: 8, h: 6 },
 };
 
 type SourceLike = {
@@ -164,6 +176,10 @@ export function widgetIncompleteReason(w: AddWidgetInput): string | null {
       }
       return null;
     }
+    case 'compare':
+      return w.config.groupId && w.config.typeKey
+        ? null
+        : 'a comparison needs a groupId and a typeKey';
     default:
       return null;
   }

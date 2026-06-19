@@ -232,3 +232,25 @@ const tableConfigSchema = z.object({
 export type TableConfig = z.infer<typeof tableConfigSchema>;
 export const parseTableConfig = (config: unknown): TableConfig =>
   tableConfigSchema.parse(config ?? {});
+
+// ---- period comparison widget ----------------------------------------------
+
+export const PERIOD_UNITS = ['day', 'week'] as const;
+export type PeriodUnitKey = (typeof PERIOD_UNITS)[number];
+
+/** Overlay one group+type aggregate across `count` consecutive periods of
+ * `amount` `unit`s (e.g. the last 6 weeks). */
+const compareConfigSchema = z.object({
+  title: c(z.string().max(60).optional(), undefined),
+  groupId: c(z.string().optional(), undefined),
+  typeKey: c(z.string().optional(), undefined),
+  agg: c(z.enum(SERIES_AGGS), 'AVG'),
+  amount: c(z.number().int().min(1).max(999), 1),
+  unit: c(z.enum(PERIOD_UNITS), 'week'),
+  count: c(z.number().int().min(2).max(6), 4),
+});
+export type CompareConfig = z.infer<typeof compareConfigSchema>;
+export const parseCompareConfig = (config: unknown): CompareConfig =>
+  compareConfigSchema.parse(config ?? {});
+export const compareConfigComplete = (cfg: CompareConfig): boolean =>
+  Boolean(cfg.groupId && cfg.typeKey);

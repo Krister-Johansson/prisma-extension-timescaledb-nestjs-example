@@ -18,6 +18,7 @@ export const WIDGET_TYPES = [
   'gauge',
   'alerts',
   'table',
+  'compare',
 ] as const;
 
 @InputType()
