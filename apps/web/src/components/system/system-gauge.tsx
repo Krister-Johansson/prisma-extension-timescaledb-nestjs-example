@@ -1,6 +1,20 @@
 const R = 50;
 const CIRCUMFERENCE = 2 * Math.PI * R;
 
+/** Pick a font size so a centered, monospace label fits within `maxWidth`
+ * (px in the 120-unit viewBox). Short strings keep `max`; long ones shrink to
+ * `min` instead of spilling past the ring. ~0.6em per glyph for monospace. */
+function fitFontSize(
+  text: string,
+  maxWidth: number,
+  max: number,
+  min: number,
+  emPerChar = 0.6,
+): number {
+  const fit = maxWidth / Math.max(1, text.length * emPerChar);
+  return Math.max(min, Math.min(max, Math.floor(fit)));
+}
+
 /** Radial progress gauge (SVG arc) — used for compression ratio & chunk coverage. */
 export function SystemGauge({
   percent,
@@ -14,6 +28,9 @@ export function SystemGauge({
   color: string;
 }) {
   const dash = Math.max(0, Math.min(1, percent)) * CIRCUMFERENCE;
+  // Shrink long labels so they stay inside the ring instead of clipping.
+  const valueFontSize = fitFontSize(value, 98, 24, 11);
+  const captionFontSize = fitFontSize(caption, 112, 10, 7, 0.56);
   return (
     <svg
       width={150}
@@ -48,7 +65,7 @@ export function SystemGauge({
         textAnchor="middle"
         className="fill-foreground font-mono"
         fontWeight={600}
-        fontSize={24}
+        fontSize={valueFontSize}
       >
         {value}
       </text>
@@ -57,7 +74,7 @@ export function SystemGauge({
         y={74}
         textAnchor="middle"
         className="fill-muted-foreground font-mono"
-        fontSize={10}
+        fontSize={captionFontSize}
       >
         {caption}
       </text>
