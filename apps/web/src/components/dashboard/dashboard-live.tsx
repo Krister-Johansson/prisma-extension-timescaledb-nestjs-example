@@ -2,6 +2,7 @@ import { useSubscription } from '@apollo/client/react';
 import {
   createContext,
   useContext,
+  useEffect,
   useRef,
   useState,
   type ReactNode,
@@ -18,6 +19,13 @@ const TICK_DEBOUNCE_MS = 3000;
 export function DashboardLive({ children }: { children: ReactNode }) {
   const [tick, setTick] = useState(0);
   const pending = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (pending.current) clearTimeout(pending.current);
+    },
+    [],
+  );
 
   useSubscription(ReadingTickDocument, {
     onData: () => {

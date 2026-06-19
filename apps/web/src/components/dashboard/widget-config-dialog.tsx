@@ -282,7 +282,14 @@ export function WidgetConfigDialog({
     <Dialog open={widget !== null} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-md">
         {widget && (
-          <ConfigForm widget={widget} onClose={onClose} onSave={onSave} />
+          // Key by id so switching the target widget remounts the form with
+          // fresh state instead of keeping the previous widget's values.
+          <ConfigForm
+            key={widget.id}
+            widget={widget}
+            onClose={onClose}
+            onSave={onSave}
+          />
         )}
       </DialogContent>
     </Dialog>

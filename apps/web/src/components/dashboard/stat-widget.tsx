@@ -55,7 +55,9 @@ export function StatWidget({ widget }: { widget: WidgetFieldsFragment }) {
       <div className="truncate text-[11px] text-muted-foreground">{source}</div>
       {cfg.sparkline && series.length > 1 && (
         <div className="mt-1 h-9">
-          <SensorSparkline series={series} status={'OK' as SensorStatus} />
+          {/* A stat's trend line is decorative, not a health indicator — use the
+              neutral (no-rules) colour rather than implying an OK status. */}
+          <SensorSparkline series={series} status={'NO_RULES' as SensorStatus} />
         </div>
       )}
     </div>

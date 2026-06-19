@@ -32,8 +32,10 @@ export function useStatData(cfg: StatConfig): StatData {
       end: new Date(nowMs).toISOString(),
       start: new Date(nowMs - WINDOW_MS[cfg.window]).toISOString(),
     };
+    // Re-anchor to "now" on a tick, a window change, or a source change so a
+    // reconfigured widget never queries against a stale window.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- tick drives refresh
-  }, [cfg.window, tick]);
+  }, [cfg.window, cfg.scope, cfg.sensorId, cfg.groupId, cfg.typeKey, tick]);
 
   const sensorQuery = useQuery(StatSensorSeriesDocument, {
     variables: { sensorId: cfg.sensorId ?? '', bucket, start, end },
