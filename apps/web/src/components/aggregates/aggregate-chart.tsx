@@ -33,6 +33,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { InteractiveLegend } from '@/components/charts/interactive-legend';
+import {
+  dimStroke,
+  useSeriesToggle,
+} from '@/components/charts/use-series-toggle';
 import { SERIES_COLORS } from '@/data/aggregates';
 import {
   DEFAULT_RANGE,
@@ -179,6 +184,7 @@ function CompareTooltip({
 export function AggregateChart({ sensors }: { sensors: Sensor[] }) {
   const [{ res, range, from, to, group, type, scale }, setSearch] =
     useSearchState('/aggregates');
+  const toggle = useSeriesToggle();
 
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -348,20 +354,19 @@ export function AggregateChart({ sensors }: { sensors: Sensor[] }) {
       />
 
       {series.length > 0 && (
-        <div className="mb-1 mt-3 flex flex-wrap gap-3.5">
-          {series.map((s) => (
-            <span
-              key={s.id}
-              className="inline-flex items-center gap-1.5 text-[11.5px] text-muted-foreground"
-            >
-              <span
-                className="h-[3px] w-2.5 rounded"
-                style={{ background: s.color }}
-              />
-              {s.name}
-            </span>
-          ))}
-        </div>
+        <InteractiveLegend
+          className="mb-1 mt-3 gap-3.5"
+          marker="line"
+          textClassName="text-[11.5px] text-muted-foreground"
+          items={series.map((s) => ({
+            key: s.id,
+            label: s.name,
+            color: s.color,
+          }))}
+          hidden={toggle.hidden}
+          toggle={toggle.toggle}
+          setHovered={toggle.setHovered}
+        />
       )}
 
       <div className="mt-3">
@@ -423,17 +428,22 @@ export function AggregateChart({ sensors }: { sensors: Sensor[] }) {
                     />
                   )}
                 />
-                {series.map((s) => (
-                  <Line
-                    key={s.id}
-                    dataKey={s.id}
-                    type="monotone"
-                    stroke={s.color}
-                    strokeWidth={1.8}
-                    dot={false}
-                    isAnimationActive={false}
-                  />
-                ))}
+                {series.map((s) => {
+                  const st = toggle.seriesProps(s.id);
+                  return (
+                    <Line
+                      key={s.id}
+                      dataKey={s.id}
+                      type="monotone"
+                      stroke={s.color}
+                      strokeOpacity={dimStroke(st.dim)}
+                      hide={st.hide}
+                      strokeWidth={1.8}
+                      dot={false}
+                      isAnimationActive={false}
+                    />
+                  );
+                })}
               </LineChart>
             </ResponsiveContainer>
           </div>

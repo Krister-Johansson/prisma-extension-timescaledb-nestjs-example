@@ -8,6 +8,11 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { InteractiveLegend } from '@/components/charts/interactive-legend';
+import {
+  dimStroke,
+  useSeriesToggle,
+} from '@/components/charts/use-series-toggle';
 import { SERIES_COLORS } from '@/data/aggregates';
 import { formatBytes, formatCount } from '@/data/format';
 
@@ -184,6 +189,7 @@ function SeriesView({ o }: { o: SeriesOut }) {
 }
 
 function CompareView({ o }: { o: CompareOut }) {
+  const toggle = useSeriesToggle();
   // Merge series onto a shared time axis, keyed by the formatted label.
   const labels = Array.from(
     new Set(o.series.flatMap((s) => s.points.map((p) => p.t))),
@@ -205,31 +211,36 @@ function CompareView({ o }: { o: CompareOut }) {
           <XAxis dataKey="label" minTickGap={28} tick={axisTick} />
           <YAxis width={30} tick={axisTick} domain={['auto', 'auto']} />
           <Tooltip content={<ChartTip />} />
-          {o.series.map((s, i) => (
-            <Line
-              key={s.label ?? i}
-              name={s.label}
-              dataKey={`s${i}`}
-              type="monotone"
-              stroke={SERIES_COLORS[i % SERIES_COLORS.length]}
-              strokeWidth={1.8}
-              dot={false}
-              connectNulls
-            />
-          ))}
+          {o.series.map((s, i) => {
+            const st = toggle.seriesProps(`s${i}`);
+            return (
+              <Line
+                key={s.label ?? i}
+                name={s.label}
+                dataKey={`s${i}`}
+                type="monotone"
+                stroke={SERIES_COLORS[i % SERIES_COLORS.length]}
+                strokeOpacity={dimStroke(st.dim)}
+                hide={st.hide}
+                strokeWidth={1.8}
+                dot={false}
+                connectNulls
+              />
+            );
+          })}
         </LineChart>
       </ResponsiveContainer>
-      <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
-        {o.series.map((s, i) => (
-          <span key={s.label ?? i} className="flex items-center gap-1 text-[10.5px]">
-            <span
-              className="size-2 rounded-full"
-              style={{ background: SERIES_COLORS[i % SERIES_COLORS.length] }}
-            />
-            {s.label}
-          </span>
-        ))}
-      </div>
+      <InteractiveLegend
+        className="mt-1.5"
+        items={o.series.map((s, i) => ({
+          key: `s${i}`,
+          label: s.label,
+          color: SERIES_COLORS[i % SERIES_COLORS.length],
+        }))}
+        hidden={toggle.hidden}
+        toggle={toggle.toggle}
+        setHovered={toggle.setHovered}
+      />
     </Card>
   );
 }
