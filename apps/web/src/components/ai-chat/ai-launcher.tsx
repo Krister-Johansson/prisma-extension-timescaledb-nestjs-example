@@ -99,7 +99,9 @@ function Conversation() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
+              // isComposing: don't submit on the Enter that confirms an IME
+              // (CJK) candidate.
+              if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
                 e.preventDefault();
                 send(input);
               }
@@ -109,12 +111,18 @@ function Conversation() {
             className="max-h-28 min-h-9 flex-1 resize-none rounded-md border border-border bg-card px-2.5 py-2 text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
           {isLoading ? (
-            <Button size="icon-sm" variant="outline" onClick={() => stop()}>
+            <Button
+              size="icon-sm"
+              variant="outline"
+              aria-label="Stop generating"
+              onClick={() => stop()}
+            >
               <Square className="size-3.5" />
             </Button>
           ) : (
             <Button
               size="icon-sm"
+              aria-label="Send message"
               disabled={!input.trim()}
               onClick={() => send(input)}
             >
