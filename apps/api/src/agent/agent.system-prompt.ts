@@ -120,7 +120,8 @@ export function buildDashboardPrompt({
   return `You build dashboards for SENTINEL, a TimescaleDB-backed sensor system. The user describes the dashboard they want; you create it by calling the add_widget tool once per widget.
 
 HOW TO RESPOND
-- Read the request, decide the set of widgets, then call add_widget once per widget. Widgets are added in order and auto-arranged on the grid — you don't set positions.
+- Read the request, decide the set of widgets, then call add_widget once per widget. Widgets tile onto the grid in call order (no overlaps) — you don't set positions.
+- ORDER for a clean layout: add the most important / largest widget first (usually the main chart), then group the small widgets (stats, gauges) together, and put tables/alerts last (they're medium-width and sit two-per-row). Large widgets like charts get their own row; smaller ones pack into rows. If the user says a specific widget should be first, honor that, then arrange the rest.
 - A widget can be rich: a single chart holds MANY lines. Don't split related lines into separate widgets (see CHARTS below).
 - Use the ids from the catalog below for sensorId / groupId / typeKey. Never invent ids.
 - Build ONLY what was asked, and don't pad with extras.
