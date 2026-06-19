@@ -29,14 +29,16 @@ import {
   SERIES_AGGS,
   STAT_AGGS,
   STAT_AGG_LABEL,
-  WINDOWS,
-  WINDOW_LABEL,
+  WINDOW_UNITS,
+  WINDOW_UNIT_LABEL,
   type AlertsConfig,
   type ChartConfig,
   type ChartSeries,
   type GaugeConfig,
   type StatConfig,
   type TableConfig,
+  type WindowSpec,
+  type WindowUnit,
 } from './widget-config';
 import {
   SIZE_KEYS,
@@ -94,6 +96,41 @@ function SelectBox({
         ))}
       </SelectContent>
     </Select>
+  );
+}
+
+/** Relative look-back window: an amount + a unit (e.g. 14 days). */
+function WindowInput({
+  value,
+  onChange,
+}: {
+  value: WindowSpec;
+  onChange: (w: WindowSpec) => void;
+}) {
+  return (
+    <div className="grid grid-cols-[5rem_1fr] gap-2">
+      <Input
+        type="number"
+        min={1}
+        className="h-8 text-[13px]"
+        aria-label="Window amount"
+        value={value.amount}
+        onChange={(e) =>
+          onChange({
+            ...value,
+            amount: Math.max(1, Math.floor(Number(e.target.value)) || 1),
+          })
+        }
+      />
+      <SelectBox
+        value={value.unit}
+        onValueChange={(u) => onChange({ ...value, unit: u as WindowUnit })}
+        options={WINDOW_UNITS.map((u) => ({
+          value: u,
+          label: WINDOW_UNIT_LABEL[u],
+        }))}
+      />
+    </div>
   );
 }
 
@@ -173,11 +210,7 @@ function StatFields({
           />
         </Field>
         <Field label="Window">
-          <SelectBox
-            value={cfg.window}
-            onValueChange={(v) => set({ window: v as StatConfig['window'] })}
-            options={WINDOWS.map((w) => ({ value: w, label: WINDOW_LABEL[w] }))}
-          />
+          <WindowInput value={cfg.window} onChange={(w) => set({ window: w })} />
         </Field>
       </div>
 
@@ -230,11 +263,7 @@ function ChartFields({
     <>
       <div className="grid grid-cols-2 gap-2">
         <Field label="Window">
-          <SelectBox
-            value={cfg.window}
-            onValueChange={(v) => set({ window: v as ChartConfig['window'] })}
-            options={WINDOWS.map((w) => ({ value: w, label: WINDOW_LABEL[w] }))}
-          />
+          <WindowInput value={cfg.window} onChange={(w) => set({ window: w })} />
         </Field>
         <Field label="Chart type">
           <SelectBox
@@ -524,11 +553,7 @@ function GaugeFields({
           />
         </Field>
         <Field label="Window">
-          <SelectBox
-            value={cfg.window}
-            onValueChange={(v) => set({ window: v as GaugeConfig['window'] })}
-            options={WINDOWS.map((w) => ({ value: w, label: WINDOW_LABEL[w] }))}
-          />
+          <WindowInput value={cfg.window} onChange={(w) => set({ window: w })} />
         </Field>
       </div>
       <div className="grid grid-cols-2 gap-2">

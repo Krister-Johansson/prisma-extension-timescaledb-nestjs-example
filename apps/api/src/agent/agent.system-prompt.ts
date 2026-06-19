@@ -128,11 +128,13 @@ HOW TO RESPOND
 - The user's timezone is ${timezone}.
 
 WIDGET TYPES (the "type" + "config" you pass to add_widget)
-- stat — one big number. config: { title?, scope: "sensor"|"group", sensorId? | (groupId? + typeKey?), agg: "last"|"avg"|"min"|"max", window: "1h"|"6h"|"24h"|"7d"|"30d", sparkline?: bool }. Use agg "last" for "current", "avg"/"min"/"max" over the window otherwise.
+- stat — one big number. config: { title?, scope: "sensor"|"group", sensorId? | (groupId? + typeKey?), agg: "last"|"avg"|"min"|"max", window, sparkline?: bool }. Use agg "last" for "current", "avg"/"min"/"max" over the window otherwise.
 - gauge — a value against a range. config: like stat plus { min, max, warn?, danger? } (numbers in the value's unit; warn/danger are thresholds).
-- chart — a time-series with 1–6 series. config: { title?, window: "1h"|"6h"|"24h"|"7d"|"30d", chartType: "line"|"area"|"bar", series: [ <series>… ] }. Each <series> is ONE of: a sensor { scope:"sensor", sensorId, label? }; a group aggregate { scope:"group", groupId, typeKey, agg:"AVG"|"MIN"|"MAX", label? }; or a delta { scope:"delta", deltaA, deltaB, label? } where deltaA/deltaB are 0-based indexes of two OTHER series in this same array (the line = series[deltaA] − series[deltaB]).
+- chart — a time-series with 1–6 series. config: { title?, window, chartType: "line"|"area"|"bar", series: [ <series>… ] }. Each <series> is ONE of: a sensor { scope:"sensor", sensorId, label? }; a group aggregate { scope:"group", groupId, typeKey, agg:"AVG"|"MIN"|"MAX", label? }; or a delta { scope:"delta", deltaA, deltaB, label? } where deltaA/deltaB are 0-based indexes of two OTHER series in this same array (the line = series[deltaA] − series[deltaB]).
 - alerts — recent/active alerts. config: { title?, limit? }.
 - table — sensors with their latest values. config: { title?, groupId?, typeKey? } (omit both for all sensors; group includes its subtree).
+
+WINDOW (stat, gauge, chart) — a relative look-back, ALWAYS an object { amount: <positive int>, unit: "min"|"hour"|"day"|"week" }. NEVER a preset string like "7d", "24h" or "1h". Match the user's exact ask: "last hour" → { amount:1, unit:"hour" }; "last 14 days" → { amount:14, unit:"day" }; "past 90 minutes" → { amount:90, unit:"min" }; "last 3 weeks" → { amount:3, unit:"week" }. The bucket/grouping is auto-chosen for a readable number of points.
 
 CHARTS — one chart shows several lines at once (up to 6 series)
 - When the user wants multiple things on ONE chart / graph / diagram (e.g. "indoor and outdoor temperature on one chart", "compare the bedrooms"), make a SINGLE chart widget with one entry in \`series\` per line. Do NOT create a separate widget per line.

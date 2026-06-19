@@ -21,15 +21,16 @@ import {
 import { useChartData, type ChartSeriesMeta } from './use-chart-data';
 import {
   parseChartConfig,
-  WINDOW_LABEL,
+  windowIsMultiDay,
+  windowLabel,
   type ChartType,
 } from './widget-config';
 
 const axisTick = { fontSize: 9.5, fill: 'var(--muted-2)' } as const;
 
-const fmtAxis = (iso: string, window: string) => {
+const fmtAxis = (iso: string, multiDay: boolean) => {
   const d = new Date(iso);
-  return /7d|30d/.test(window)
+  return multiDay
     ? d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
     : d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 };
@@ -129,9 +130,10 @@ export function ChartWidget({ widget }: { widget: WidgetFieldsFragment }) {
     );
   }
 
+  const multiDay = windowIsMultiDay(cfg.window);
   const rows = data.rows.map((r) => ({
     ...r,
-    label: fmtAxis(r.t as string, cfg.window),
+    label: fmtAxis(r.t as string, multiDay),
   }));
   const Chart =
     cfg.chartType === 'area'
@@ -144,7 +146,7 @@ export function ChartWidget({ widget }: { widget: WidgetFieldsFragment }) {
     <div className="flex h-full flex-col">
       <div className="mb-1 flex items-baseline justify-between gap-2">
         <span className="truncate text-[11px] text-muted-2">
-          {WINDOW_LABEL[cfg.window]}
+          {windowLabel(cfg.window)}
         </span>
         {data.unit && <span className="text-[10px] text-muted-2">{data.unit}</span>}
       </div>
