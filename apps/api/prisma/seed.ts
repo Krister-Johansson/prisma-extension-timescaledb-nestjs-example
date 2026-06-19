@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { Prisma } from '../src/generated/prisma/client.js';
 import {
   createPrismaClient,
   type ExtendedPrismaClient,
@@ -88,6 +89,7 @@ async function main(prisma: ExtendedPrismaClient) {
   await prisma.alertEvent.deleteMany();
   await prisma.alertRule.deleteMany();
   await prisma.emulator.deleteMany();
+  await prisma.dashboard.deleteMany(); // widgets cascade
   await prisma.$executeRawUnsafe('TRUNCATE TABLE "SensorReading"');
   await prisma.sensor.deleteMany();
   await prisma.sensorGroup.deleteMany();
@@ -199,8 +201,77 @@ async function main(prisma: ExtendedPrismaClient) {
     `CALL refresh_continuous_aggregate('"SensorReadingHourly"', NULL, NULL)`,
   );
 
+  // Default dashboards so a fresh seed lands on populated, customizable views.
+  const sid = (name: string) => {
+    const s = sensors.find((x) => x.name === name);
+    if (!s) throw new Error(`seed: missing sensor "${name}"`);
+    return s.id;
+  };
+  const co2 = { agg: 'last', window: '1h', min: 400, max: 1500, warn: 1000, danger: 1200 };
+  interface SeedWidget {
+    type: string;
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    config: unknown;
+  }
+  const DASHBOARDS: { name: string; widgets: SeedWidget[] }[] = [
+    {
+      name: 'Home',
+      widgets: [
+        { type: 'chart', x: 0, y: 0, w: 12, h: 6, config: { title: 'Indoor vs Outdoor temperature', window: '7d', chartType: 'line', series: [{ scope: 'group', groupId: house.id, typeKey: 'TEMPERATURE', agg: 'AVG', label: 'Indoor' }, { scope: 'group', groupId: outdoor.id, typeKey: 'TEMPERATURE', agg: 'AVG', label: 'Outdoor' }] } },
+        { type: 'stat', x: 0, y: 6, w: 3, h: 3, config: { title: 'Indoor temp', scope: 'group', groupId: house.id, typeKey: 'TEMPERATURE', agg: 'last', window: '1h', sparkline: true } },
+        { type: 'stat', x: 3, y: 6, w: 3, h: 3, config: { title: 'Indoor humidity', scope: 'group', groupId: house.id, typeKey: 'HUMIDITY', agg: 'last', window: '1h', sparkline: true } },
+        { type: 'gauge', x: 6, y: 6, w: 3, h: 4, config: { title: 'Bedroom CO₂', scope: 'sensor', sensorId: sid('Bedroom CO₂'), ...co2 } },
+        { type: 'alerts', x: 9, y: 6, w: 3, h: 4, config: { title: 'Recent alerts', limit: 8 } },
+      ],
+    },
+    {
+      name: 'Indoor',
+      widgets: [
+        { type: 'chart', x: 0, y: 0, w: 8, h: 5, config: { title: 'Room temperatures', window: '24h', chartType: 'line', series: INDOOR_ROOMS.map((room) => ({ scope: 'group', groupId: roomId[room], typeKey: 'TEMPERATURE', agg: 'AVG', label: room })) } },
+        { type: 'table', x: 8, y: 0, w: 4, h: 8, config: { title: 'Indoor sensors', groupId: house.id } },
+        { type: 'gauge', x: 0, y: 5, w: 4, h: 4, config: { title: 'Bedroom CO₂', scope: 'sensor', sensorId: sid('Bedroom CO₂'), ...co2 } },
+        { type: 'gauge', x: 4, y: 5, w: 4, h: 4, config: { title: 'Office CO₂', scope: 'sensor', sensorId: sid('Office CO₂'), ...co2 } },
+      ],
+    },
+    {
+      name: 'Outdoor',
+      widgets: [
+        { type: 'stat', x: 0, y: 0, w: 3, h: 3, config: { title: 'Temperature', scope: 'sensor', sensorId: sid('Outdoor Temperature'), agg: 'last', window: '24h', sparkline: true } },
+        { type: 'stat', x: 3, y: 0, w: 3, h: 3, config: { title: 'Humidity', scope: 'sensor', sensorId: sid('Outdoor Humidity'), agg: 'last', window: '24h', sparkline: true } },
+        { type: 'gauge', x: 6, y: 0, w: 3, h: 4, config: { title: 'PM2.5', scope: 'sensor', sensorId: sid('Outdoor PM2.5'), agg: 'last', window: '1h', min: 0, max: 60, warn: 25, danger: 40 } },
+        { type: 'table', x: 9, y: 0, w: 3, h: 7, config: { title: 'Outdoor sensors', groupId: outdoor.id } },
+        { type: 'chart', x: 0, y: 3, w: 9, h: 5, config: { title: 'Outdoor temperature', window: '7d', chartType: 'area', series: [{ scope: 'sensor', sensorId: sid('Outdoor Temperature'), agg: 'AVG', label: 'Outdoor' }] } },
+      ],
+    },
+  ];
+  for (const [position, d] of DASHBOARDS.entries()) {
+    const dash = await prisma.dashboard.create({
+      data: {
+        name: d.name,
+        slug: d.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        position,
+      },
+    });
+    for (const w of d.widgets) {
+      await prisma.widget.create({
+        data: {
+          dashboardId: dash.id,
+          type: w.type,
+          x: w.x,
+          y: w.y,
+          w: w.w,
+          h: w.h,
+          config: w.config as Prisma.InputJsonValue,
+        },
+      });
+    }
+  }
+
   console.log(
-    `Seeded ${TYPES.length} types, ${INDOOR_ROOMS.length + 2} groups, ${sensors.length} sensors + emulators, ${totalRows.toLocaleString()} readings up to ${end.toISOString()}.`,
+    `Seeded ${TYPES.length} types, ${INDOOR_ROOMS.length + 2} groups, ${sensors.length} sensors + emulators, ${totalRows.toLocaleString()} readings, ${DASHBOARDS.length} dashboards up to ${end.toISOString()}.`,
   );
 }
 
