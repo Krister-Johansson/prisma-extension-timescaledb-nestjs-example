@@ -156,3 +156,33 @@ model AlertEvent {
 
   @@index([sensorId, createdAt])
 }
+
+/// A user-customizable dashboard — rendered as a tab. `locked` disables
+/// drag/resize of its widgets.
+model Dashboard {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  position  Int      @default(0)
+  locked    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  widgets   Widget[]
+}
+
+/// One widget on a dashboard. `type` selects the renderer/config schema; `config`
+/// is a type-specific JSON blob validated by Zod at the app boundary. x/y/w/h are
+/// react-grid-layout grid units (12-col grid).
+model Widget {
+  id          String    @id @default(uuid())
+  dashboardId String
+  dashboard   Dashboard @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
+  type        String
+  x           Int       @default(0)
+  y           Int       @default(0)
+  w           Int       @default(4)
+  h           Int       @default(3)
+  config      Json      @default("{}")
+  createdAt   DateTime  @default(now())
+
+  @@index([dashboardId])
+}

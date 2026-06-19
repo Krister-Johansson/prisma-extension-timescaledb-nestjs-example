@@ -10,6 +10,7 @@ import { AlertModule } from './alert/alert.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { PrismaClientExceptionFilter } from './common/filters/prisma-client-exception.filter';
 import { validate } from './config/env.validation';
+import { DashboardModule } from './dashboard/dashboard.module';
 import { createLoaders } from './dataloader/loaders';
 import { EmulatorModule } from './emulator/emulator.module';
 import { GroupModule } from './group/group.module';
@@ -88,6 +89,7 @@ const AGENT_ENABLED =
     EmulatorModule,
     GroupModule,
     TimescaleAdminModule,
+    DashboardModule,
     ...(AGENT_ENABLED ? [AgentModule] : []),
   ],
   providers: [

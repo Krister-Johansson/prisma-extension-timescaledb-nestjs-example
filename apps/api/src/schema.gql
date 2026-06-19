@@ -49,6 +49,10 @@ input CreateAlertRuleInput {
   threshold: Float!
 }
 
+input CreateDashboardInput {
+  name: String!
+}
+
 input CreateEmulatorInput {
   """Seconds between ingested readings (1–3600)."""
   intervalSeconds: Int!
@@ -73,6 +77,26 @@ input CreateSensorTypeInput {
 
   """Unit of measure, e.g. ppm, µg/m³."""
   unit: String!
+}
+
+input CreateWidgetInput {
+  config: JSON
+  dashboardId: ID!
+  h: Int
+  type: String!
+  w: Int
+  x: Int
+  y: Int
+}
+
+type Dashboard {
+  createdAt: DateTime!
+  id: ID!
+  locked: Boolean!
+  name: String!
+  position: Int!
+  slug: String!
+  widgets: [Widget!]!
 }
 
 """
@@ -136,29 +160,44 @@ input IngestReadingInput {
   value: Float!
 }
 
+"""
+The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
+"""
+scalar JSON
+
 type Mutation {
+  addWidget(input: CreateWidgetInput!): Widget!
   assignSensorToGroup(groupId: ID, sensorId: ID!): Sensor!
   createAlertRule(input: CreateAlertRuleInput!): AlertRule!
+  createDashboard(input: CreateDashboardInput!): Dashboard!
   createEmulator(input: CreateEmulatorInput!): Emulator!
   createSensor(input: CreateSensorInput!): Sensor!
   createSensorGroup(name: String!, parentId: ID): SensorGroup!
   createSensorType(input: CreateSensorTypeInput!): SensorType!
   deleteAlertRule(id: ID!): AlertRule!
+  deleteDashboard(id: ID!): Boolean!
   deleteEmulator(id: ID!): Emulator!
   deleteSensor(id: ID!): Sensor!
   deleteSensorGroup(id: ID!): Boolean!
+  deleteWidget(id: ID!): Boolean!
   ingestReading(input: IngestReadingInput!): SensorReading!
   moveSensorGroup(id: ID!, parentId: ID): SensorGroup!
   refreshSensorReadingHourly(end: DateTime, start: DateTime): Boolean!
   renameSensorGroup(id: ID!, name: String!): SensorGroup!
+  reorderDashboards(ids: [ID!]!): [Dashboard!]!
   setEmulatorRunning(id: ID!, running: Boolean!): Emulator!
   updateAlertRule(id: ID!, input: UpdateAlertRuleInput!): AlertRule!
+  updateDashboard(id: ID!, input: UpdateDashboardInput!): Dashboard!
   updateSensor(id: ID!, input: UpdateSensorInput!): Sensor!
+  updateWidget(id: ID!, input: UpdateWidgetInput!): Widget!
+  updateWidgetLayout(items: [WidgetLayoutInput!]!): Boolean!
 }
 
 type Query {
   alertEvents(sensorId: ID, take: Int): [AlertEvent!]!
   alertRules(sensorId: ID!): [AlertRule!]!
+  dashboard(slug: String!): Dashboard
+  dashboards: [Dashboard!]!
   emulators: [Emulator!]!
   groupSeries(bucket: String! = "1 hour", end: DateTime!, specs: [GroupSeriesSpecInput!]!, start: DateTime!): [GroupSeries!]!
   hypertableStats(model: HypertableModel!): HypertableStats!
@@ -270,6 +309,39 @@ input UpdateAlertRuleInput {
   threshold: Float!
 }
 
+input UpdateDashboardInput {
+  locked: Boolean
+  name: String
+}
+
 input UpdateSensorInput {
   name: String
+}
+
+input UpdateWidgetInput {
+  config: JSON
+  h: Int
+  w: Int
+  x: Int
+  y: Int
+}
+
+type Widget {
+  config: JSON!
+  createdAt: DateTime!
+  dashboardId: ID!
+  h: Int!
+  id: ID!
+  type: String!
+  w: Int!
+  x: Int!
+  y: Int!
+}
+
+input WidgetLayoutInput {
+  h: Int!
+  id: ID!
+  w: Int!
+  x: Int!
+  y: Int!
 }
