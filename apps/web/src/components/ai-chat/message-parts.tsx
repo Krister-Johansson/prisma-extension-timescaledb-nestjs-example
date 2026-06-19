@@ -1,6 +1,11 @@
 import { ChevronRight, Wrench } from 'lucide-react';
 import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+import {
+  RENDERABLE_KINDS,
+  ToolResultView,
+  type ToolOutput,
+} from './tool-result-view';
 
 /** A TanStack AI UIMessage part (loosely typed — the lib's union). */
 export interface Part {
@@ -71,6 +76,17 @@ export function MessagePart({ part }: { part: Part }) {
     return <ThinkingDisclosure content={part.content ?? ''} />;
   }
   if (part.type === 'tool-call') {
+    // Once the tool's structured output arrives, render it as a chart/card;
+    // until then (and for outputs with no renderable kind) show a status chip.
+    const output = part.output as ToolOutput | undefined;
+    if (
+      output &&
+      typeof output === 'object' &&
+      'kind' in output &&
+      RENDERABLE_KINDS.has(output.kind)
+    ) {
+      return <ToolResultView output={output} />;
+    }
     return <ToolStatus name={part.name} state={part.state} />;
   }
   return null;
