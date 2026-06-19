@@ -10,7 +10,7 @@ import { useCatalog } from './use-catalog';
 import {
   bucketedWindow,
   chartSeriesComplete,
-  WINDOW_BUCKET,
+  windowBucketInterval,
   type ChartConfig,
   type ChartSeries,
 } from './widget-config';
@@ -69,7 +69,7 @@ function seriesUnit(s: ChartSeries, catalog: Catalog, all: ChartSeries[]): strin
 export function useChartData(cfg: ChartConfig): ChartData {
   const tick = useDashboardTick();
   const catalog = useCatalog();
-  const bucket = WINDOW_BUCKET[cfg.window];
+  const bucket = windowBucketInterval(cfg.window);
 
   // Keep the original index so colours/keys are stable as completeness changes.
   const indexed = cfg.series.map((s, i) => ({ s, i }));
@@ -86,7 +86,7 @@ export function useChartData(cfg: ChartConfig): ChartData {
   const { start, end } = useMemo(() => {
     return bucketedWindow(cfg.window, Date.now());
     // eslint-disable-next-line react-hooks/exhaustive-deps -- tick/series drive refresh
-  }, [cfg.window, tick, seriesSig]);
+  }, [cfg.window.amount, cfg.window.unit, tick, seriesSig]);
 
   const groupQuery = useQuery(ChartGroupSeriesDocument, {
     variables: {

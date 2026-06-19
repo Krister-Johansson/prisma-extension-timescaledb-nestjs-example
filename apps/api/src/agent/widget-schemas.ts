@@ -8,12 +8,23 @@ import { z } from 'zod';
  * shape — when the client schemas change, update these too.
  */
 
-export const WINDOWS = ['1h', '6h', '24h', '7d', '30d'] as const;
+export const WINDOW_UNITS = ['min', 'hour', 'day', 'week'] as const;
 export const STAT_AGGS = ['last', 'avg', 'min', 'max'] as const;
 export const SERIES_AGGS = ['AVG', 'MIN', 'MAX'] as const;
 export const CHART_TYPES = ['line', 'area', 'bar'] as const;
 
-const windowEnum = z.enum(WINDOWS);
+// A relative look-back window. A plain object (not a wrapped/preprocessed
+// schema) so the tool's JSON schema is explicit and the model emits
+// { amount, unit } rather than falling back to a preset string. (Legacy preset
+// strings from older stored configs are coerced client-side on read.)
+const windowObject = z.object({
+  amount: z.number().int().positive().max(1000),
+  unit: z.enum(WINDOW_UNITS),
+});
+const windowField = (def: {
+  amount: number;
+  unit: (typeof WINDOW_UNITS)[number];
+}) => windowObject.default(def);
 const scopeEnum = z.enum(['sensor', 'group']);
 
 const statConfig = z.object({
@@ -23,7 +34,7 @@ const statConfig = z.object({
   groupId: z.string().optional(),
   typeKey: z.string().optional(),
   agg: z.enum(STAT_AGGS).default('last'),
-  window: windowEnum.default('24h'),
+  window: windowField({ amount: 24, unit: 'hour' }),
   sparkline: z.boolean().default(true),
 });
 
@@ -34,7 +45,7 @@ const gaugeConfig = z.object({
   groupId: z.string().optional(),
   typeKey: z.string().optional(),
   agg: z.enum(STAT_AGGS).default('last'),
-  window: windowEnum.default('1h'),
+  window: windowField({ amount: 1, unit: 'hour' }),
   min: z.number().default(0),
   max: z.number().default(100),
   warn: z.number().optional(),
@@ -56,7 +67,7 @@ const chartSeries = z.object({
 
 const chartConfig = z.object({
   title: z.string().max(60).optional(),
-  window: windowEnum.default('7d'),
+  window: windowField({ amount: 7, unit: 'day' }),
   chartType: z.enum(CHART_TYPES).default('line'),
   series: z.array(chartSeries).min(1).max(6),
 });

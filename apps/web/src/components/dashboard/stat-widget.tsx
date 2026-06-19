@@ -7,7 +7,7 @@ import {
   parseStatConfig,
   statConfigComplete,
   STAT_AGG_LABEL,
-  WINDOW_LABEL,
+  windowLabel,
 } from './widget-config';
 
 const fmt = (n: number | null) =>
@@ -44,7 +44,7 @@ export function StatWidget({ widget }: { widget: WidgetFieldsFragment }) {
   return (
     <div className="flex h-full flex-col justify-between gap-1">
       <div className="truncate text-[10.5px] uppercase tracking-wide text-muted-2">
-        {STAT_AGG_LABEL[cfg.agg]} · {WINDOW_LABEL[cfg.window]}
+        {STAT_AGG_LABEL[cfg.agg]} · {windowLabel(cfg.window)}
       </div>
       <div className="flex items-baseline gap-1">
         <span className="text-3xl font-semibold tabular-nums">

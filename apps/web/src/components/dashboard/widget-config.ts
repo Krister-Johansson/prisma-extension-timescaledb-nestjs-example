@@ -1,38 +1,70 @@
 import { z } from 'zod';
 
-/** Relative time windows a widget can look back over. */
-export const WINDOWS = ['1h', '6h', '24h', '7d', '30d'] as const;
-export type Window = (typeof WINDOWS)[number];
-export const WINDOW_MS: Record<Window, number> = {
-  '1h': 3_600_000,
-  '6h': 21_600_000,
-  '24h': 86_400_000,
-  '7d': 604_800_000,
-  '30d': 2_592_000_000,
+/** A relative look-back window: "the last <amount> <unit>" (e.g. 14 days). */
+export const WINDOW_UNITS = ['min', 'hour', 'day', 'week'] as const;
+export type WindowUnit = (typeof WINDOW_UNITS)[number];
+export interface WindowSpec {
+  amount: number;
+  unit: WindowUnit;
+}
+
+const UNIT_MS: Record<WindowUnit, number> = {
+  min: 60_000,
+  hour: 3_600_000,
+  day: 86_400_000,
+  week: 604_800_000,
 };
-export const WINDOW_LABEL: Record<Window, string> = {
-  '1h': 'Last hour',
-  '6h': 'Last 6 hours',
-  '24h': 'Last 24 hours',
-  '7d': 'Last 7 days',
-  '30d': 'Last 30 days',
+export const WINDOW_UNIT_LABEL: Record<WindowUnit, string> = {
+  min: 'Minutes',
+  hour: 'Hours',
+  day: 'Days',
+  week: 'Weeks',
 };
-/** A sensible bucket interval for a window (≈ a few dozen points). */
-export const WINDOW_BUCKET: Record<Window, string> = {
-  '1h': '5 minutes',
-  '6h': '15 minutes',
-  '24h': '1 hour',
-  '7d': '6 hours',
-  '30d': '1 day',
+const UNIT_NOUN: Record<WindowUnit, [string, string]> = {
+  min: ['minute', 'minutes'],
+  hour: ['hour', 'hours'],
+  day: ['day', 'days'],
+  week: ['week', 'weeks'],
 };
-/** WINDOW_BUCKET as milliseconds — used to snap the query window to the bucket. */
-export const WINDOW_BUCKET_MS: Record<Window, number> = {
-  '1h': 300_000,
-  '6h': 900_000,
-  '24h': 3_600_000,
-  '7d': 21_600_000,
-  '30d': 86_400_000,
-};
+
+export const windowMs = (w: WindowSpec) => w.amount * UNIT_MS[w.unit];
+
+/** "Last 14 days", "Last hour", … */
+export function windowLabel(w: WindowSpec): string {
+  const [one, many] = UNIT_NOUN[w.unit];
+  return w.amount === 1 ? `Last ${one}` : `Last ${w.amount} ${many}`;
+}
+
+/** Axis ticks read as dates once the span covers a couple of days. */
+export const windowIsMultiDay = (w: WindowSpec) => windowMs(w) >= 2 * UNIT_MS.day;
+
+// A ladder of "nice" bucket intervals (Postgres interval string + ms). The
+// bucket is auto-chosen so a window renders ~a few dozen points.
+const BUCKET_LADDER: { interval: string; ms: number }[] = [
+  { interval: '1 minute', ms: 60_000 },
+  { interval: '5 minutes', ms: 300_000 },
+  { interval: '15 minutes', ms: 900_000 },
+  { interval: '30 minutes', ms: 1_800_000 },
+  { interval: '1 hour', ms: 3_600_000 },
+  { interval: '3 hours', ms: 10_800_000 },
+  { interval: '6 hours', ms: 21_600_000 },
+  { interval: '12 hours', ms: 43_200_000 },
+  { interval: '1 day', ms: 86_400_000 },
+  { interval: '2 days', ms: 172_800_000 },
+  { interval: '1 week', ms: 604_800_000 },
+];
+const TARGET_POINTS = 48;
+
+/** The smallest ladder bucket that keeps a span at/under ~TARGET_POINTS points. */
+export function bucketFor(spanMs: number): { interval: string; ms: number } {
+  const desired = spanMs / TARGET_POINTS;
+  return (
+    BUCKET_LADDER.find((b) => b.ms >= desired) ??
+    BUCKET_LADDER[BUCKET_LADDER.length - 1]
+  );
+}
+export const windowBucketInterval = (w: WindowSpec) =>
+  bucketFor(windowMs(w)).interval;
 
 /**
  * Snap the [now − window, now] range to the window's bucket boundary. Because
@@ -42,16 +74,36 @@ export const WINDOW_BUCKET_MS: Record<Window, number> = {
  * bucket is included so the latest data still shows.
  */
 export function bucketedWindow(
-  window: Window,
+  w: WindowSpec,
   nowMs: number,
 ): { start: string; end: string } {
-  const step = WINDOW_BUCKET_MS[window];
+  const span = windowMs(w);
+  const step = bucketFor(span).ms;
   const end = Math.floor(nowMs / step) * step + step;
   return {
-    start: new Date(end - WINDOW_MS[window]).toISOString(),
+    start: new Date(end - span).toISOString(),
     end: new Date(end).toISOString(),
   };
 }
+
+/** Legacy preset windows (stored before relative windows) → WindowSpec. */
+const LEGACY_WINDOW: Record<string, WindowSpec> = {
+  '1h': { amount: 1, unit: 'hour' },
+  '6h': { amount: 6, unit: 'hour' },
+  '24h': { amount: 24, unit: 'hour' },
+  '7d': { amount: 7, unit: 'day' },
+  '30d': { amount: 30, unit: 'day' },
+};
+const windowObjSchema = z.object({
+  amount: z.number().int().positive().max(1000),
+  unit: z.enum(WINDOW_UNITS),
+});
+/** Parse a window, coercing the old `"7d"` preset strings to a WindowSpec. */
+const windowSchema = z.preprocess(
+  (v) => (typeof v === 'string' && LEGACY_WINDOW[v]) || v,
+  windowObjSchema,
+);
+const windowField = (def: WindowSpec) => windowSchema.catch(def);
 
 /** How a Stat widget reduces its windowed series to one number. */
 export const STAT_AGGS = ['last', 'avg', 'min', 'max'] as const;
@@ -77,7 +129,7 @@ const statConfigSchema = z.object({
   groupId: c(z.string().optional(), undefined),
   typeKey: c(z.string().optional(), undefined),
   agg: c(z.enum(STAT_AGGS), 'last'),
-  window: c(z.enum(WINDOWS), '24h'),
+  window: windowField({ amount: 24, unit: 'hour' }),
   sparkline: c(z.boolean(), true),
 });
 export type StatConfig = z.infer<typeof statConfigSchema>;
@@ -117,7 +169,7 @@ export type ChartSeries = z.infer<typeof chartSeriesSchema>;
 
 const chartConfigSchema = z.object({
   title: c(z.string().max(60).optional(), undefined),
-  window: c(z.enum(WINDOWS), '7d'),
+  window: windowField({ amount: 7, unit: 'day' }),
   chartType: c(z.enum(CHART_TYPES), 'line'),
   series: c(z.array(chartSeriesSchema).max(6), [] as ChartSeries[]),
 });
@@ -145,7 +197,7 @@ const gaugeConfigSchema = z.object({
   groupId: c(z.string().optional(), undefined),
   typeKey: c(z.string().optional(), undefined),
   agg: c(z.enum(STAT_AGGS), 'last'),
-  window: c(z.enum(WINDOWS), '1h'),
+  window: windowField({ amount: 1, unit: 'hour' }),
   min: c(z.number(), 0),
   max: c(z.number(), 100),
   warn: c(z.number().optional(), undefined),
