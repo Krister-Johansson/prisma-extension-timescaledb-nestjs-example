@@ -65,3 +65,39 @@ export function statConfigComplete(cfg: StatConfig): boolean {
     ? Boolean(cfg.sensorId)
     : Boolean(cfg.groupId && cfg.typeKey);
 }
+
+// ---- chart widget ----------------------------------------------------------
+
+export const SERIES_AGGS = ['AVG', 'MIN', 'MAX'] as const;
+export type SeriesAggKey = (typeof SERIES_AGGS)[number];
+export const CHART_TYPES = ['line', 'area', 'bar'] as const;
+export type ChartType = (typeof CHART_TYPES)[number];
+
+/** One line/series on a chart — a single sensor or a group + type aggregate. */
+const chartSeriesSchema = z.object({
+  scope: c(z.enum(['sensor', 'group']), 'group'),
+  sensorId: c(z.string().optional(), undefined),
+  groupId: c(z.string().optional(), undefined),
+  typeKey: c(z.string().optional(), undefined),
+  agg: c(z.enum(SERIES_AGGS), 'AVG'),
+  label: c(z.string().max(40).optional(), undefined),
+});
+export type ChartSeries = z.infer<typeof chartSeriesSchema>;
+
+export const chartConfigSchema = z.object({
+  title: c(z.string().max(60).optional(), undefined),
+  window: c(z.enum(WINDOWS), '7d'),
+  chartType: c(z.enum(CHART_TYPES), 'line'),
+  series: c(z.array(chartSeriesSchema).max(6), [] as ChartSeries[]),
+});
+export type ChartConfig = z.infer<typeof chartConfigSchema>;
+
+export function parseChartConfig(config: unknown): ChartConfig {
+  return chartConfigSchema.parse(config ?? {});
+}
+
+export function chartSeriesComplete(s: ChartSeries): boolean {
+  return s.scope === 'sensor'
+    ? Boolean(s.sensorId)
+    : Boolean(s.groupId && s.typeKey);
+}

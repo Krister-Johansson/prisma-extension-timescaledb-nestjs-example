@@ -68,3 +68,40 @@ subscription ReadingTick {
     sensorId
   }
 }
+
+# Chart widget: several group+type aggregate series in one query.
+query ChartGroupSeries(
+  $specs: [GroupSeriesSpecInput!]!
+  $bucket: String!
+  $start: DateTime!
+  $end: DateTime!
+) {
+  groupSeries(specs: $specs, bucket: $bucket, start: $start, end: $end) {
+    groupId
+    type
+    agg
+    points {
+      bucket
+      value
+    }
+  }
+}
+
+# Chart widget: several single-sensor series in one query.
+query ChartSensorSeries(
+  $sensorIds: [ID!]!
+  $bucket: String!
+  $start: DateTime!
+  $end: DateTime!
+) {
+  sensorReadingsBucketedMulti(
+    sensorIds: $sensorIds
+    bucket: $bucket
+    start: $start
+    end: $end
+  ) {
+    sensorId
+    bucket
+    avg
+  }
+}
