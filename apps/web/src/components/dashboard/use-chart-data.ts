@@ -104,10 +104,17 @@ export function useChartData(cfg: ChartConfig): ChartData {
       return r;
     };
 
-    // group results come back in spec order.
-    const gres = groupQuery.data?.groupSeries ?? [];
-    groupItems.forEach((x, gi) => {
-      for (const p of gres[gi]?.points ?? [])
+    // Match each group result to its series by (groupId, type, agg) rather than
+    // assuming the resolver preserves request order.
+    const groupByKey = new Map(
+      (groupQuery.data?.groupSeries ?? []).map((g) => [
+        `${g.groupId}|${g.type}|${g.agg}`,
+        g,
+      ]),
+    );
+    groupItems.forEach((x) => {
+      const g = groupByKey.get(`${x.s.groupId}|${x.s.typeKey}|${x.s.agg}`);
+      for (const p of g?.points ?? [])
         row(new Date(p.bucket).getTime())[`s${x.i}`] = p.value ?? null;
     });
     // sensor results are flat — bucket them by sensorId.
@@ -133,8 +140,12 @@ export function useChartData(cfg: ChartConfig): ChartData {
         label: seriesLabel(x.s, catalog),
         color: SERIES_COLORS[x.i % SERIES_COLORS.length],
       }));
+    // Only consider rendered (complete) series so the header unit matches.
     const unit =
-      cfg.series.map((s) => seriesUnit(s, catalog)).find(Boolean) ?? '';
+      cfg.series
+        .filter(chartSeriesComplete)
+        .map((s) => seriesUnit(s, catalog))
+        .find(Boolean) ?? '';
 
     return {
       rows,
@@ -143,5 +154,12 @@ export function useChartData(cfg: ChartConfig): ChartData {
       loading: groupQuery.loading || sensorQuery.loading,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groupQuery.data, sensorQuery.data, catalog, seriesSig]);
+  }, [
+    groupQuery.data,
+    sensorQuery.data,
+    groupQuery.loading,
+    sensorQuery.loading,
+    catalog,
+    seriesSig,
+  ]);
 }
