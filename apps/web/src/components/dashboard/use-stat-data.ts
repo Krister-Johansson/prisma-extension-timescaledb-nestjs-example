@@ -17,9 +17,15 @@ export interface StatData {
   loading: boolean;
 }
 
-/** Resolve a Stat widget's windowed series (sensor or group) and reduce it to a
- * single value per the configured aggregate. Re-queries on the live tick. */
-export function useStatData(cfg: StatConfig): StatData {
+/** Just the fields needed to resolve a windowed value — shared by Stat + Gauge. */
+export type StatSource = Pick<
+  StatConfig,
+  'scope' | 'sensorId' | 'groupId' | 'typeKey' | 'agg' | 'window'
+>;
+
+/** Resolve a windowed series (sensor or group) and reduce it to a single value
+ * per the configured aggregate. Re-queries on the live tick. */
+export function useStatData(cfg: StatSource): StatData {
   const tick = useDashboardTick();
   const isSensor = cfg.scope === 'sensor';
   const bucket = WINDOW_BUCKET[cfg.window];

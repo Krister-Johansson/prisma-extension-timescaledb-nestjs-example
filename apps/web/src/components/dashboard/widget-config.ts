@@ -101,3 +101,50 @@ export function chartSeriesComplete(s: ChartSeries): boolean {
     ? Boolean(s.sensorId)
     : Boolean(s.groupId && s.typeKey);
 }
+
+// ---- gauge widget ----------------------------------------------------------
+
+/** A gauge reuses the Stat source + reduces to a value, shown against a range
+ * with optional warning/danger thresholds. */
+export const gaugeConfigSchema = z.object({
+  title: c(z.string().max(60).optional(), undefined),
+  scope: c(z.enum(['sensor', 'group']), 'group'),
+  sensorId: c(z.string().optional(), undefined),
+  groupId: c(z.string().optional(), undefined),
+  typeKey: c(z.string().optional(), undefined),
+  agg: c(z.enum(STAT_AGGS), 'last'),
+  window: c(z.enum(WINDOWS), '1h'),
+  min: c(z.number(), 0),
+  max: c(z.number(), 100),
+  warn: c(z.number().optional(), undefined),
+  danger: c(z.number().optional(), undefined),
+});
+export type GaugeConfig = z.infer<typeof gaugeConfigSchema>;
+export const parseGaugeConfig = (config: unknown): GaugeConfig =>
+  gaugeConfigSchema.parse(config ?? {});
+export const gaugeConfigComplete = (cfg: GaugeConfig): boolean =>
+  cfg.scope === 'sensor'
+    ? Boolean(cfg.sensorId)
+    : Boolean(cfg.groupId && cfg.typeKey);
+
+// ---- alerts widget ---------------------------------------------------------
+
+export const alertsConfigSchema = z.object({
+  title: c(z.string().max(60).optional(), undefined),
+  limit: c(z.number().int().min(1).max(50), 8),
+});
+export type AlertsConfig = z.infer<typeof alertsConfigSchema>;
+export const parseAlertsConfig = (config: unknown): AlertsConfig =>
+  alertsConfigSchema.parse(config ?? {});
+
+// ---- sensor table widget ---------------------------------------------------
+
+/** Empty group/type = all sensors. group includes the whole subtree. */
+export const tableConfigSchema = z.object({
+  title: c(z.string().max(60).optional(), undefined),
+  groupId: c(z.string().optional(), undefined),
+  typeKey: c(z.string().optional(), undefined),
+});
+export type TableConfig = z.infer<typeof tableConfigSchema>;
+export const parseTableConfig = (config: unknown): TableConfig =>
+  tableConfigSchema.parse(config ?? {});
