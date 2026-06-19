@@ -1,5 +1,5 @@
 import { useQuery } from '@apollo/client/react';
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import {
   Table,
   TableBody,
@@ -10,22 +10,22 @@ import {
 } from '@/components/ui/table';
 import type { WidgetFieldsFragment } from '@/graphql/dashboards.generated';
 import { TableSensorsDocument } from '@/graphql/widget-data.generated';
-import { useDashboardTick } from './dashboard-live';
 import { useCatalog } from './use-catalog';
 import { parseTableConfig } from './widget-config';
 
 const fmt = (n: number) => (Math.abs(n) >= 100 ? n.toFixed(0) : n.toFixed(1));
 
+/** A list of latest values doesn't need sub-second freshness — poll slowly
+ * rather than refetching on the live reading tick. */
+const POLL_MS = 30_000;
+
 export function TableWidget({ widget }: { widget: WidgetFieldsFragment }) {
   const cfg = parseTableConfig(widget.config);
-  const tick = useDashboardTick();
   const catalog = useCatalog();
-  const { data, refetch } = useQuery(TableSensorsDocument, {
+  const { data } = useQuery(TableSensorsDocument, {
     variables: { where: cfg.typeKey ? { typeKey: cfg.typeKey } : undefined },
+    pollInterval: POLL_MS,
   });
-  useEffect(() => {
-    if (tick) void refetch();
-  }, [tick, refetch]);
 
   // Resolve the selected group's whole subtree (client-side, from the tree).
   const subtree = useMemo(() => {

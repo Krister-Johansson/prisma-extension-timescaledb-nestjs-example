@@ -8,9 +8,9 @@ import {
 import { useDashboardTick } from './dashboard-live';
 import { useCatalog } from './use-catalog';
 import {
+  bucketedWindow,
   chartSeriesComplete,
   WINDOW_BUCKET,
-  WINDOW_MS,
   type ChartConfig,
   type ChartSeries,
 } from './widget-config';
@@ -61,12 +61,10 @@ export function useChartData(cfg: ChartConfig): ChartData {
   );
 
   const seriesSig = JSON.stringify(cfg.series);
+  // Snap to the bucket so variables are stable within a bucket — Apollo serves
+  // the cache between bucket boundaries instead of refetching on every tick.
   const { start, end } = useMemo(() => {
-    const now = Date.now();
-    return {
-      end: new Date(now).toISOString(),
-      start: new Date(now - WINDOW_MS[cfg.window]).toISOString(),
-    };
+    return bucketedWindow(cfg.window, Date.now());
     // eslint-disable-next-line react-hooks/exhaustive-deps -- tick/series drive refresh
   }, [cfg.window, tick, seriesSig]);
 

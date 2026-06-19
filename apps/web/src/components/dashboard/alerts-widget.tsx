@@ -1,10 +1,12 @@
 import { useQuery } from '@apollo/client/react';
-import { useEffect } from 'react';
 import { AllAlertEventsDocument } from '@/graphql/alert-events.generated';
 import type { WidgetFieldsFragment } from '@/graphql/dashboards.generated';
-import { useDashboardTick } from './dashboard-live';
 import { useCatalog } from './use-catalog';
 import { parseAlertsConfig } from './widget-config';
+
+/** Recent alert events refresh on a slow poll; live alerts surface through the
+ * app-wide AlertToaster, so the widget needn't chase every reading tick. */
+const POLL_MS = 30_000;
 
 const relTime = (iso: string) => {
   const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
@@ -16,15 +18,11 @@ const relTime = (iso: string) => {
 
 export function AlertsWidget({ widget }: { widget: WidgetFieldsFragment }) {
   const cfg = parseAlertsConfig(widget.config);
-  const tick = useDashboardTick();
   const catalog = useCatalog();
-  const { data, refetch } = useQuery(AllAlertEventsDocument, {
+  const { data } = useQuery(AllAlertEventsDocument, {
     variables: { take: cfg.limit },
+    pollInterval: POLL_MS,
   });
-
-  useEffect(() => {
-    if (tick) void refetch();
-  }, [tick, refetch]);
 
   const events = data?.alertEvents ?? [];
   if (events.length === 0) {
