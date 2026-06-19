@@ -193,7 +193,11 @@ export function Dashboards() {
           {locked ? 'This dashboard is empty.' : 'Add a widget to get started.'}
         </div>
       ) : active ? (
+        // Key by dashboard id so switching tabs remounts the grid with fresh
+        // layout state — avoids rgl looping when the prior dashboard's layout
+        // briefly mismatches the new widgets.
         <DashboardGrid
+          key={active.id}
           widgets={active.widgets}
           locked={locked}
           onPersist={onPersist}

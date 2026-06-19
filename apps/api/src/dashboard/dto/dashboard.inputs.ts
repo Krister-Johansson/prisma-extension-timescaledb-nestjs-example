@@ -31,12 +31,11 @@ export class CreateDashboardInput {
 
 @InputType()
 export class UpdateDashboardInput {
-  @Field({ nullable: true })
-  @IsOptional()
+  @Field()
   @IsString()
   @MinLength(1)
   @MaxLength(60)
-  name?: string;
+  name!: string;
 }
 
 @InputType()
