@@ -25,6 +25,33 @@ export const WINDOW_BUCKET: Record<Window, string> = {
   '7d': '6 hours',
   '30d': '1 day',
 };
+/** WINDOW_BUCKET as milliseconds — used to snap the query window to the bucket. */
+export const WINDOW_BUCKET_MS: Record<Window, number> = {
+  '1h': 300_000,
+  '6h': 900_000,
+  '24h': 3_600_000,
+  '7d': 21_600_000,
+  '30d': 86_400_000,
+};
+
+/**
+ * Snap the [now − window, now] range to the window's bucket boundary. Because
+ * the result only changes when the bucket *advances* (not on every live tick),
+ * the query variables stay stable within a bucket — so Apollo serves the cache
+ * instead of refetching every widget every few seconds. The current, in-progress
+ * bucket is included so the latest data still shows.
+ */
+export function bucketedWindow(
+  window: Window,
+  nowMs: number,
+): { start: string; end: string } {
+  const step = WINDOW_BUCKET_MS[window];
+  const end = Math.floor(nowMs / step) * step + step;
+  return {
+    start: new Date(end - WINDOW_MS[window]).toISOString(),
+    end: new Date(end).toISOString(),
+  };
+}
 
 /** How a Stat widget reduces its windowed series to one number. */
 export const STAT_AGGS = ['last', 'avg', 'min', 'max'] as const;

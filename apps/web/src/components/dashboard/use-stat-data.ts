@@ -4,8 +4,8 @@ import {
   StatGroupSeriesDocument,
   StatSensorSeriesDocument,
 } from '@/graphql/widget-data.generated';
-import { useDashboardTick } from './dashboard-live';
-import { WINDOW_BUCKET, WINDOW_MS, type StatConfig } from './widget-config';
+import { useDashboardTick, useLiveReading } from './dashboard-live';
+import { bucketedWindow, WINDOW_BUCKET, type StatConfig } from './widget-config';
 
 export interface StatPoint {
   t: number;
@@ -24,24 +24,25 @@ export type StatSource = Pick<
 >;
 
 /** Resolve a windowed series (sensor or group) and reduce it to a single value
- * per the configured aggregate. Re-queries on the live tick. */
+ * per the configured aggregate. The query window is snapped to the bucket so it
+ * only refetches when the bucket advances; a sensor's "current" value is kept
+ * live by the pushed subscription reading in between. */
 export function useStatData(cfg: StatSource): StatData {
   const tick = useDashboardTick();
   const isSensor = cfg.scope === 'sensor';
   const bucket = WINDOW_BUCKET[cfg.window];
 
-  // The window slides forward on each tick, which changes the variables and so
-  // re-runs the query — that's the live refresh.
+  // Snap to the bucket: re-evaluated on each tick, but the value only changes
+  // when the bucket advances, so within a bucket Apollo serves the cache (no
+  // refetch). tick is the recompute trigger.
   const { start, end } = useMemo(() => {
-    const nowMs = Date.now();
-    return {
-      end: new Date(nowMs).toISOString(),
-      start: new Date(nowMs - WINDOW_MS[cfg.window]).toISOString(),
-    };
-    // Re-anchor to "now" on a tick, a window change, or a source change so a
-    // reconfigured widget never queries against a stale window.
+    return bucketedWindow(cfg.window, Date.now());
     // eslint-disable-next-line react-hooks/exhaustive-deps -- tick drives refresh
-  }, [cfg.window, cfg.scope, cfg.sensorId, cfg.groupId, cfg.typeKey, tick]);
+  }, [cfg.window, tick]);
+
+  // For a sensor "current" widget, push the latest reading in live so the value
+  // updates between bucket refetches.
+  const live = useLiveReading(isSensor ? cfg.sensorId : undefined);
 
   const sensorQuery = useQuery(StatSensorSeriesDocument, {
     variables: { sensorId: cfg.sensorId ?? '', bucket, start, end },
@@ -59,17 +60,26 @@ export function useStatData(cfg: StatSource): StatData {
   });
 
   const points = useMemo<StatPoint[]>(() => {
-    if (isSensor) {
-      return (sensorQuery.data?.sensorReadingsBucketed ?? []).map((b) => ({
-        t: new Date(b.bucket).getTime(),
-        value: b.avg ?? null,
+    if (!isSensor) {
+      return (groupQuery.data?.groupSeries?.[0]?.points ?? []).map((p) => ({
+        t: new Date(p.bucket).getTime(),
+        value: p.value ?? null,
       }));
     }
-    return (groupQuery.data?.groupSeries?.[0]?.points ?? []).map((p) => ({
-      t: new Date(p.bucket).getTime(),
-      value: p.value ?? null,
-    }));
-  }, [isSensor, sensorQuery.data, groupQuery.data]);
+    const pts: StatPoint[] = (
+      sensorQuery.data?.sensorReadingsBucketed ?? []
+    ).map((b) => ({ t: new Date(b.bucket).getTime(), value: b.avg ?? null }));
+    // Append the live reading for a "current" widget so it tracks the latest
+    // value without waiting for the next bucket refetch.
+    if (
+      cfg.agg === 'last' &&
+      live &&
+      (pts.length === 0 || live.time > pts[pts.length - 1].t)
+    ) {
+      pts.push({ t: live.time, value: live.value });
+    }
+    return pts;
+  }, [isSensor, sensorQuery.data, groupQuery.data, cfg.agg, live]);
 
   const value = useMemo(() => {
     const nums = points

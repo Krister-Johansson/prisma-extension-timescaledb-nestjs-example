@@ -62,10 +62,13 @@ query StatGroupSeries(
   }
 }
 
-# Fires on every ingested reading — drives the dashboard's real-time refresh.
-subscription ReadingTick {
+# Fires on every ingested reading — drives the dashboard's real-time refresh and
+# pushes the latest value straight into the "current value" widgets.
+subscription LiveReading {
   readingIngested {
     sensorId
+    value
+    time
   }
 }
 
