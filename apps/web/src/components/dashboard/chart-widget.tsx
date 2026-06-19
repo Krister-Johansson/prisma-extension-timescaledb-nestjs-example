@@ -13,6 +13,11 @@ import {
   YAxis,
 } from 'recharts';
 import type { WidgetFieldsFragment } from '@/graphql/dashboards.generated';
+import { InteractiveLegend } from '@/components/charts/interactive-legend';
+import {
+  dimStroke,
+  useSeriesToggle,
+} from '@/components/charts/use-series-toggle';
 import { useChartData, type ChartSeriesMeta } from './use-chart-data';
 import {
   parseChartConfig,
@@ -61,7 +66,11 @@ function ChartTip({
   );
 }
 
-function renderSeries(type: ChartType, s: ChartSeriesMeta) {
+function renderSeries(
+  type: ChartType,
+  s: ChartSeriesMeta,
+  st: { hide: boolean; dim: boolean },
+) {
   if (type === 'area')
     return (
       <Area
@@ -71,14 +80,25 @@ function renderSeries(type: ChartType, s: ChartSeriesMeta) {
         type="monotone"
         stroke={s.color}
         fill={s.color}
-        fillOpacity={0.15}
+        fillOpacity={st.dim ? 0.04 : 0.15}
+        strokeOpacity={dimStroke(st.dim)}
+        hide={st.hide}
         strokeWidth={1.8}
         dot={false}
         connectNulls
       />
     );
   if (type === 'bar')
-    return <Bar key={s.key} dataKey={s.key} name={s.label} fill={s.color} />;
+    return (
+      <Bar
+        key={s.key}
+        dataKey={s.key}
+        name={s.label}
+        fill={s.color}
+        fillOpacity={st.dim ? 0.25 : 1}
+        hide={st.hide}
+      />
+    );
   return (
     <Line
       key={s.key}
@@ -86,6 +106,8 @@ function renderSeries(type: ChartType, s: ChartSeriesMeta) {
       name={s.label}
       type="monotone"
       stroke={s.color}
+      strokeOpacity={dimStroke(st.dim)}
+      hide={st.hide}
       strokeWidth={1.8}
       dot={false}
       connectNulls
@@ -96,6 +118,8 @@ function renderSeries(type: ChartType, s: ChartSeriesMeta) {
 export function ChartWidget({ widget }: { widget: WidgetFieldsFragment }) {
   const cfg = useMemo(() => parseChartConfig(widget.config), [widget.config]);
   const data = useChartData(cfg);
+  // Reset visibility when the series set changes (keys are positional).
+  const toggle = useSeriesToggle(data.series.length);
 
   if (data.series.length === 0) {
     return (
@@ -131,21 +155,19 @@ export function ChartWidget({ widget }: { widget: WidgetFieldsFragment }) {
             <XAxis dataKey="label" minTickGap={28} tick={axisTick} />
             <YAxis width={32} tick={axisTick} domain={['auto', 'auto']} />
             <Tooltip content={<ChartTip />} />
-            {data.series.map((s) => renderSeries(cfg.chartType, s))}
+            {data.series.map((s) =>
+              renderSeries(cfg.chartType, s, toggle.seriesProps(s.key)),
+            )}
           </Chart>
         </ResponsiveContainer>
       </div>
-      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
-        {data.series.map((s) => (
-          <span key={s.key} className="flex items-center gap-1 text-[10px]">
-            <span
-              className="size-2 rounded-full"
-              style={{ background: s.color }}
-            />
-            <span className="max-w-[120px] truncate">{s.label}</span>
-          </span>
-        ))}
-      </div>
+      <InteractiveLegend
+        className="mt-1 gap-x-3 gap-y-0.5"
+        items={data.series}
+        hidden={toggle.hidden}
+        toggle={toggle.toggle}
+        setHovered={toggle.setHovered}
+      />
     </div>
   );
 }

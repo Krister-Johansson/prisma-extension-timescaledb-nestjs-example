@@ -35,6 +35,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  dimStroke,
+  useSeriesToggle,
+} from '@/components/charts/use-series-toggle';
 import { SERIES_COLORS } from '@/data/aggregates';
 import {
   DEFAULT_RANGE,
@@ -108,6 +112,8 @@ function OverlayTooltip({
 export function AggregateOverlay() {
   const [{ res, range, from, to, series }, setSearch] =
     useSearchState('/aggregates');
+  // Reset visibility when series are added/removed (keys are positional).
+  const toggle = useSeriesToggle(series.length);
   const { data: groupsData } = useQuery(SensorGroupsDocument, {
     context: { suppressErrorToast: true },
   });
@@ -251,10 +257,24 @@ export function AggregateOverlay() {
       {/* Series editor */}
       <div className="mt-3 flex flex-col gap-2">
         {series.map((s, i) => (
-          <div key={i} className="flex flex-wrap items-center gap-2">
-            <span
-              className="size-2.5 flex-none rounded-full"
-              style={{ background: meta[i].color }}
+          <div
+            key={`${s.g}|${s.t ?? 'all'}|${s.agg}|${i}`}
+            className="flex flex-wrap items-center gap-2"
+            onMouseEnter={() => toggle.setHovered(meta[i].key)}
+            onMouseLeave={() => toggle.setHovered(null)}
+          >
+            <button
+              type="button"
+              aria-pressed={!toggle.hidden.has(meta[i].key)}
+              aria-label={
+                toggle.hidden.has(meta[i].key) ? 'Show series' : 'Hide series'
+              }
+              onClick={() => toggle.toggle(meta[i].key)}
+              className="size-2.5 flex-none rounded-full outline-none ring-offset-1 transition-opacity focus-visible:ring-2 focus-visible:ring-ring"
+              style={{
+                background: meta[i].color,
+                opacity: toggle.hidden.has(meta[i].key) ? 0.3 : 1,
+              }}
             />
             <Select value={s.g} onValueChange={(v) => updateSeries(i, { g: v })}>
               <SelectTrigger size="sm" className="w-[150px]">
@@ -394,17 +414,22 @@ export function AggregateOverlay() {
                     />
                   )}
                 />
-                {meta.map((m) => (
-                  <Line
-                    key={m.key}
-                    dataKey={m.key}
-                    type="monotone"
-                    stroke={m.color}
-                    strokeWidth={1.8}
-                    dot={false}
-                    isAnimationActive={false}
-                  />
-                ))}
+                {meta.map((m) => {
+                  const st = toggle.seriesProps(m.key);
+                  return (
+                    <Line
+                      key={m.key}
+                      dataKey={m.key}
+                      type="monotone"
+                      stroke={m.color}
+                      strokeOpacity={dimStroke(st.dim)}
+                      hide={st.hide}
+                      strokeWidth={1.8}
+                      dot={false}
+                      isAnimationActive={false}
+                    />
+                  );
+                })}
               </LineChart>
             </ResponsiveContainer>
           </div>
