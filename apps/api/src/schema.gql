@@ -92,7 +92,6 @@ input CreateWidgetInput {
 type Dashboard {
   createdAt: DateTime!
   id: ID!
-  locked: Boolean!
   name: String!
   position: Int!
   slug: String!
@@ -310,7 +309,6 @@ input UpdateAlertRuleInput {
 }
 
 input UpdateDashboardInput {
-  locked: Boolean
   name: String
 }
 

@@ -70,7 +70,7 @@ export class DashboardService {
   update(id: string, input: UpdateDashboardInput) {
     return this.prisma.dashboard.update({
       where: { id },
-      data: { name: input.name, locked: input.locked },
+      data: { name: input.name },
       ...withWidgets,
     });
   }

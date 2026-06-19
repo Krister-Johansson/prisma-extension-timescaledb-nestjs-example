@@ -1,6 +1,5 @@
 import { Field, ID, InputType, Int } from '@nestjs/graphql';
 import {
-  IsBoolean,
   IsIn,
   IsInt,
   IsOptional,
@@ -38,11 +37,6 @@ export class UpdateDashboardInput {
   @MinLength(1)
   @MaxLength(60)
   name?: string;
-
-  @Field({ nullable: true })
-  @IsOptional()
-  @IsBoolean()
-  locked?: boolean;
 }
 
 @InputType()

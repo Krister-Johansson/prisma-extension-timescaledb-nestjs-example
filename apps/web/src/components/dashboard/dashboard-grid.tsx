@@ -37,6 +37,17 @@ const toLayout = (widgets: WidgetFieldsFragment[]): Layout =>
     minH: 2,
   }));
 
+/** Same items + positions (order-independent). Lets onLayoutChange bail out when
+ * rgl re-emits an unchanged layout as a new array, which would otherwise loop. */
+const sameLayout = (a: Layout, b: Layout): boolean => {
+  if (a.length !== b.length) return false;
+  const byId = new Map(b.map((l) => [l.i, l]));
+  return a.every((l) => {
+    const m = byId.get(l.i);
+    return !!m && m.x === l.x && m.y === l.y && m.w === l.w && m.h === l.h;
+  });
+};
+
 export function DashboardGrid({
   widgets,
   locked,
@@ -89,7 +100,9 @@ export function DashboardGrid({
           compactType="vertical"
           preventCollision={false}
           resizeHandles={['se']}
-          onLayoutChange={(current) => setLayout(current)}
+          onLayoutChange={(current) =>
+            setLayout((prev) => (sameLayout(prev, current) ? prev : current))
+          }
           onDragStop={(current) => persist(current)}
           onResizeStop={(current) => persist(current)}
         >
