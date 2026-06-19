@@ -22,6 +22,11 @@ export default defineConfig({
         // Proxy the WebSocket upgrade too, for graphql-ws subscriptions.
         ws: true,
       },
+      // The AI chat agent's SSE endpoint.
+      '/agent': {
+        target: process.env.VITE_API_PROXY ?? 'http://localhost:3000',
+        changeOrigin: true,
+      },
     },
   },
   plugins: [
