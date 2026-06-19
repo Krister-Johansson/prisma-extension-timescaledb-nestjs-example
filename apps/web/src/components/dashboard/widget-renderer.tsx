@@ -1,12 +1,14 @@
 import { LayoutDashboard } from 'lucide-react';
 import type { WidgetFieldsFragment } from '@/graphql/dashboards.generated';
+import { ChartWidget } from './chart-widget';
 import { StatWidget } from './stat-widget';
 import { WIDGET_TYPES } from './widget-meta';
 
-/** Maps a widget to its renderer. Chart/gauge/alerts/table land in later phases
- * and still show a labeled placeholder. */
+/** Maps a widget to its renderer. Gauge/alerts/table land in later phases and
+ * still show a labeled placeholder. */
 export function WidgetRenderer({ widget }: { widget: WidgetFieldsFragment }) {
   if (widget.type === 'stat') return <StatWidget widget={widget} />;
+  if (widget.type === 'chart') return <ChartWidget widget={widget} />;
 
   const meta = WIDGET_TYPES[widget.type];
   return (

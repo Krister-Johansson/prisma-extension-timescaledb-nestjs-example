@@ -16,14 +16,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Trash2 } from 'lucide-react';
 import type { WidgetFieldsFragment } from '@/graphql/dashboards.generated';
 import { useCatalog } from './use-catalog';
 import {
+  CHART_TYPES,
+  parseChartConfig,
   parseStatConfig,
+  SERIES_AGGS,
   STAT_AGGS,
   STAT_AGG_LABEL,
   WINDOWS,
   WINDOW_LABEL,
+  type ChartConfig,
+  type ChartSeries,
   type StatConfig,
 } from './widget-config';
 import {
@@ -181,6 +187,175 @@ function StatFields({
   );
 }
 
+function ChartFields({
+  cfg,
+  set,
+}: {
+  cfg: ChartConfig;
+  set: (patch: Partial<ChartConfig>) => void;
+}) {
+  const catalog = useCatalog();
+  const updateSeries = (idx: number, p: Partial<ChartSeries>) =>
+    set({
+      series: cfg.series.map((s, i) => (i === idx ? { ...s, ...p } : s)),
+    });
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="Window">
+          <SelectBox
+            value={cfg.window}
+            onValueChange={(v) => set({ window: v as ChartConfig['window'] })}
+            options={WINDOWS.map((w) => ({ value: w, label: WINDOW_LABEL[w] }))}
+          />
+        </Field>
+        <Field label="Chart type">
+          <SelectBox
+            value={cfg.chartType}
+            onValueChange={(v) =>
+              set({ chartType: v as ChartConfig['chartType'] })
+            }
+            options={CHART_TYPES.map((t) => ({
+              value: t,
+              label: t[0].toUpperCase() + t.slice(1),
+            }))}
+          />
+        </Field>
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-[11px] text-muted-foreground">Series</Label>
+        {cfg.series.length === 0 && (
+          <p className="text-[12px] text-muted-2">
+            No series yet — add one below.
+          </p>
+        )}
+        {cfg.series.map((s, idx) => (
+          <div
+            // eslint-disable-next-line react/no-array-index-key
+            key={idx}
+            className="space-y-1.5 rounded-md border border-border p-2"
+          >
+            <div className="flex items-center gap-1.5">
+              <Button
+                type="button"
+                size="xs"
+                variant={s.scope === 'sensor' ? 'default' : 'outline'}
+                onClick={() => updateSeries(idx, { scope: 'sensor' })}
+              >
+                Sensor
+              </Button>
+              <Button
+                type="button"
+                size="xs"
+                variant={s.scope === 'group' ? 'default' : 'outline'}
+                onClick={() => updateSeries(idx, { scope: 'group' })}
+              >
+                Group
+              </Button>
+              <Button
+                type="button"
+                size="icon-xs"
+                variant="ghost"
+                className="ml-auto"
+                aria-label="Remove series"
+                onClick={() =>
+                  set({ series: cfg.series.filter((_, i) => i !== idx) })
+                }
+              >
+                <Trash2 className="size-3.5" />
+              </Button>
+            </div>
+            {s.scope === 'sensor' ? (
+              <SelectBox
+                value={s.sensorId}
+                placeholder="Sensor"
+                onValueChange={(v) => updateSeries(idx, { sensorId: v })}
+                options={catalog.sensors.map((x) => ({
+                  value: x.id,
+                  label: x.name,
+                }))}
+              />
+            ) : (
+              <div className="grid grid-cols-2 gap-1.5">
+                <SelectBox
+                  value={s.groupId}
+                  placeholder="Group"
+                  onValueChange={(v) => updateSeries(idx, { groupId: v })}
+                  options={catalog.groups.map((g) => ({
+                    value: g.id,
+                    label: g.name,
+                  }))}
+                />
+                <SelectBox
+                  value={s.typeKey}
+                  placeholder="Type"
+                  onValueChange={(v) => updateSeries(idx, { typeKey: v })}
+                  options={catalog.types.map((t) => ({
+                    value: t.key,
+                    label: t.label,
+                  }))}
+                />
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-1.5">
+              <SelectBox
+                value={s.agg}
+                onValueChange={(v) =>
+                  updateSeries(idx, { agg: v as ChartSeries['agg'] })
+                }
+                options={SERIES_AGGS.map((a) => ({ value: a, label: a }))}
+              />
+              <Input
+                className="h-8 text-[13px]"
+                placeholder="Label (optional)"
+                value={s.label ?? ''}
+                maxLength={40}
+                onChange={(e) =>
+                  updateSeries(idx, { label: e.target.value || undefined })
+                }
+              />
+            </div>
+          </div>
+        ))}
+        {cfg.series.length < 6 && (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              set({
+                series: [
+                  ...cfg.series,
+                  {
+                    scope: 'group',
+                    agg: 'AVG',
+                    sensorId: undefined,
+                    groupId: undefined,
+                    typeKey: undefined,
+                    label: undefined,
+                  },
+                ],
+              })
+            }
+          >
+            + Add series
+          </Button>
+        )}
+      </div>
+    </>
+  );
+}
+
+function initialConfig(widget: WidgetFieldsFragment): Record<string, unknown> {
+  if (widget.type === 'stat')
+    return parseStatConfig(widget.config) as unknown as Record<string, unknown>;
+  if (widget.type === 'chart')
+    return parseChartConfig(widget.config) as unknown as Record<string, unknown>;
+  return { ...((widget.config as object) ?? {}) };
+}
+
 function ConfigForm({
   widget,
   onClose,
@@ -193,11 +368,12 @@ function ConfigForm({
   const [size, setSize] = useState<SizeKey | 'custom'>(() =>
     matchSize(widget.w, widget.h),
   );
-  const [cfg, setCfg] = useState<StatConfig>(() =>
-    parseStatConfig(widget.config),
+  const [config, setConfig] = useState<Record<string, unknown>>(() =>
+    initialConfig(widget),
   );
   const [saving, setSaving] = useState(false);
-  const set = (patch: Partial<StatConfig>) => setCfg((c) => ({ ...c, ...patch }));
+  const patch = (p: Record<string, unknown>) =>
+    setConfig((c) => ({ ...c, ...p }));
   const meta = WIDGET_TYPES[widget.type];
 
   const save = async () => {
@@ -205,12 +381,6 @@ function ConfigForm({
     try {
       const { w, h } =
         size === 'custom' ? { w: widget.w, h: widget.h } : SIZE_PRESETS[size];
-      // Only the Stat widget persists the full config for now; other types just
-      // keep their (future) config plus the shared title.
-      const config =
-        widget.type === 'stat'
-          ? (cfg as Record<string, unknown>)
-          : { ...((widget.config as object) ?? {}), title: cfg.title };
       await onSave({ config, w, h });
       onClose();
     } finally {
@@ -223,13 +393,13 @@ function ConfigForm({
       <DialogHeader>
         <DialogTitle>Configure {meta?.label ?? widget.type}</DialogTitle>
       </DialogHeader>
-      <div className="space-y-3">
+      <div className="max-h-[70vh] space-y-3 overflow-y-auto pr-1">
         <Field label="Title (optional)">
           <Input
-            value={cfg.title ?? ''}
+            value={(config.title as string) ?? ''}
             maxLength={60}
             placeholder={meta?.label}
-            onChange={(e) => set({ title: e.target.value || undefined })}
+            onChange={(e) => patch({ title: e.target.value || undefined })}
           />
         </Field>
         <Field label="Size">
@@ -249,9 +419,19 @@ function ConfigForm({
           </div>
         </Field>
 
-        {widget.type === 'stat' ? (
-          <StatFields cfg={cfg} set={set} />
-        ) : (
+        {widget.type === 'stat' && (
+          <StatFields
+            cfg={config as unknown as StatConfig}
+            set={patch as (p: Partial<StatConfig>) => void}
+          />
+        )}
+        {widget.type === 'chart' && (
+          <ChartFields
+            cfg={config as unknown as ChartConfig}
+            set={patch as (p: Partial<ChartConfig>) => void}
+          />
+        )}
+        {widget.type !== 'stat' && widget.type !== 'chart' && (
           <p className="text-[12px] text-muted-2">
             More options for this widget type are coming soon.
           </p>
