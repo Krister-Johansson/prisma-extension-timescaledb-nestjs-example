@@ -1,0 +1,141 @@
+import { z } from 'zod';
+
+/**
+ * Server-side mirror of the client widget config schemas (`apps/web/src/
+ * components/dashboard/widget-config.ts`). The AI dashboard generator validates
+ * the model's output against these before persisting, so generated widgets
+ * match what the client can render. Kept intentionally close to the client
+ * shape — when the client schemas change, update these too.
+ */
+
+export const WINDOWS = ['1h', '6h', '24h', '7d', '30d'] as const;
+export const STAT_AGGS = ['last', 'avg', 'min', 'max'] as const;
+export const SERIES_AGGS = ['AVG', 'MIN', 'MAX'] as const;
+export const CHART_TYPES = ['line', 'area', 'bar'] as const;
+
+const windowEnum = z.enum(WINDOWS);
+const scopeEnum = z.enum(['sensor', 'group']);
+
+const statConfig = z.object({
+  title: z.string().max(60).optional(),
+  scope: scopeEnum,
+  sensorId: z.string().optional(),
+  groupId: z.string().optional(),
+  typeKey: z.string().optional(),
+  agg: z.enum(STAT_AGGS).default('last'),
+  window: windowEnum.default('24h'),
+  sparkline: z.boolean().default(true),
+});
+
+const gaugeConfig = z.object({
+  title: z.string().max(60).optional(),
+  scope: scopeEnum,
+  sensorId: z.string().optional(),
+  groupId: z.string().optional(),
+  typeKey: z.string().optional(),
+  agg: z.enum(STAT_AGGS).default('last'),
+  window: windowEnum.default('1h'),
+  min: z.number().default(0),
+  max: z.number().default(100),
+  warn: z.number().optional(),
+  danger: z.number().optional(),
+});
+
+const chartSeries = z.object({
+  scope: scopeEnum,
+  sensorId: z.string().optional(),
+  groupId: z.string().optional(),
+  typeKey: z.string().optional(),
+  agg: z.enum(SERIES_AGGS).default('AVG'),
+  label: z.string().max(40).optional(),
+});
+
+const chartConfig = z.object({
+  title: z.string().max(60).optional(),
+  window: windowEnum.default('7d'),
+  chartType: z.enum(CHART_TYPES).default('line'),
+  series: z.array(chartSeries).min(1).max(6),
+});
+
+const alertsConfig = z.object({
+  title: z.string().max(60).optional(),
+  limit: z.number().int().min(1).max(50).default(8),
+});
+
+const tableConfig = z.object({
+  title: z.string().max(60).optional(),
+  groupId: z.string().optional(),
+  typeKey: z.string().optional(),
+});
+
+/** Coerce a JSON-stringified object back to an object before validating. Models
+ * frequently emit a nested tool-call field (`config`) as a stringified JSON blob
+ * rather than a real object; without this the schema rejects it outright. */
+const asObject = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess((v) => {
+    if (typeof v === 'string') {
+      try {
+        // The parsed value is validated by the downstream schema; type it as
+        // unknown so it doesn't escape type-checking (no-unsafe-return).
+        return JSON.parse(v) as unknown;
+      } catch {
+        return v;
+      }
+    }
+    return v;
+  }, schema);
+
+/** The `add_widget` tool input — a discriminated union so the model fills the
+ * config shape that matches the chosen widget type. */
+export const addWidgetInput = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('stat'), config: asObject(statConfig) }),
+  z.object({ type: z.literal('gauge'), config: asObject(gaugeConfig) }),
+  z.object({ type: z.literal('chart'), config: asObject(chartConfig) }),
+  z.object({ type: z.literal('alerts'), config: asObject(alertsConfig) }),
+  z.object({ type: z.literal('table'), config: asObject(tableConfig) }),
+]);
+export type AddWidgetInput = z.infer<typeof addWidgetInput>;
+
+/** Default grid size per widget type (mirrors the client SIZE_PRESETS + each
+ * type's defaultSize in widget-meta.ts). */
+export const WIDGET_DEFAULT_SIZE: Record<string, { w: number; h: number }> = {
+  stat: { w: 3, h: 3 },
+  chart: { w: 8, h: 6 },
+  gauge: { w: 4, h: 4 },
+  alerts: { w: 6, h: 5 },
+  table: { w: 6, h: 5 },
+};
+
+type SourceLike = {
+  scope: string;
+  sensorId?: string;
+  groupId?: string;
+  typeKey?: string;
+};
+
+function sourceReason(c: SourceLike): string | null {
+  if (c.scope === 'sensor')
+    return c.sensorId ? null : 'sensor scope requires a sensorId';
+  return c.groupId && c.typeKey
+    ? null
+    : 'group scope requires a groupId and a typeKey';
+}
+
+/** Why a generated widget can't be rendered yet, or null if it's complete.
+ * Lets the tool reject under-specified widgets so the model self-corrects. */
+export function widgetIncompleteReason(w: AddWidgetInput): string | null {
+  switch (w.type) {
+    case 'stat':
+    case 'gauge':
+      return sourceReason(w.config);
+    case 'chart': {
+      for (const s of w.config.series) {
+        const r = sourceReason(s);
+        if (r) return `a chart series is invalid: ${r}`;
+      }
+      return null;
+    }
+    default:
+      return null;
+  }
+}

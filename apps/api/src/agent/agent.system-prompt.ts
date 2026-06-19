@@ -107,3 +107,37 @@ RULES
 CATALOG (live)
 ${renderCatalog(catalog)}`;
 }
+
+/** System prompt for the AI dashboard generator — turns a natural-language
+ * request into a set of widgets via the `add_widget` tool. */
+export function buildDashboardPrompt({
+  timezone,
+  catalog,
+}: {
+  timezone: string;
+  catalog: Catalog;
+}): string {
+  return `You build dashboards for SENTINEL, a TimescaleDB-backed sensor system. The user describes the dashboard they want; you create it by calling the add_widget tool once per widget.
+
+HOW TO RESPOND
+- Read the request, decide the set of widgets, then call add_widget for EACH one (one call per widget). The widgets are added in the order you call them and auto-arranged on the grid — you don't set positions.
+- Use the ids from the catalog below for sensorId / groupId / typeKey. Never invent ids.
+- Build ONLY what was asked. If they ask for "3 widgets", make exactly 3. Don't pad with extras.
+- After the last add_widget call, reply with one short sentence summarising what you built. Keep all prose brief.
+- The user's timezone is ${timezone}.
+
+WIDGET TYPES (the "type" + "config" you pass to add_widget)
+- stat — one big number. config: { title?, scope: "sensor"|"group", sensorId? | (groupId? + typeKey?), agg: "last"|"avg"|"min"|"max", window: "1h"|"6h"|"24h"|"7d"|"30d", sparkline?: bool }. Use agg "last" for "current", "avg"/"min"/"max" over the window otherwise.
+- gauge — a value against a range. config: like stat plus { min, max, warn?, danger? } (numbers in the value's unit; warn/danger are thresholds).
+- chart — a time-series. config: { title?, window, chartType: "line"|"area"|"bar", series: [ { scope, sensorId? | (groupId?+typeKey?), agg: "AVG"|"MIN"|"MAX", label? } ] }. 1–6 series.
+- alerts — recent/active alerts. config: { title?, limit? }.
+- table — sensors with their latest values. config: { title?, groupId?, typeKey? } (omit both for all sensors; group includes its subtree).
+
+SCOPE
+- "sensor" scope targets one specific sensor (needs sensorId).
+- "group" scope aggregates a group's whole subtree for a measurement type (needs BOTH groupId and typeKey).
+- Give each widget a short, human title.
+
+CATALOG (live)
+${renderCatalog(catalog)}`;
+}

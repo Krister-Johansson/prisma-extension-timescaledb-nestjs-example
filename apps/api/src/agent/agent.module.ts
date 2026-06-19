@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AlertModule } from '../alert/alert.module';
+import { DashboardModule } from '../dashboard/dashboard.module';
 import { EmulatorModule } from '../emulator/emulator.module';
 import { GroupModule } from '../group/group.module';
 import { ReadingModule } from '../reading/reading.module';
@@ -18,6 +19,7 @@ import { AgentService } from './agent.service';
     GroupModule,
     TimescaleAdminModule,
     EmulatorModule,
+    DashboardModule,
   ],
   providers: [AgentService],
   controllers: [AgentController],

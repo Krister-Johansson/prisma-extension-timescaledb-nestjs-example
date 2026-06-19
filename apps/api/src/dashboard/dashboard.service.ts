@@ -14,6 +14,34 @@ const withWidgets = {
   include: { widgets: { orderBy: { createdAt: 'asc' as const } } },
 };
 
+const GRID_COLS = 12;
+type Box = { x: number; y: number; w: number; h: number };
+
+/** Skyline-pack a new `w × h` box onto a 12-col grid, given the boxes already
+ * placed — picks the left-most lowest shelf it fits on. Used to auto-layout
+ * AI-generated widgets so they tile without overlapping. */
+export function packWidget(existing: Box[], w: number, h: number): Box {
+  const width = Math.min(Math.max(w, 1), GRID_COLS);
+  const heights = new Array<number>(GRID_COLS).fill(0);
+  for (const it of existing) {
+    const bottom = it.y + it.h;
+    for (let c = it.x; c < Math.min(it.x + it.w, GRID_COLS); c++) {
+      heights[c] = Math.max(heights[c], bottom);
+    }
+  }
+  let bestX = 0;
+  let bestY = Number.POSITIVE_INFINITY;
+  for (let x = 0; x <= GRID_COLS - width; x++) {
+    let y = 0;
+    for (let c = x; c < x + width; c++) y = Math.max(y, heights[c]);
+    if (y < bestY) {
+      bestY = y;
+      bestX = x;
+    }
+  }
+  return { x: bestX, y: Number.isFinite(bestY) ? bestY : 0, w: width, h };
+}
+
 @Injectable()
 export class DashboardService {
   constructor(
@@ -100,6 +128,32 @@ export class DashboardService {
         w: input.w ?? 4,
         h: input.h ?? 3,
         config: (input.config ?? {}) as Prisma.InputJsonValue,
+      },
+    });
+  }
+
+  /** Create a widget at an auto-computed, non-overlapping slot — for the AI
+   * dashboard generator, which doesn't supply coordinates. */
+  async addGeneratedWidget(
+    dashboardId: string,
+    type: string,
+    config: unknown,
+    size: { w: number; h: number },
+  ) {
+    const existing = await this.prisma.widget.findMany({
+      where: { dashboardId },
+      select: { x: true, y: true, w: true, h: true },
+    });
+    const slot = packWidget(existing, size.w, size.h);
+    return this.prisma.widget.create({
+      data: {
+        dashboardId,
+        type,
+        x: slot.x,
+        y: slot.y,
+        w: slot.w,
+        h: slot.h,
+        config: (config ?? {}) as Prisma.InputJsonValue,
       },
     });
   }
