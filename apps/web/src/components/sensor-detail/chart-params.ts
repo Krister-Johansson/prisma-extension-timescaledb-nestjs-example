@@ -6,7 +6,7 @@ export type Resolution = (typeof RESOLUTIONS)[number];
 export const RANGES = ['1h', '24h', '7d', '30d', '90d'] as const;
 export type RangeKey = (typeof RANGES)[number];
 
-export const TABS = ['data', 'alert'] as const;
+const TABS = ['data', 'alert'] as const;
 export type TabKey = (typeof TABS)[number];
 
 /** The default live view (also what the Reset control restores). */

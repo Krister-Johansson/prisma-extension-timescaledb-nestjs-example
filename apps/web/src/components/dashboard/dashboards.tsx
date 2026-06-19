@@ -37,6 +37,8 @@ import { NameDialog } from './name-dialog';
 import { WidgetConfigDialog, type WidgetSave } from './widget-config-dialog';
 import { SIZE_PRESETS, WIDGET_TYPES } from './widget-meta';
 
+const refetchQueries = [{ query: DashboardsDocument }];
+
 export function Dashboards() {
   const { data, loading, refetch } = useQuery(DashboardsDocument);
   const dashboards = data?.dashboards ?? [];
@@ -48,7 +50,6 @@ export function Dashboards() {
   const active =
     dashboards.find((d) => d.slug === activeSlug) ?? dashboards[0] ?? null;
 
-  const refetchQueries = [{ query: DashboardsDocument }];
   const [createDashboard] = useMutation(CreateDashboardDocument, {
     refetchQueries,
   });

@@ -32,7 +32,7 @@ function downsample(values: number[], n: number): number[] {
  * `status`, the representative `rule`, and `ruleCount` derive from the sensor's
  * alert `rules` (a sensor can have several).
  */
-export function toUiSensor(sensor: GqlSensor): Sensor {
+function toUiSensor(sensor: GqlSensor): Sensor {
   const ordered = [...sensor.readings].sort((a, b) =>
     a.time.localeCompare(b.time),
   );
