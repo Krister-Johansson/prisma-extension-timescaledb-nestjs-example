@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { z } from 'zod';
 import { AlertService } from '../alert/alert.service';
+import { EmulatorService } from '../emulator/emulator.service';
 import { GroupService } from '../group/group.service';
 import { PRISMA_CLIENT } from '../prisma/prisma-client';
 import type { ExtendedPrismaClient } from '../prisma/prisma-client';
@@ -31,6 +32,7 @@ export class AgentService {
     private readonly readings: ReadingService,
     private readonly alerts: AlertService,
     private readonly admin: TimescaleAdminService,
+    private readonly emulators: EmulatorService,
     private readonly config: ConfigService,
   ) {}
 
@@ -87,6 +89,22 @@ export class AgentService {
       def({ name, description, inputSchema, outputSchema: anyObject }).server(
         fn,
       );
+
+    // Mutating tools require the user to approve before they run (the client
+    // renders a Confirm card). No deletes are exposed.
+    const writeTool = (
+      name: string,
+      description: string,
+      inputSchema: z.ZodTypeAny,
+      fn: (input: never) => unknown,
+    ) =>
+      def({
+        name,
+        description,
+        inputSchema,
+        outputSchema: anyObject,
+        needsApproval: true,
+      }).server(fn);
 
     return [
       tool(
@@ -174,7 +192,137 @@ export class AgentService {
         z.object({}),
         () => this.admin.hypertableStats(HypertableModel.SensorReading),
       ),
+      tool(
+        'list_emulators',
+        'The value emulators with their ids, target sensor, range, interval and running state. Use these ids for set_emulator_running.',
+        z.object({}),
+        () => this.emulators.list(),
+      ),
+
+      // ---- writes (approval-gated) ----
+      writeTool(
+        'create_sensor',
+        'Create a sensor of a given measurement type. Optionally place it in a group.',
+        z.object({
+          name: z.string().min(1).max(80),
+          typeKey: z.string(),
+          groupId: z.string().optional(),
+        }),
+        (i) => this.createSensor(i),
+      ),
+      writeTool(
+        'create_group',
+        'Create a group, optionally nested under a parent group.',
+        z.object({
+          name: z.string().min(1).max(80),
+          parentId: z.string().optional(),
+        }),
+        (i: { name: string; parentId?: string }) =>
+          this.done(
+            () => this.groups.create(i.name, i.parentId),
+            `Created group "${i.name}"`,
+          ),
+      ),
+      writeTool(
+        'rename_group',
+        'Rename an existing group.',
+        z.object({ id: z.string(), name: z.string().min(1).max(80) }),
+        (i: { id: string; name: string }) =>
+          this.done(
+            () => this.groups.rename(i.id, i.name),
+            `Renamed group to "${i.name}"`,
+          ),
+      ),
+      writeTool(
+        'move_group',
+        'Move a group under a new parent (omit parentId to move it to the top level).',
+        z.object({ id: z.string(), parentId: z.string().optional() }),
+        (i: { id: string; parentId?: string }) =>
+          this.done(() => this.groups.move(i.id, i.parentId), 'Moved group'),
+      ),
+      writeTool(
+        'assign_sensor_to_group',
+        'Put a sensor in a group (omit groupId to remove it from its group).',
+        z.object({ sensorId: z.string(), groupId: z.string().optional() }),
+        (i: { sensorId: string; groupId?: string }) =>
+          this.done(
+            () => this.groups.assignSensor(i.sensorId, i.groupId ?? null),
+            i.groupId
+              ? 'Assigned sensor to group'
+              : 'Removed sensor from group',
+          ),
+      ),
+      writeTool(
+        'create_sensor_type',
+        'Create a measurement type (e.g. key "CO2", label "CO₂", unit "ppm").',
+        z.object({
+          key: z.string().min(1).max(40),
+          label: z.string().min(1).max(80),
+          unit: z.string().max(20),
+        }),
+        (i: { key: string; label: string; unit: string }) =>
+          this.done(
+            () => this.sensors.createType(i),
+            `Created type "${i.key}"`,
+          ),
+      ),
+      writeTool(
+        'create_emulator',
+        'Create a value emulator for a sensor (generates readings between min and max every intervalSeconds). Start it with set_emulator_running.',
+        z.object({
+          sensorId: z.string(),
+          min: z.number(),
+          max: z.number(),
+          intervalSeconds: z.number().int().min(1).max(3600),
+        }),
+        (i: {
+          sensorId: string;
+          min: number;
+          max: number;
+          intervalSeconds: number;
+        }) => this.done(() => this.emulators.create(i), 'Created emulator'),
+      ),
+      writeTool(
+        'set_emulator_running',
+        'Start or stop an emulator.',
+        z.object({ id: z.string(), running: z.boolean() }),
+        (i: { id: string; running: boolean }) =>
+          this.done(
+            () => this.emulators.setRunning(i.id, i.running),
+            i.running ? 'Started emulator' : 'Stopped emulator',
+          ),
+      ),
     ];
+  }
+
+  /** Run a mutation and wrap it as a renderable "done" confirmation. */
+  private async done(fn: () => Promise<unknown>, label: string) {
+    const result = await fn();
+    return { kind: 'done', label, result };
+  }
+
+  private async createSensor(i: {
+    name: string;
+    typeKey: string;
+    groupId?: string;
+  }) {
+    // Atomic: if the group assignment fails (e.g. a bad groupId), the create
+    // rolls back too — no orphaned, ungrouped sensor. Returns the final state.
+    const sensor = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.sensor.create({
+        data: { name: i.name, typeKey: i.typeKey },
+      });
+      if (!i.groupId) return created;
+      return tx.sensor.update({
+        where: { id: created.id },
+        data: { groupId: i.groupId },
+      });
+    });
+    return {
+      kind: 'done',
+      label: `Created sensor "${i.name}"`,
+      result: sensor,
+    };
   }
 
   // ---- tool implementations -------------------------------------------------

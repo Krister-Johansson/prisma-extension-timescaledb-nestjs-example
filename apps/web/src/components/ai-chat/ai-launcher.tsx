@@ -1,5 +1,13 @@
 import { fetchServerSentEvents, useChat } from '@tanstack/ai-react';
-import { Loader2, Send, Sparkles, Square, X } from 'lucide-react';
+import {
+  Loader2,
+  Maximize2,
+  Minimize2,
+  Send,
+  Sparkles,
+  Square,
+  X,
+} from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { MessagePart, type Part } from './message-parts';
@@ -24,7 +32,21 @@ function Conversation() {
     forwardedProps: { timezone: TIMEZONE },
   });
   const messages = chat.messages as unknown as UIMessage[];
-  const { sendMessage, isLoading, stop, error } = chat;
+  const { sendMessage, isLoading, stop, error, addToolApprovalResponse } = chat;
+
+  const onApproval = (id: string, approved: boolean) => {
+    void addToolApprovalResponse({ id, approved });
+  };
+
+  // A tool call can appear in both the pre- and post-approval messages; keep
+  // only its final occurrence so its card (and result) renders once.
+  const lastToolPos = new Map<string, string>();
+  messages.forEach((m, mi) =>
+    m.parts.forEach((p, pi) => {
+      const id = p.id as string | undefined;
+      if (p.type === 'tool-call' && id) lastToolPos.set(id, `${mi}:${pi}`);
+    }),
+  );
 
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -61,7 +83,7 @@ function Conversation() {
             ))}
           </div>
         ) : (
-          messages.map((m) =>
+          messages.map((m, mi) =>
             m.role === 'user' ? (
               <div key={m.id} className="flex justify-end">
                 <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-primary px-3 py-1.5 text-[13px] text-primary-foreground">
@@ -73,9 +95,18 @@ function Conversation() {
               </div>
             ) : (
               <div key={m.id} className="flex flex-col gap-1.5">
-                {m.parts.map((part, i) => (
-                  <MessagePart key={i} part={part} />
-                ))}
+                {m.parts.map((part, pi) => {
+                  const id = part.id as string | undefined;
+                  if (
+                    part.type === 'tool-call' &&
+                    id &&
+                    lastToolPos.get(id) !== `${mi}:${pi}`
+                  )
+                    return null;
+                  return (
+                    <MessagePart key={pi} part={part} onApproval={onApproval} />
+                  );
+                })}
               </div>
             ),
           )
@@ -138,24 +169,45 @@ function Conversation() {
 /** Floating AI assistant — a bottom-right button that opens a chat panel. */
 export function AiLauncher() {
   const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   return (
     <>
       {open && (
-        <div className="fixed bottom-20 right-4 z-50 flex h-[min(70vh,560px)] w-[min(92vw,380px)] flex-col overflow-hidden rounded-[16px] border border-border bg-popover shadow-xl">
+        <div
+          className={`fixed bottom-20 right-4 z-50 flex flex-col overflow-hidden rounded-[16px] border border-border bg-popover shadow-xl ${
+            expanded
+              ? 'h-[min(86vh,820px)] w-[min(96vw,620px)]'
+              : 'h-[min(70vh,560px)] w-[min(92vw,380px)]'
+          }`}
+        >
           <div className="flex items-center justify-between border-b border-border bg-card px-3 py-2">
             <div className="flex items-center gap-1.5 text-sm font-semibold">
               <Sparkles className="size-4 text-primary" />
               Assistant
             </div>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Close assistant"
-              onClick={() => setOpen(false)}
-            >
-              <X className="size-4" />
-            </Button>
+            <div className="flex items-center gap-0.5">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={expanded ? 'Shrink assistant' : 'Expand assistant'}
+                onClick={() => setExpanded((e) => !e)}
+              >
+                {expanded ? (
+                  <Minimize2 className="size-4" />
+                ) : (
+                  <Maximize2 className="size-4" />
+                )}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Close assistant"
+                onClick={() => setOpen(false)}
+              >
+                <X className="size-4" />
+              </Button>
+            </div>
           </div>
           {/* Remount per open so a fresh conversation starts each time. */}
           <Conversation key={open ? 'open' : 'closed'} />
