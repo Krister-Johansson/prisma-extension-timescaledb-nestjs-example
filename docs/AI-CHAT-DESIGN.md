@@ -215,6 +215,29 @@ mutation tools.
    Confirm/Cancel card in the chat.
 5. *(later)* persistence, per-user usage limits, model picker.
 
+## Phase 1 implementation notes (the spec, as built)
+- **Tool result shapes** are Zod `outputSchema`s in `agent.service.ts`; each
+  carries a `kind` discriminator (`series` / `compare` / `stat` / `values` /
+  `alerts` / `stats`) that the Phase 3 client registry keys on. `series`/`compare`
+  also include a `chartHint` (`line`/`bar`) and `unit`.
+- **Timezone source** — the browser sends `Intl.DateTimeFormat().resolvedOptions()
+  .timeZone` via `useChat` `forwardedProps`; the server **validates** it (`Intl`)
+  and falls back to UTC. It's injected into the system prompt and the
+  `get_current_time` tool.
+- **Prompt-injection** — interpolated names + timezone are sanitized (control
+  chars stripped, length capped) in `agent.system-prompt.ts`; tool outputs are
+  returned as structured data, never as instructions.
+- **Write approval (Phase 4)** — `toolDefinition({ needsApproval: true })`; the
+  client renders Confirm/Cancel and replies via `addToolApprovalResponse`.
+  Allowed writes: create_sensor, create_group, rename_group, move_group,
+  assign_sensor_to_group, create_sensor_type, create_emulator,
+  set_emulator_running. **No deletes.**
+- **Endpoint gating** — registered only when `OPENROUTER_API_KEY` is set **and**
+  (dev or `AI_CHAT_ENABLED=true`); SSE piped with `stream.pipeline` for clean
+  error/teardown.
+- **Rate limiting** — out of scope for v1 (cost not a concern per the owner); a
+  per-IP Nest guard can be added later.
+
 ## Decisions (confirmed)
 - **Model tier** — ✅ **Opus** (`anthropic/claude-opus-4.x`, env-configurable).
 - **Scope** — ✅ **read + confirm-gated writes** (reads free; mutations behind a

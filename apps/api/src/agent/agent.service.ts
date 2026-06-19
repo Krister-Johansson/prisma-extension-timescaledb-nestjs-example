@@ -38,12 +38,23 @@ export class AgentService {
     return Boolean(this.config.get<string>('OPENROUTER_API_KEY'));
   }
 
+  /** Validate the client-sent timezone (an IANA name) before it's interpolated
+   * into the prompt / used for formatting; fall back to UTC on anything bogus. */
+  private safeTimezone(tz: unknown): string {
+    if (typeof tz !== 'string') return 'UTC';
+    try {
+      new Intl.DateTimeFormat('en-US', { timeZone: tz });
+      return tz;
+    } catch {
+      return 'UTC';
+    }
+  }
+
   /** Run a chat turn and return the AG-UI SSE Response. */
   async chat(body: unknown): Promise<Response> {
     const { ai, or } = await loadAi();
     const params: ChatParams = await ai.chatParamsFromRequestBody(body);
-    const timezone =
-      (params.forwardedProps?.timezone as string | undefined) ?? 'UTC';
+    const timezone = this.safeTimezone(params.forwardedProps?.timezone);
 
     const catalog = await this.catalog();
     const model = this.config.get<string>(

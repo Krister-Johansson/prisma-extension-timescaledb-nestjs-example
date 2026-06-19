@@ -10,6 +10,19 @@ export interface Catalog {
   types: { key: string; label: string; unit: string }[];
 }
 
+/** Strip control chars + newlines and cap length so a user-controlled name
+ * (sensor/group/type) can't smuggle extra "instructions" into the prompt. */
+function clean(s: string): string {
+  // Drop control chars (incl. newlines), collapse whitespace, cap length — a
+  // user-controlled name must not be able to inject extra prompt instructions.
+  let out = '';
+  for (const ch of s) {
+    const code = ch.codePointAt(0) ?? 0;
+    out += code < 0x20 || code === 0x7f ? ' ' : ch;
+  }
+  return out.replace(/\s+/g, ' ').trim().slice(0, 100);
+}
+
 /** Render the group tree + sensors + types compactly so the model can pick ids
  * without a round-trip. */
 function renderCatalog(c: Catalog): string {
@@ -23,10 +36,10 @@ function renderCatalog(c: Catalog): string {
   const lines: string[] = [];
   const walk = (parentId: string | null, depth: number) => {
     for (const g of childrenOf(parentId)) {
-      lines.push(`${'  '.repeat(depth)}- ${g.name} [${g.id}]`);
+      lines.push(`${'  '.repeat(depth)}- ${clean(g.name)} [${g.id}]`);
       for (const s of sensorsIn(g.id)) {
         lines.push(
-          `${'  '.repeat(depth + 1)}• ${s.name} [${s.id}] — ${s.typeKey} (${s.unit})`,
+          `${'  '.repeat(depth + 1)}• ${clean(s.name)} [${s.id}] — ${clean(s.typeKey)} (${clean(s.unit)})`,
         );
       }
       walk(g.id, depth + 1);
@@ -38,12 +51,14 @@ function renderCatalog(c: Catalog): string {
   if (ungrouped.length) {
     lines.push('- (ungrouped)');
     for (const s of ungrouped) {
-      lines.push(`  • ${s.name} [${s.id}] — ${s.typeKey} (${s.unit})`);
+      lines.push(
+        `  • ${clean(s.name)} [${s.id}] — ${clean(s.typeKey)} (${clean(s.unit)})`,
+      );
     }
   }
 
   const types = c.types
-    .map((t) => `${t.key} = ${t.label} (${t.unit})`)
+    .map((t) => `${clean(t.key)} = ${clean(t.label)} (${clean(t.unit)})`)
     .join(', ');
 
   return `TYPES: ${types}\n\nGROUPS & SENSORS:\n${lines.join('\n') || '(none yet)'}`;

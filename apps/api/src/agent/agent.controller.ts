@@ -1,12 +1,14 @@
 import {
   Body,
   Controller,
+  Logger,
   Post,
   Res,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import type { ReadableStream as WebReadableStream } from 'node:stream/web';
 import { AgentService } from './agent.service';
 
@@ -14,6 +16,8 @@ import { AgentService } from './agent.service';
  * client consumes. No auth — gated to dev/key-present in AppModule. */
 @Controller('agent')
 export class AgentController {
+  private readonly logger = new Logger(AgentController.name);
+
   constructor(private readonly agent: AgentService) {}
 
   @Post('chat')
@@ -24,10 +28,21 @@ export class AgentController {
     const response = await this.agent.chat(body);
     res.status(response.status);
     response.headers.forEach((value, key) => res.setHeader(key, value));
-    if (response.body) {
-      Readable.fromWeb(response.body as WebReadableStream).pipe(res);
-    } else {
+    if (!response.body) {
       res.end();
+      return;
+    }
+    try {
+      // pipeline awaits completion and tears down both streams on error or
+      // client disconnect — a bare .pipe() would leave the request dangling.
+      await pipeline(Readable.fromWeb(response.body as WebReadableStream), res);
+    } catch (err) {
+      this.logger.warn(
+        `Agent SSE stream ended early: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+      if (!res.writableEnded) res.end();
     }
   }
 }

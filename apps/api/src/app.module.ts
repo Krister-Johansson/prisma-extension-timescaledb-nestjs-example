@@ -42,9 +42,13 @@ const MCP_TOOLS = [
   DataTools,
 ];
 
-// The /agent/chat endpoint has no auth and calls a paid model, so register it
-// only when an OpenRouter key is present (dev .env). No key → no endpoint.
-const AGENT_ENABLED = Boolean(process.env.OPENROUTER_API_KEY);
+// The /agent/chat endpoint has no auth and calls a paid model. Require BOTH an
+// OpenRouter key AND an explicit opt-in (dev, or AI_CHAT_ENABLED=true) — so a
+// key configured for some other reason never auto-exposes it in production.
+const AGENT_ENABLED =
+  Boolean(process.env.OPENROUTER_API_KEY) &&
+  (process.env.AI_CHAT_ENABLED === 'true' ||
+    process.env.NODE_ENV !== 'production');
 
 @Module({
   imports: [
