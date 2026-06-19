@@ -23,18 +23,26 @@ export function NameDialog({
   title: string;
   initial?: string;
   submitLabel: string;
-  onSubmit: (name: string) => void;
+  onSubmit: (name: string) => void | Promise<void>;
 }) {
   const [value, setValue] = useState(initial ?? '');
+  const [submitting, setSubmitting] = useState(false);
   useEffect(() => {
     if (open) setValue(initial ?? '');
   }, [open, initial]);
 
-  const submit = () => {
+  const submit = async () => {
     const v = value.trim();
-    if (!v) return;
-    onSubmit(v);
-    onOpenChange(false);
+    if (!v || submitting) return;
+    setSubmitting(true);
+    try {
+      await onSubmit(v);
+      onOpenChange(false); // close only after the mutation resolves
+    } catch {
+      // keep the dialog open so the user can retry
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -57,7 +65,7 @@ export function NameDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={submit} disabled={!value.trim()}>
+          <Button onClick={submit} disabled={!value.trim() || submitting}>
             {submitLabel}
           </Button>
         </DialogFooter>

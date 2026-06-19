@@ -1,7 +1,17 @@
 import { useMutation, useQuery } from '@apollo/client/react';
 import { Lock, Plus, Unlock } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -49,20 +59,24 @@ export function Dashboards() {
   const [updateWidgetLayout] = useMutation(UpdateWidgetLayoutDocument);
 
   const [dialog, setDialog] = useState<'create' | 'rename' | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const onCreate = async (name: string) => {
     const res = await createDashboard({ variables: { input: { name } } });
     const slug = res.data?.createDashboard.slug;
     if (slug) setActiveSlug(slug);
   };
-  const onRename = (name: string) => {
-    if (active) updateDashboard({ variables: { id: active.id, input: { name } } });
+  const onRename = async (name: string) => {
+    if (active)
+      await updateDashboard({ variables: { id: active.id, input: { name } } });
   };
-  const onDelete = async () => {
+  const runDelete = async () => {
     if (!active) return;
     const fallback = dashboards.find((d) => d.id !== active.id)?.slug ?? null;
     await deleteDashboard({ variables: { id: active.id } });
     setActiveSlug(fallback);
+    setConfirmDelete(false);
   };
   const toggleLock = () => {
     if (active)
@@ -80,8 +94,15 @@ export function Dashboards() {
   };
   const onRemoveWidget = (widget: WidgetFieldsFragment) =>
     deleteWidget({ variables: { id: widget.id } });
-  const onPersist = (items: LayoutItem[]) =>
-    updateWidgetLayout({ variables: { items } });
+  // Debounce + coalesce: rapid drags collapse to one write of the final layout,
+  // so a slow earlier response can't land last and revert newer positions.
+  const onPersist = (items: LayoutItem[]) => {
+    if (persistTimer.current) clearTimeout(persistTimer.current);
+    persistTimer.current = setTimeout(
+      () => updateWidgetLayout({ variables: { items } }),
+      250,
+    );
+  };
   const onConfigure = () =>
     toast('Widget configuration arrives in the next update.');
 
@@ -119,7 +140,7 @@ export function Dashboards() {
           onSelect={setActiveSlug}
           onCreate={() => setDialog('create')}
           onRename={() => setDialog('rename')}
-          onDelete={onDelete}
+          onDelete={() => setConfirmDelete(true)}
         />
         <div className="flex shrink-0 items-center gap-1.5 pb-1">
           {!locked && (
@@ -186,6 +207,26 @@ export function Dashboards() {
         submitLabel="Save"
         onSubmit={onRename}
       />
+
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete “{active?.name}”?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes the dashboard and its widgets. This can’t be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-white hover:bg-destructive/90"
+              onClick={runDelete}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -24,7 +24,11 @@ export function DashboardTabs({
   onDelete: () => void;
 }) {
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto">
+    <div
+      role="tablist"
+      aria-label="Dashboards"
+      className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto"
+    >
       {dashboards.map((d) => {
         const active = d.slug === activeSlug;
         return (
@@ -36,6 +40,8 @@ export function DashboardTabs({
           >
             <button
               type="button"
+              role="tab"
+              aria-selected={active}
               onClick={() => onSelect(d.slug)}
               className={`px-3 py-2 text-sm whitespace-nowrap ${
                 active

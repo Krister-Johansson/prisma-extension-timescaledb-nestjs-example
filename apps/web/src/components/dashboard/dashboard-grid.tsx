@@ -12,6 +12,11 @@ import { WidgetFrame } from './widget-frame';
 
 const BREAKPOINTS = { lg: 1100, md: 850, sm: 640, xs: 480, xxs: 0 };
 const COLS = { lg: GRID_COLS, md: GRID_COLS, sm: 6, xs: 4, xxs: 2 };
+const BP_ORDER = ['lg', 'md', 'sm', 'xs', 'xxs'] as const;
+
+/** The active breakpoint for a width — largest whose min-width fits. */
+const breakpointFor = (width: number) =>
+  BP_ORDER.find((bp) => width >= BREAKPOINTS[bp]) ?? 'xxs';
 
 export interface LayoutItem {
   id: string;
@@ -58,8 +63,13 @@ export function DashboardGrid({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sig encodes widgets
   }, [sig]);
 
-  const persist = (current: Layout) =>
+  const persist = (current: Layout) => {
+    // Only persist edits made on the canonical 12-col (lg) layout — the backend
+    // stores one x/y/w/h per widget, so saving a reflowed small-screen layout
+    // would corrupt the desktop arrangement.
+    if (breakpointFor(width) !== 'lg') return;
     onPersist(current.map((l) => ({ id: l.i, x: l.x, y: l.y, w: l.w, h: l.h })));
+  };
 
   return (
     <div ref={containerRef} className="pb-6">
