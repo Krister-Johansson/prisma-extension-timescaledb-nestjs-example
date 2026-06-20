@@ -7,6 +7,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { McpModule, McpTransportType } from '@rekog/mcp-nest';
 import { join } from 'node:path';
 import { AlertModule } from './alert/alert.module';
+import { AnomalyModule } from './anomaly/anomaly.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { PrismaClientExceptionFilter } from './common/filters/prisma-client-exception.filter';
 import { validate } from './config/env.validation';
@@ -86,6 +87,7 @@ const AGENT_ENABLED =
     SensorModule,
     ReadingModule,
     AlertModule,
+    AnomalyModule,
     EmulatorModule,
     GroupModule,
     TimescaleAdminModule,
