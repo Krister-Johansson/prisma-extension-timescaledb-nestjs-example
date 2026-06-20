@@ -1,8 +1,5 @@
 import type { Sensor, SensorType } from './types';
 
-// Real ingestion rate (1 reading / 5 min) drives the KPI count.
-const READINGS_PER_DAY = 288;
-
 /** Short human label for a sensor's alert rule (or a no-rule note). */
 export function ruleSummary(sensor: Sensor): string {
   if (!sensor.rule) return 'No alert rule';
@@ -13,10 +10,6 @@ export function ruleSummary(sensor: Sensor): string {
 /** One-letter chip for a type key (e.g. T, P, H, C). */
 export function typeChip(type: SensorType): string {
   return type.charAt(0);
-}
-
-export function activeAlertCount(sensors: Sensor[]): number {
-  return sensors.filter((s) => s.status === 'ALERTING').length;
 }
 
 export interface TypeAverage {
@@ -55,9 +48,4 @@ export function averagesByType(sensors: Sensor[]): TypeAverage[] {
       };
     })
     .sort((a, b) => a.label.localeCompare(b.label));
-}
-
-/** ~288 readings/day per sensor (1 / 5 min), as in the design KPI. */
-export function totalDataPoints(sensors: Sensor[]): number {
-  return sensors.length * READINGS_PER_DAY;
 }

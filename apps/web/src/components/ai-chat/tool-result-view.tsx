@@ -299,10 +299,16 @@ function AlertsView({ o }: { o: AlertsOut }) {
   );
 }
 
-function StatsView({ o }: { o: StatsOut }) {
-  const rows = formatCount(o.approximateRowCount ?? 0);
-  const size = formatBytes(o.totalBytes ?? 0);
-  const stat = (label: string, value: string, unit?: string) => (
+function StatCell({
+  label,
+  value,
+  unit,
+}: {
+  label: string;
+  value: string;
+  unit?: string;
+}) {
+  return (
     <div>
       <div className="font-mono text-[10px] uppercase text-muted-2">{label}</div>
       <div className="text-lg font-semibold">
@@ -311,14 +317,23 @@ function StatsView({ o }: { o: StatsOut }) {
       </div>
     </div>
   );
+}
+
+function StatsView({ o }: { o: StatsOut }) {
+  const rows = formatCount(o.approximateRowCount ?? 0);
+  const size = formatBytes(o.totalBytes ?? 0);
   return (
     <Card title="Readings storage">
       <div className="grid grid-cols-2 gap-2">
-        {stat('Rows', rows.value, rows.unit)}
-        {stat('Size', size.value, size.unit)}
-        {stat('Chunks', String(o.numChunks ?? '—'))}
-        {o.compressionRatio != null &&
-          stat('Compression', `${(o.compressionRatio * 100).toFixed(0)}%`)}
+        <StatCell label="Rows" value={rows.value} unit={rows.unit} />
+        <StatCell label="Size" value={size.value} unit={size.unit} />
+        <StatCell label="Chunks" value={String(o.numChunks ?? '—')} />
+        {o.compressionRatio != null && (
+          <StatCell
+            label="Compression"
+            value={`${(o.compressionRatio * 100).toFixed(0)}%`}
+          />
+        )}
       </div>
     </Card>
   );

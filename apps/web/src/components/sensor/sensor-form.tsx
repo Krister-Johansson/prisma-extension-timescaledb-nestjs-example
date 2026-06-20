@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/select';
 import { SensorTypesDocument } from '@/graphql/sensors.generated';
 
-export const sensorFormSchema = z.object({
+const sensorFormSchema = z.object({
   name: z.string().trim().min(1, 'Name is required'),
   typeKey: z.string().min(1, 'Type is required'),
 });

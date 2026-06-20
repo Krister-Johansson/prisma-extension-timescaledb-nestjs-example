@@ -7,12 +7,12 @@ import {
 } from '@/components/sensor-detail/chart-params';
 
 export const SERIES_AGGS = ['AVG', 'MIN', 'MAX'] as const;
-export const SCALES = ['normalized', 'real'] as const;
+const SCALES = ['normalized', 'real'] as const;
 export type Scale = (typeof SCALES)[number];
 
 /** One overlay series spec (compact for the URL): group id `g`, optional
  * measurement type key `t` (omit = all types), aggregate `agg`. */
-export const overlaySeriesSchema = z.object({
+const overlaySeriesSchema = z.object({
   g: z.string(),
   t: z.string().optional(),
   agg: z.enum(SERIES_AGGS).catch('AVG'),

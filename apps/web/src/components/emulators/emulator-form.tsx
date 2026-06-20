@@ -82,6 +82,14 @@ function FieldError({
 
 /** Create-emulator form (TanStack Form + Zod). Interval is entered as a value +
  * unit and converted to seconds on submit. */
+const defaultValues: FormInput = {
+  sensorId: '',
+  min: '',
+  max: '',
+  intervalValue: '5',
+  intervalUnit: 'SECONDS',
+};
+
 export function EmulatorForm({
   sensors,
   pending,
@@ -91,13 +99,6 @@ export function EmulatorForm({
   pending: boolean;
   onSubmit: (values: EmulatorValues) => void;
 }) {
-  const defaultValues: FormInput = {
-    sensorId: '',
-    min: '',
-    max: '',
-    intervalValue: '5',
-    intervalUnit: 'SECONDS',
-  };
   const form = useForm({
     defaultValues,
     validators: { onChange: emulatorFormSchema },

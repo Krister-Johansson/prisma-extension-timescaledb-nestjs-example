@@ -18,7 +18,7 @@ const number = z
   .refine((v) => Number.isFinite(Number(v)), 'Enter a number')
   .transform(Number);
 
-export const alertRuleSchema = z
+const alertRuleSchema = z
   .object({
     direction: z.enum(['ABOVE', 'BELOW']),
     threshold: number,
