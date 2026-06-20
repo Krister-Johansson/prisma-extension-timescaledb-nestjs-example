@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { PubSub } from 'graphql-subscriptions';
 import { assertInterval } from 'prisma-extension-timescaledb';
 import { AlertService } from '../alert/alert.service';
+import { AnomalyService } from '../anomaly/anomaly.service';
 import { Prisma } from '../generated/prisma/client.js';
 import { SensorBucket } from './models/sensor-bucket.model';
 import { PRISMA_CLIENT } from '../prisma/prisma-client';
@@ -37,6 +38,7 @@ export class ReadingService {
     @Inject(PRISMA_CLIENT) private readonly prisma: ExtendedPrismaClient,
     @Inject(PUB_SUB) private readonly pubSub: PubSub,
     private readonly alertService: AlertService,
+    private readonly anomalyService: AnomalyService,
   ) {}
 
   /** Write a raw reading into the hypertable, then evaluate the sensor's alert. */
@@ -68,6 +70,19 @@ export class ReadingService {
     } catch (error) {
       this.logger.error(
         `Alert evaluation failed for sensor ${input.sensorId}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
+
+    try {
+      await this.anomalyService.evaluateReading(
+        reading.sensorId,
+        reading.value,
+        reading.time,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Anomaly evaluation failed for sensor ${input.sensorId}`,
         error instanceof Error ? error.stack : String(error),
       );
     }

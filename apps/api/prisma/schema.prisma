@@ -34,6 +34,12 @@ enum AlertEventKind {
   CLEARED
 }
 
+/// Severity of a detected anomaly, derived from the modified z-score magnitude.
+enum AnomalySeverity {
+  WARNING
+  CRITICAL
+}
+
 model Sensor {
   id        String         @id @default(uuid())
   name      String
@@ -45,6 +51,7 @@ model Sensor {
   readings  SensorReading[]
   rules     AlertRule[]
   events    AlertEvent[]
+  anomalies Anomaly[]
   emulators Emulator[]
 
   @@index([groupId])
@@ -155,6 +162,26 @@ model AlertEvent {
   createdAt DateTime       @default(now())
 
   @@index([sensorId, createdAt])
+}
+
+/// A reading flagged as anomalous by the rolling-MAD detector. `score` is the
+/// modified z-score; `median`/`mad` are the recent-window baseline it was judged
+/// against. `aiSummary` is filled in asynchronously by the OpenRouter summarizer.
+model Anomaly {
+  id        String          @id @default(uuid())
+  sensorId  String
+  sensor    Sensor          @relation(fields: [sensorId], references: [id], onDelete: Cascade)
+  time      DateTime
+  value     Float
+  score     Float
+  median    Float
+  mad       Float
+  severity  AnomalySeverity @default(WARNING)
+  aiSummary String?
+  createdAt DateTime        @default(now())
+
+  @@index([sensorId, time])
+  @@index([createdAt])
 }
 
 /// A user-customizable dashboard — rendered as a tab. `locked` disables

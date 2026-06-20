@@ -8,6 +8,7 @@ export const PUB_SUB = Symbol('PUB_SUB');
 export const TOPICS = {
   readingIngested: 'readingIngested',
   alertFired: 'alertFired',
+  anomalyDetected: 'anomalyDetected',
 } as const;
 
 /**

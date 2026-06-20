@@ -39,6 +39,24 @@ enum AlertState {
   OK
 }
 
+type Anomaly {
+  aiSummary: String
+  createdAt: DateTime!
+  id: ID!
+  mad: Float!
+  median: Float!
+  score: Float!
+  sensorId: ID!
+  severity: AnomalySeverity!
+  time: DateTime!
+  value: Float!
+}
+
+enum AnomalySeverity {
+  CRITICAL
+  WARNING
+}
+
 input CreateAlertRuleInput {
   """Hysteresis reset band edge (must be on the resetting side)."""
   clearThreshold: Float!
@@ -196,6 +214,7 @@ type Mutation {
 type Query {
   alertEvents(sensorId: ID, take: Int): [AlertEvent!]!
   alertRules(sensorId: ID!): [AlertRule!]!
+  anomalies(sensorId: ID, take: Int): [Anomaly!]!
   dashboard(slug: String!): Dashboard
   dashboards: [Dashboard!]!
   emulators: [Emulator!]!
@@ -297,6 +316,7 @@ enum SeriesAgg {
 
 type Subscription {
   alertFired(sensorId: ID): AlertEvent!
+  anomalyDetected(sensorId: ID): Anomaly!
   readingIngested(sensorId: ID): SensorReading!
 }
 
