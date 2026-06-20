@@ -195,6 +195,8 @@ export class AnomalyService {
 
     const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
+      // Bound the fire-and-forget request so a stalled call can't leak forever.
+      signal: AbortSignal.timeout(20_000),
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
