@@ -16,7 +16,7 @@ import {
 } from './chart-params';
 import { datesToWindow, shiftWindow, type TimeWindow } from './chart-window';
 import { DetailChartControls } from './detail-chart-controls';
-import type { ReadingsBuckets } from './use-readings-buckets';
+import type { AnomalyMark, ReadingsBuckets } from './use-readings-buckets';
 
 const round1 = (n: number | null | undefined) =>
   n == null ? '—' : Math.round(n * 10) / 10;
@@ -27,6 +27,32 @@ interface Point {
   min: number | null;
   max: number | null;
   count: number;
+  anomaly?: AnomalyMark;
+}
+
+/** Red dot only on buckets that contain an anomaly; nothing on the rest. */
+function renderAnomalyDot(props: {
+  cx?: number;
+  cy?: number;
+  index?: number;
+  payload?: Point;
+}) {
+  const { cx, cy, index, payload } = props;
+  if (!payload?.anomaly || cx == null || cy == null) {
+    return <g key={`nd-${index}`} />;
+  }
+  const critical = payload.anomaly.severity === 'CRITICAL';
+  return (
+    <circle
+      key={`ad-${index}`}
+      cx={cx}
+      cy={cy}
+      r={critical ? 5 : 4}
+      fill="var(--alert)"
+      stroke="var(--card)"
+      strokeWidth={1.5}
+    />
+  );
 }
 
 function ReadingsTooltip({
@@ -55,6 +81,17 @@ function ReadingsTooltip({
         <span className="text-muted-foreground">count</span>
         <span className="text-right">{p.count}</span>
       </div>
+      {p.anomaly && (
+        <div className="mt-1.5 border-t border-border pt-1.5">
+          <div className="flex items-center gap-1.5 font-semibold text-alert">
+            <span className="size-2 rounded-full bg-alert" />
+            {p.anomaly.severity === 'CRITICAL' ? 'Critical' : 'Warning'} anomaly
+          </div>
+          <div className="mt-0.5 font-mono text-muted-foreground">
+            {round1(p.anomaly.value)} {unit} · score {round1(p.anomaly.score)}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -82,6 +119,7 @@ export function DetailReadingsChart({
     min: b.min,
     max: b.max,
     count: b.count,
+    anomaly: b.anomaly,
   }));
 
   const setWindow = (w: TimeWindow) =>
@@ -187,7 +225,7 @@ export function DetailReadingsChart({
                   type="monotone"
                   stroke="var(--primary)"
                   strokeWidth={1.8}
-                  dot={false}
+                  dot={renderAnomalyDot}
                   isAnimationActive={false}
                 />
               </LineChart>

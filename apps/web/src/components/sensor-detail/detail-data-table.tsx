@@ -19,7 +19,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { formatBucketLabel, type Resolution } from './chart-params';
-import type { ReadingBucket } from './use-readings-buckets';
+import type { AnomalyMark, ReadingBucket } from './use-readings-buckets';
 
 interface Row {
   bucketMs: number;
@@ -28,6 +28,7 @@ interface Row {
   min: number | null;
   max: number | null;
   count: number;
+  anomaly?: AnomalyMark;
 }
 
 const fmt = (n: number | null) => (n == null ? '—' : String(Math.round(n * 10) / 10));
@@ -62,6 +63,7 @@ export function DetailDataTable({
         min: b.min,
         max: b.max,
         count: b.count,
+        anomaly: b.anomaly,
       })),
     [buckets, res],
   );
@@ -72,7 +74,20 @@ export function DetailDataTable({
         id: 'time',
         header: 'Time',
         sortingFn: (a, b) => a.original.bucketMs - b.original.bucketMs,
-        cell: (i) => <span className="font-mono">{i.getValue()}</span>,
+        cell: (i) => {
+          const a = i.row.original.anomaly;
+          return (
+            <span className="inline-flex items-center gap-1.5 font-mono">
+              {a && (
+                <span
+                  className="size-2 shrink-0 rounded-full bg-alert"
+                  title={`${a.severity === 'CRITICAL' ? 'Critical' : 'Warning'} anomaly: ${Math.round(a.value * 10) / 10} (score ${Math.round(a.score * 10) / 10})`}
+                />
+              )}
+              {i.getValue()}
+            </span>
+          );
+        },
       }),
       col.accessor('avg', {
         header: `Avg (${unit})`,

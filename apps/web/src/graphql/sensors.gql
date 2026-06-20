@@ -105,6 +105,17 @@ mutation IngestReading($input: IngestReadingInput!) {
   }
 }
 
+# Recent anomalies for a sensor — for chart dots + data-table badges.
+query SensorAnomalies($sensorId: ID!, $take: Int) {
+  anomalies(sensorId: $sensorId, take: $take) {
+    id
+    time
+    value
+    score
+    severity
+  }
+}
+
 query SensorReadingsBucketed(
   $sensorId: ID!
   $bucket: String!
