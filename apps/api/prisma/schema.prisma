@@ -48,6 +48,8 @@ model Sensor {
   createdAt DateTime       @default(now())
   groupId   String?
   group     SensorGroup?   @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  /// Anomaly state machine: true while the sensor is in an anomalous spell.
+  inAnomaly Boolean        @default(false)
   readings  SensorReading[]
   rules     AlertRule[]
   events    AlertEvent[]

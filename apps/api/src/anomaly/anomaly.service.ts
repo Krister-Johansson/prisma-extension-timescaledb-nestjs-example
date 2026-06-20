@@ -84,31 +84,46 @@ export class AnomalyService {
     if (sigma <= 0) return null;
 
     const score = Math.abs(value - median) / sigma;
-    if (score < THRESHOLD) return null;
+    const isAnomalous = score >= THRESHOLD;
 
-    // Transition dedupe: only flag the entry INTO an anomalous spell, so a
-    // sustained excursion doesn't create one anomaly per reading.
-    const prevReading = await this.prisma.sensorReading.findFirst({
-      where: { sensorId, time: { lt: time } },
-      orderBy: { time: 'desc' },
-      select: { time: true },
+    // Per-sensor state machine (mirrors alert hysteresis): flag only the ENTRY
+    // into an anomalous spell, and clear the flag when the sensor returns to
+    // normal — so a sustained excursion produces exactly one anomaly.
+    const sensor = await this.prisma.sensor.findUnique({
+      where: { id: sensorId },
+      select: { inAnomaly: true },
     });
-    if (prevReading) {
-      const prevAnomaly = await this.prisma.anomaly.findFirst({
-        where: { sensorId, time: prevReading.time },
-        select: { id: true },
-      });
-      if (prevAnomaly) return null;
+    const wasInAnomaly = sensor?.inAnomaly ?? false;
+
+    if (!isAnomalous) {
+      if (wasInAnomaly) {
+        await this.prisma.sensor.update({
+          where: { id: sensorId },
+          data: { inAnomaly: false },
+        });
+      }
+      return null;
     }
+    if (wasInAnomaly) return null; // already inside an anomalous spell
 
     const severity =
       score >= CRITICAL_SCORE
         ? AnomalySeverity.CRITICAL
         : AnomalySeverity.WARNING;
 
-    const anomaly = await this.prisma.anomaly.create({
-      data: { sensorId, time, value, score, median, mad, severity },
+    // Compare-and-swap the sensor flag so concurrent ingests can't both open
+    // the spell (only the winner records the anomaly).
+    const anomaly = await this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.sensor.updateMany({
+        where: { id: sensorId, inAnomaly: false },
+        data: { inAnomaly: true },
+      });
+      if (count === 0) return null;
+      return tx.anomaly.create({
+        data: { sensorId, time, value, score, median, mad, severity },
+      });
     });
+    if (!anomaly) return null;
 
     this.logger.warn(
       `Anomaly on sensor ${sensorId}: value ${value} vs median ${median.toFixed(2)} (score ${score.toFixed(1)}, ${severity})`,
