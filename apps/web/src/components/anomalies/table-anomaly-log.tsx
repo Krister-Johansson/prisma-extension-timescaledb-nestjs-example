@@ -70,10 +70,10 @@ export function TableAnomalyLog({ rows }: { rows: AnomalyRow[] }) {
                   {...rowLink(routes.sensors.detail(a.sensorId))}
                   className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                 >
-                  <TableCell className="font-medium">
-                    <div>{a.sensor}</div>
+                  <TableCell className="align-top font-medium">
+                    <div className="mt-0.5">{a.sensor}</div>
                     {a.aiSummary && (
-                      <div className="mt-0.5 max-w-[460px] text-[11.5px] font-normal leading-snug text-muted-foreground">
+                      <div className="mt-1 max-w-[460px] whitespace-normal text-[11.5px] font-normal leading-snug text-balance text-muted-foreground">
                         {a.aiSummary}
                       </div>
                     )}
