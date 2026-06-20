@@ -1,3 +1,8 @@
+# Dev-only: wipe all readings + alert events (rejected by the API in production).
+mutation PurgeReadings {
+  purgeReadings
+}
+
 query HypertableStats($model: HypertableModel!) {
   hypertableStats(model: $model) {
     approximateRowCount

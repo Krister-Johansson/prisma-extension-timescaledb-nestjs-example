@@ -3,6 +3,7 @@ import { QueryError } from '@/components/common/query-error';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatBytes, formatCount } from '@/data/format';
 import { HypertableStatsDocument } from '@/graphql/system.generated';
+import { SystemDangerZone } from './system-danger-zone';
 import { SystemGauge } from './system-gauge';
 import { type SystemStat, SystemStatCards } from './system-stat-cards';
 import { SystemStorage } from './system-storage';
@@ -100,6 +101,8 @@ export function System() {
           ]}
         />
       </div>
+
+      {import.meta.env.DEV && <SystemDangerZone />}
     </div>
   );
 }
