@@ -42,6 +42,7 @@ function requireId(value: string, fn: string): string {
 export const routes = {
   overview: () => path(),
   alerts: () => path('alerts'),
+  anomalies: () => path('anomalies'),
   aggregates: () => path('aggregates'),
   system: () => path('system'),
   manage: () => path('manage'),
