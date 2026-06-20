@@ -27,6 +27,15 @@ export function SystemDangerZone() {
     ],
   });
 
+  const run = async () => {
+    try {
+      await purge();
+      setOpen(false);
+    } catch {
+      // Apollo's ErrorLink surfaces the failure; keep the dialog open to retry.
+    }
+  };
+
   return (
     <div className="rounded-[14px] border border-destructive/40 bg-card p-5 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -66,7 +75,11 @@ export function SystemDangerZone() {
             <AlertDialogAction
               className="bg-destructive text-white hover:bg-destructive/90"
               disabled={loading}
-              onClick={() => void purge()}
+              onClick={(e) => {
+                // Keep the dialog open until the mutation resolves.
+                e.preventDefault();
+                void run();
+              }}
             >
               {loading ? 'Deleting…' : 'Delete all data'}
             </AlertDialogAction>

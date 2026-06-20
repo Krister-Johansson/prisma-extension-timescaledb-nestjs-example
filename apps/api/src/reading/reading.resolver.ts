@@ -1,4 +1,5 @@
 import { ForbiddenException, Inject } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   Args,
   ID,
@@ -8,6 +9,7 @@ import {
   Subscription,
 } from '@nestjs/graphql';
 import { PubSub } from 'graphql-subscriptions';
+import { EnvironmentVariables, NodeEnv } from '../config/env.validation';
 import { PUB_SUB, TOPICS } from '../pubsub/pubsub.module';
 import { SensorReading } from '../sensor/models/sensor.model';
 import { IngestReadingInput } from './dto/ingest-reading.input';
@@ -29,6 +31,7 @@ export class ReadingResolver {
   constructor(
     private readonly readingService: ReadingService,
     @Inject(PUB_SUB) private readonly pubSub: PubSub,
+    private readonly config: ConfigService<EnvironmentVariables, true>,
   ) {}
 
   @Mutation(() => SensorReading)
@@ -39,11 +42,12 @@ export class ReadingResolver {
   }
 
   /** Dev-only: delete all readings + alert events (e.g. to test from scratch).
-   * Rejected in production so a deployed instance can't be wiped. */
+   * Default-deny — allowed ONLY when NODE_ENV is explicitly `development`, so no
+   * deployed environment (production, staging, …) can be wiped. */
   @Mutation(() => Boolean)
   purgeReadings(): Promise<boolean> {
-    if (process.env.NODE_ENV === 'production') {
-      throw new ForbiddenException('Data purge is disabled in production');
+    if (this.config.get('NODE_ENV', { infer: true }) !== NodeEnv.Development) {
+      throw new ForbiddenException('Data purge is only allowed in development');
     }
     return this.readingService.purgeAll();
   }
