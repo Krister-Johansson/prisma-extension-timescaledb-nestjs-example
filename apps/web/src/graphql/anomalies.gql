@@ -1,0 +1,13 @@
+# All recent anomalies across sensors — for the Anomalies page.
+query AllAnomalies($take: Int) {
+  anomalies(take: $take) {
+    id
+    sensorId
+    time
+    value
+    score
+    median
+    severity
+    aiSummary
+  }
+}
