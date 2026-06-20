@@ -75,6 +75,18 @@ export class ReadingService {
     return reading;
   }
 
+  /** Dev-only: wipe every reading (TRUNCATE the hypertable) plus the derived
+   * alert events, and reset alert rules to OK — so the demo can start fresh.
+   * Keeps sensors/groups/dashboards/emulators (re-seed for those). */
+  async purgeAll(): Promise<boolean> {
+    // TRUNCATE is instant on the hypertable (vs deleting millions of rows).
+    await this.prisma.$executeRawUnsafe('TRUNCATE TABLE "SensorReading"');
+    await this.prisma.alertEvent.deleteMany({});
+    await this.prisma.alertRule.updateMany({ data: { state: 'OK' } });
+    this.logger.warn('All sensor readings and alert events were purged.');
+    return true;
+  }
+
   /** Ad-hoc time_bucket rollup over the raw hypertable. */
   async bucketed(args: ReadingBucketArgs): Promise<ReadingBucket[]> {
     const { bucket } = args;

@@ -1,4 +1,4 @@
-import { Inject } from '@nestjs/common';
+import { ForbiddenException, Inject } from '@nestjs/common';
 import {
   Args,
   ID,
@@ -36,6 +36,16 @@ export class ReadingResolver {
     @Args('input') input: IngestReadingInput,
   ): Promise<SensorReading> {
     return this.readingService.ingest(input);
+  }
+
+  /** Dev-only: delete all readings + alert events (e.g. to test from scratch).
+   * Rejected in production so a deployed instance can't be wiped. */
+  @Mutation(() => Boolean)
+  purgeReadings(): Promise<boolean> {
+    if (process.env.NODE_ENV === 'production') {
+      throw new ForbiddenException('Data purge is disabled in production');
+    }
+    return this.readingService.purgeAll();
   }
 
   /** Ad-hoc rollup over the raw hypertable via timeBucket(...). */

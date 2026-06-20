@@ -181,6 +181,7 @@ type Mutation {
   deleteWidget(id: ID!): Boolean!
   ingestReading(input: IngestReadingInput!): SensorReading!
   moveSensorGroup(id: ID!, parentId: ID): SensorGroup!
+  purgeReadings: Boolean!
   refreshSensorReadingHourly(end: DateTime, start: DateTime): Boolean!
   renameSensorGroup(id: ID!, name: String!): SensorGroup!
   reorderDashboards(ids: [ID!]!): [Dashboard!]!
