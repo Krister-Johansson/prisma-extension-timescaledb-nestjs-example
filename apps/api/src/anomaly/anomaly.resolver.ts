@@ -1,5 +1,13 @@
 import { Inject } from '@nestjs/common';
-import { Args, ID, Int, Query, Resolver, Subscription } from '@nestjs/graphql';
+import {
+  Args,
+  GraphQLISODateTime,
+  ID,
+  Int,
+  Query,
+  Resolver,
+  Subscription,
+} from '@nestjs/graphql';
 import { PubSub } from 'graphql-subscriptions';
 import { PUB_SUB, TOPICS } from '../pubsub/pubsub.module';
 import { AnomalyService } from './anomaly.service';
@@ -16,8 +24,12 @@ export class AnomalyResolver {
   anomalies(
     @Args('sensorId', { type: () => ID, nullable: true }) sensorId?: string,
     @Args('take', { type: () => Int, nullable: true }) take?: number,
+    @Args('start', { type: () => GraphQLISODateTime, nullable: true })
+    start?: Date,
+    @Args('end', { type: () => GraphQLISODateTime, nullable: true })
+    end?: Date,
   ): Promise<Anomaly[]> {
-    return this.anomalyService.list(sensorId, take);
+    return this.anomalyService.list(sensorId, take, start, end);
   }
 
   /** Live stream of detected anomalies, optionally filtered by sensor. */

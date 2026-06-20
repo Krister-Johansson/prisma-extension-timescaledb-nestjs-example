@@ -105,6 +105,17 @@ mutation IngestReading($input: IngestReadingInput!) {
   }
 }
 
+# Anomalies for a sensor within the chart's window — for dots + table badges.
+query SensorAnomalies($sensorId: ID!, $start: DateTime, $end: DateTime) {
+  anomalies(sensorId: $sensorId, start: $start, end: $end) {
+    id
+    time
+    value
+    score
+    severity
+  }
+}
+
 query SensorReadingsBucketed(
   $sensorId: ID!
   $bucket: String!

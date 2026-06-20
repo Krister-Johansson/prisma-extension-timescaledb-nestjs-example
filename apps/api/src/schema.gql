@@ -214,7 +214,7 @@ type Mutation {
 type Query {
   alertEvents(sensorId: ID, take: Int): [AlertEvent!]!
   alertRules(sensorId: ID!): [AlertRule!]!
-  anomalies(sensorId: ID, take: Int): [Anomaly!]!
+  anomalies(end: DateTime, sensorId: ID, start: DateTime, take: Int): [Anomaly!]!
   dashboard(slug: String!): Dashboard
   dashboards: [Dashboard!]!
   emulators: [Emulator!]!
