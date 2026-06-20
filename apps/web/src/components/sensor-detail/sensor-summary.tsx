@@ -1,10 +1,11 @@
-import { Pencil } from 'lucide-react';
+import { Pencil, PlusCircle } from 'lucide-react';
 import { useState } from 'react';
 import { AlertRuleSection } from '@/components/alert-rule/alert-rule-section';
 import { RelativeTime } from '@/components/common/relative-time';
 import { SensorEditDialog } from '@/components/sensor/sensor-edit-dialog';
 import { Button } from '@/components/ui/button';
 import { DetailReadings } from './detail-readings';
+import { SensorLogDialog } from './sensor-log-dialog';
 
 type DetailSensor = {
   id: string;
@@ -21,6 +22,7 @@ type DetailSensor = {
  */
 export function SensorSummary({ sensor }: { sensor: DetailSensor }) {
   const [editOpen, setEditOpen] = useState(false);
+  const [logOpen, setLogOpen] = useState(false);
 
   const newest = sensor.latestReading;
 
@@ -59,15 +61,26 @@ export function SensorSummary({ sensor }: { sensor: DetailSensor }) {
               <Field label="ID" value={sensor.id} mono />
             </dl>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="shrink-0 gap-1.5"
-            onClick={() => setEditOpen(true)}
-          >
-            <Pencil className="size-3.5" />
-            Edit
-          </Button>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setLogOpen(true)}
+            >
+              <PlusCircle className="size-3.5" />
+              Log reading
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setEditOpen(true)}
+            >
+              <Pencil className="size-3.5" />
+              Edit
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -78,6 +91,14 @@ export function SensorSummary({ sensor }: { sensor: DetailSensor }) {
       <p className="text-xs leading-relaxed text-muted-2">
         Hourly aggregates for this sensor are coming in a later update.
       </p>
+
+      <SensorLogDialog
+        sensorId={sensor.id}
+        sensorName={sensor.name}
+        unit={sensor.type.unit}
+        open={logOpen}
+        onOpenChange={setLogOpen}
+      />
 
       <SensorEditDialog
         sensor={{

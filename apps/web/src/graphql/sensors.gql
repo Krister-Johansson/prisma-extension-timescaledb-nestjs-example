@@ -96,6 +96,15 @@ mutation DeleteSensor($id: ID!) {
   }
 }
 
+# Manually log a reading for a sensor (timestamped now; runs alert evaluation).
+mutation IngestReading($input: IngestReadingInput!) {
+  ingestReading(input: $input) {
+    sensorId
+    value
+    time
+  }
+}
+
 query SensorReadingsBucketed(
   $sensorId: ID!
   $bucket: String!
