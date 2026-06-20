@@ -85,40 +85,38 @@ export class AnomalyService {
 
     const score = Math.abs(value - median) / sigma;
     const isAnomalous = score >= THRESHOLD;
-
-    // Per-sensor state machine (mirrors alert hysteresis): flag only the ENTRY
-    // into an anomalous spell, and clear the flag when the sensor returns to
-    // normal — so a sustained excursion produces exactly one anomaly.
-    const sensor = await this.prisma.sensor.findUnique({
-      where: { id: sensorId },
-      select: { inAnomaly: true },
-    });
-    const wasInAnomaly = sensor?.inAnomaly ?? false;
-
-    if (!isAnomalous) {
-      if (wasInAnomaly) {
-        await this.prisma.sensor.update({
-          where: { id: sensorId },
-          data: { inAnomaly: false },
-        });
-      }
-      return null;
-    }
-    if (wasInAnomaly) return null; // already inside an anomalous spell
-
     const severity =
       score >= CRITICAL_SCORE
         ? AnomalySeverity.CRITICAL
         : AnomalySeverity.WARNING;
 
-    // Compare-and-swap the sensor flag so concurrent ingests can't both open
-    // the spell (only the winner records the anomaly).
+    // Per-sensor state machine (mirrors alert hysteresis): flag only the ENTRY
+    // into an anomalous spell, and clear the flag on return to normal — so a
+    // sustained excursion produces exactly one anomaly. The whole read→decide→
+    // write runs under a row lock on the sensor (SELECT … FOR UPDATE), so
+    // concurrent ingests for the same sensor serialize and a stale normal-path
+    // clear can't clobber a newer spell.
     const anomaly = await this.prisma.$transaction(async (tx) => {
-      const { count } = await tx.sensor.updateMany({
-        where: { id: sensorId, inAnomaly: false },
+      const locked = await tx.$queryRaw<{ inAnomaly: boolean }[]>`
+        SELECT "inAnomaly" FROM "Sensor" WHERE id = ${sensorId} FOR UPDATE
+      `;
+      const wasInAnomaly = locked[0]?.inAnomaly ?? false;
+
+      if (!isAnomalous) {
+        if (wasInAnomaly) {
+          await tx.sensor.update({
+            where: { id: sensorId },
+            data: { inAnomaly: false },
+          });
+        }
+        return null;
+      }
+      if (wasInAnomaly) return null; // already inside an anomalous spell
+
+      await tx.sensor.update({
+        where: { id: sensorId },
         data: { inAnomaly: true },
       });
-      if (count === 0) return null;
       return tx.anomaly.create({
         data: { sensorId, time, value, score, median, mad, severity },
       });
