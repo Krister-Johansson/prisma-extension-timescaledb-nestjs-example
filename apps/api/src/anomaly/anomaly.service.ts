@@ -33,11 +33,23 @@ export class AnomalyService {
     @Inject(PUB_SUB) private readonly pubSub: PubSub,
   ) {}
 
-  /** Recent anomalies, newest first (optionally for one sensor). Bounded scan. */
-  list(sensorId?: string, take = 50) {
-    const safeTake = Math.min(Math.max(take, 1), 200);
+  /** Anomalies newest-first, optionally for one sensor and/or a [start, end)
+   * time window. With a window the scan is bounded by the range (and dedupe
+   * keeps anomalies sparse), so callers get every in-window anomaly. */
+  list(sensorId?: string, take = 50, start?: Date, end?: Date) {
+    const safeTake = Math.min(Math.max(take, 1), 500);
     return this.prisma.anomaly.findMany({
-      where: sensorId ? { sensorId } : undefined,
+      where: {
+        ...(sensorId ? { sensorId } : {}),
+        ...(start || end
+          ? {
+              time: {
+                ...(start ? { gte: start } : {}),
+                ...(end ? { lt: end } : {}),
+              },
+            }
+          : {}),
+      },
       orderBy: { time: 'desc' },
       take: safeTake,
     });

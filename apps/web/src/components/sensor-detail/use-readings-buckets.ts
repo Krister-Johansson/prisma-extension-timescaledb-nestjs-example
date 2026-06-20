@@ -113,22 +113,22 @@ export function useReadingsBuckets(sensorId: string): ReadingsBuckets {
     context: { suppressErrorToast: true },
   });
 
-  // Anomalies are sparse, so fetching the recent set and filtering to the window
-  // client-side is enough (no windowed query needed).
+  // Server-side window filter so every in-window anomaly is returned (a fixed
+  // take could silently drop some before filtering).
   const { data: anomalyData } = useQuery(SensorAnomaliesDocument, {
-    variables: { sensorId, take: 200 },
+    variables: {
+      sensorId,
+      start: new Date(window.startMs).toISOString(),
+      end: new Date(window.endMs).toISOString(),
+    },
     pollInterval: live ? 15_000 : undefined,
     skip: tooMany,
     context: { suppressErrorToast: true },
   });
 
-  const inWindow = (anomalyData?.anomalies ?? []).filter((a) => {
-    const t = Date.parse(a.time);
-    return t >= window.startMs && t < window.endMs;
-  });
   const buckets = attachAnomalies(
     data?.sensorReadingsBucketed ?? [],
-    inWindow,
+    anomalyData?.anomalies ?? [],
   );
 
   return {

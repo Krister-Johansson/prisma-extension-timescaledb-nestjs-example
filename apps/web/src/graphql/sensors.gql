@@ -105,9 +105,9 @@ mutation IngestReading($input: IngestReadingInput!) {
   }
 }
 
-# Recent anomalies for a sensor — for chart dots + data-table badges.
-query SensorAnomalies($sensorId: ID!, $take: Int) {
-  anomalies(sensorId: $sensorId, take: $take) {
+# Anomalies for a sensor within the chart's window — for dots + table badges.
+query SensorAnomalies($sensorId: ID!, $start: DateTime, $end: DateTime) {
+  anomalies(sensorId: $sensorId, start: $start, end: $end) {
     id
     time
     value
