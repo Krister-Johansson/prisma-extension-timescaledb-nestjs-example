@@ -16,6 +16,7 @@
     "db:deploy": "prisma migrate deploy",
     "db:reset": "prisma migrate reset --force",
     "db:seed": "tsx prisma/seed.ts",
+    "db:seed:empty": "SEED_SKIP_READINGS=1 tsx prisma/seed.ts",
     "prisma:generate": "prisma generate",
     "postinstall": "prisma generate",
     "lint": "eslint \"{src,test}/**/*.ts\" --fix",

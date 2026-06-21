@@ -158,44 +158,57 @@ async function main(prisma: ExtendedPrismaClient) {
     );
   }
 
+  // Structure-only mode: SEED_SKIP_READINGS gives the same types/groups/sensors/
+  // emulators/dashboards with NO reading history — a clean slate for watching the
+  // live emulators (and the anomaly detector) fill in data from scratch.
+  const skipReadings =
+    process.env.SEED_SKIP_READINGS === '1' ||
+    process.env.SEED_SKIP_READINGS === 'true';
+
   // History: 3 years of 5-minute readings per sensor, ending now. Generated in
   // the database (generate_series) so ~7M rows insert in seconds rather than
   // round-tripping from Node. Each value = midpoint + a diurnal swing (peaks
   // mid-afternoon) + a seasonal swing (peaks ~mid-year) + light noise, clamped
   // to the sensor's range.
   const end = new Date();
-  const start = new Date(
-    end.getTime() - HISTORY_YEARS * 365.25 * 24 * 60 * 60 * 1000,
-  );
-  console.log(
-    `Generating ${HISTORY_YEARS}y of ${READING_INTERVAL} history for ${sensors.length} sensors…`,
-  );
   let totalRows = 0;
-  for (const s of sensors) {
-    const base = (s.min + s.max) / 2;
-    const amp = s.max - s.min;
-    const diurnal = amp * 0.28;
-    const seasonal = amp * 0.16;
-    const noise = amp * 0.06;
-    const inserted = await prisma.$executeRaw`
-      INSERT INTO "SensorReading" ("sensorId", "time", "value")
-      SELECT ${s.id}, t,
-        GREATEST(${s.min}::float8, LEAST(${s.max}::float8,
-          ${base}::float8
-          + ${diurnal}::float8 * sin(2 * pi() * ((extract(hour from t) + extract(minute from t) / 60.0 - 9) / 24.0))
-          + ${seasonal}::float8 * sin(2 * pi() * ((extract(doy from t) - 80) / 365.0))
-          + ${noise}::float8 * (random() * 2 - 1)
-        ))::float8
-      FROM generate_series(${start}::timestamptz, ${end}::timestamptz, ${READING_INTERVAL}::interval) AS t
-    `;
-    totalRows += Number(inserted);
-    process.stdout.write(
-      `  ${s.name.padEnd(24)} ${Number(inserted).toLocaleString()} rows\n`,
+  if (skipReadings) {
+    console.log(
+      'SEED_SKIP_READINGS set — seeding structure only, no reading history.',
     );
+  } else {
+    const start = new Date(
+      end.getTime() - HISTORY_YEARS * 365.25 * 24 * 60 * 60 * 1000,
+    );
+    console.log(
+      `Generating ${HISTORY_YEARS}y of ${READING_INTERVAL} history for ${sensors.length} sensors…`,
+    );
+    for (const s of sensors) {
+      const base = (s.min + s.max) / 2;
+      const amp = s.max - s.min;
+      const diurnal = amp * 0.28;
+      const seasonal = amp * 0.16;
+      const noise = amp * 0.06;
+      const inserted = await prisma.$executeRaw`
+        INSERT INTO "SensorReading" ("sensorId", "time", "value")
+        SELECT ${s.id}, t,
+          GREATEST(${s.min}::float8, LEAST(${s.max}::float8,
+            ${base}::float8
+            + ${diurnal}::float8 * sin(2 * pi() * ((extract(hour from t) + extract(minute from t) / 60.0 - 9) / 24.0))
+            + ${seasonal}::float8 * sin(2 * pi() * ((extract(doy from t) - 80) / 365.0))
+            + ${noise}::float8 * (random() * 2 - 1)
+          ))::float8
+        FROM generate_series(${start}::timestamptz, ${end}::timestamptz, ${READING_INTERVAL}::interval) AS t
+      `;
+      totalRows += Number(inserted);
+      process.stdout.write(
+        `  ${s.name.padEnd(24)} ${Number(inserted).toLocaleString()} rows\n`,
+      );
+    }
   }
 
-  // Refresh the hourly continuous aggregate over the whole range so the export
-  // views reflect the new history immediately (not just live real-time agg).
+  // Refresh the hourly continuous aggregate so the export views reflect the
+  // current source — the new history, or empty after a structure-only seed.
   console.log('Refreshing the hourly continuous aggregate…');
   await prisma.$executeRawUnsafe(
     `CALL refresh_continuous_aggregate('"SensorReadingHourly"', NULL, NULL)`,
