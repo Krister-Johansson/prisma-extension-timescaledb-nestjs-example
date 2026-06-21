@@ -11,3 +11,18 @@ query AllAnomalies($take: Int) {
     aiSummary
   }
 }
+
+# Live stream of detected anomalies (and re-published updates, e.g. when the AI
+# summary lands). Same fields as the query so they merge cleanly.
+subscription AnomalyDetected {
+  anomalyDetected {
+    id
+    sensorId
+    time
+    value
+    score
+    median
+    severity
+    aiSummary
+  }
+}
