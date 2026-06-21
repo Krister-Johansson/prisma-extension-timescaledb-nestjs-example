@@ -72,6 +72,23 @@ export class AnomalyService {
     });
   }
 
+  /** Dismiss (or restore) a single anomaly. Throws P2025 (→ 404) if missing. */
+  acknowledge(id: string, acknowledged: boolean) {
+    return this.prisma.anomaly.update({
+      where: { id },
+      data: { acknowledgedAt: acknowledged ? new Date() : null },
+    });
+  }
+
+  /** Dismiss every still-open anomaly at once; returns how many were cleared. */
+  async acknowledgeAll(): Promise<number> {
+    const { count } = await this.prisma.anomaly.updateMany({
+      where: { acknowledgedAt: null },
+      data: { acknowledgedAt: new Date() },
+    });
+    return count;
+  }
+
   /**
    * Judge a freshly-ingested reading against the sensor's recent window using a
    * rolling MAD modified z-score. On a normal→anomalous transition, persist an

@@ -4,6 +4,7 @@ import {
   GraphQLISODateTime,
   ID,
   Int,
+  Mutation,
   Query,
   Resolver,
   Subscription,
@@ -30,6 +31,26 @@ export class AnomalyResolver {
     end?: Date,
   ): Promise<Anomaly[]> {
     return this.anomalyService.list(sensorId, take, start, end);
+  }
+
+  /** Dismiss (acknowledged=true, default) or restore (false) an anomaly. */
+  @Mutation(() => Anomaly)
+  acknowledgeAnomaly(
+    @Args('id', { type: () => ID }) id: string,
+    @Args('acknowledged', {
+      type: () => Boolean,
+      nullable: true,
+      defaultValue: true,
+    })
+    acknowledged: boolean,
+  ): Promise<Anomaly> {
+    return this.anomalyService.acknowledge(id, acknowledged);
+  }
+
+  /** Dismiss every open anomaly at once; returns how many were cleared. */
+  @Mutation(() => Int)
+  acknowledgeAllAnomalies(): Promise<number> {
+    return this.anomalyService.acknowledgeAll();
   }
 
   /** Live stream of detected anomalies, optionally filtered by sensor. */

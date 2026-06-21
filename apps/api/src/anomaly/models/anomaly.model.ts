@@ -44,6 +44,10 @@ export class Anomaly {
   @Field(() => String, { nullable: true })
   aiSummary?: string | null;
 
+  /** Set when dismissed/acknowledged by an operator; null = still open. */
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  acknowledgedAt?: Date | null;
+
   @Field(() => GraphQLISODateTime)
   createdAt!: Date;
 }

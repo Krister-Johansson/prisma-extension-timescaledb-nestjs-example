@@ -9,6 +9,7 @@ query AllAnomalies($take: Int) {
     median
     severity
     aiSummary
+    acknowledgedAt
   }
 }
 
@@ -24,5 +25,20 @@ subscription AnomalyDetected {
     median
     severity
     aiSummary
+    acknowledgedAt
   }
+}
+
+# Dismiss (acknowledged: true, default) or restore (false) a single anomaly.
+mutation AcknowledgeAnomaly($id: ID!, $acknowledged: Boolean) {
+  acknowledgeAnomaly(id: $id, acknowledged: $acknowledged) {
+    __typename
+    id
+    acknowledgedAt
+  }
+}
+
+# Dismiss every open anomaly at once; returns how many were cleared.
+mutation AcknowledgeAllAnomalies {
+  acknowledgeAllAnomalies
 }
