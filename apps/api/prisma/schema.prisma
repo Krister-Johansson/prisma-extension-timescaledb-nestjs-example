@@ -180,10 +180,13 @@ model Anomaly {
   mad       Float
   severity  AnomalySeverity @default(WARNING)
   aiSummary String?
+  /// Set when an operator dismisses/acknowledges the anomaly (kept in history).
+  acknowledgedAt DateTime?
   createdAt DateTime        @default(now())
 
   @@index([sensorId, time])
   @@index([createdAt])
+  @@index([acknowledgedAt])
 }
 
 /// A user-customizable dashboard — rendered as a tab. `locked` disables
