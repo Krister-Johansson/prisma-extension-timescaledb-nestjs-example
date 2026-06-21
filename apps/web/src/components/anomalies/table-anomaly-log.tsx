@@ -69,7 +69,9 @@ export function TableAnomalyLog({
               <TableHead className="text-right font-mono text-[10.5px] uppercase tracking-wide text-muted-foreground">
                 Score
               </TableHead>
-              <TableHead className="w-10" />
+              <TableHead className="w-10">
+                <span className="sr-only">Actions</span>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
